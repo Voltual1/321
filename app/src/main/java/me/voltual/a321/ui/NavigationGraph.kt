@@ -23,7 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.*
 import androidx.navigation3.scene.DialogSceneStrategy
 import me.voltual.a321.core.ui.components.IDMTransferDialog
-import me.voltual.pyrolysis.ui.settings.update.UpdateSettingsScreen
+import me.voltual.a321.ui.settings.update.UpdateSettingsScreen
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.*
 import androidx.navigation3.ui.NavDisplay

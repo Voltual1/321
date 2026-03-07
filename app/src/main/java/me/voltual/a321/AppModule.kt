@@ -15,7 +15,7 @@ import org.koin.dsl.module
 import me.voltual.a321.data.UserAgreementDataStore
 import me.voltual.a321.core.database.*
 import me.voltual.a321.core.database.dao.*
-import me.voltual.a321.ui.settings.update.UpdateSettingsViewModel
+import me.voltual.a321.ui.settings.update.*
 
 val appModule = module {
 

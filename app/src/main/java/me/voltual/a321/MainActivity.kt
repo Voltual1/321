@@ -137,7 +137,7 @@ class MainActivity : ComponentActivity() {
                 android.os.Process.killProcess(android.os.Process.myPid())
             }
         }
-    }*/
+    }
 
     private fun getCrashReport(throwable: Throwable): String {
         val stackTrace = throwable.stackTraceToString()

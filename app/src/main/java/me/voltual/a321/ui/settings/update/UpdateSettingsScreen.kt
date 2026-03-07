@@ -29,7 +29,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun UpdateSettingsScreen(
-    viewModel: UpdateSettingsViewModel = koinViewModel()
+    viewModel: UpdateSettingsViewModel = koinViewModel(),
     snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
