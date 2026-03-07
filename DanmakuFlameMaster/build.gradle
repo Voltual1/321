@@ -1,0 +1,46 @@
+/*
+ * Copyright (C) 2013 Chen Hui <calmer91@gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// DanmakuFlameMaster/build.gradle
+
+apply plugin: 'com.android.library'
+
+android {
+    // **NEW**: 添加 namespace
+    namespace 'master.flame.danmaku'
+    
+    compileSdkVersion 33
+    // buildToolsVersion "30.0.3" // 新版AGP不再需要此行
+
+    defaultConfig {
+        minSdkVersion 21 // 与BBQ主应用保持一致
+        targetSdkVersion 34 // 与BBQ主应用保持一致
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-project.txt'
+        }
+    }
+    compileOptions {
+        sourceCompatibility = 1.8
+        targetCompatibility = 1.8
+    }
+    lintOptions {
+        abortOnError false
+    }
+}

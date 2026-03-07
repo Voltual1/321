@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 允许访问本地主机（开发者の领域） -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">127.0.0.1</domain>  <!-- 本机の圣域 -->
+        <domain includeSubdomains="true">localhost</domain>   <!-- 本地の神域 -->
+        <domain includeSubdomains="true">10.0.2.2</domain>   <!-- 模拟器の结界 -->
+        <domain includeSubdomains="true">apk.xiaoqu.online</domain>
+        <domain includeSubdomains="true">api.xiaoqu.online</domain>
+    </domain-config>
+    
+    <!-- 网络信任策略：混沌中立模式 -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />  <!-- 信任系统の权威 -->
+            <certificates src="user" />    <!-- 包容用户の任性 -->
+            <!-- [PROXY PIN MODE ENABLED] -->
+            <certificates src="@raw/proxy_pin_root" />  <!-- 注入抓包の神力 -->
+        </trust-anchors>
+    </base-config>
+</network-security-config>

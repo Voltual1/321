@@ -1,0 +1,322 @@
+package me.voltual.pyrolysis.ui.plaza
+
+import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.BottomAppBarDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import me.voltual.pyrolysis.MainActivity
+import me.voltual.pyrolysis.BBQApplication
+import me.voltual.pyrolysis.R
+import me.voltual.pyrolysis.data.content.Preferences
+import me.voltual.pyrolysis.data.entity.DialogKey
+import me.voltual.pyrolysis.data.entity.Source
+import me.voltual.pyrolysis.ui.components.ProductsListItem
+import me.voltual.pyrolysis.ui.components.SelectChip
+import me.voltual.pyrolysis.ui.components.SortFilterChip
+import me.voltual.pyrolysis.ui.components.TopBar
+import me.voltual.pyrolysis.ui.components.WideSearchField
+import me.voltual.pyrolysis.core.ui.icons.Phosphor
+import me.voltual.pyrolysis.core.ui.icons.phosphor.ArrowSquareOut
+import me.voltual.pyrolysis.core.ui.icons.phosphor.CircleWavyWarning
+import me.voltual.pyrolysis.core.ui.icons.phosphor.CirclesFour
+import me.voltual.pyrolysis.core.ui.icons.phosphor.HeartStraight
+import me.voltual.pyrolysis.ui.*
+import me.voltual.pyrolysis.ui.dialog.BaseDialog
+import me.voltual.pyrolysis.ui.dialog.KeyDialogUI
+//import me.voltual.pyrolysis.ui.navigation.NavItem
+import me.voltual.pyrolysis.core.utils.extension.koinPyrolysisViewModel
+import me.voltual.pyrolysis.core.utils.onLaunchClick
+//import com.machiav3lli.fdroid.viewmodels.plazaViewModel
+//import com.machiav3lli.fdroid.viewmodels.SearchVM
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchPage(
+    viewModel: SearchVM = koinPyrolysisViewModel(),
+    plazaViewModel: PlazaViewModel = koinPyrolysisViewModel(),
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val mainActivity = LocalActivity.current as MainActivity
+    val openDialog = remember { mutableStateOf(false) }
+    val dialogKey: MutableState<DialogKey?> = remember { mutableStateOf(null) }
+    val navigator = LocalNavigator.current    
+
+    val listState = rememberLazyListState()
+    val pageState by viewModel.pageState.collectAsStateWithLifecycle()
+    val dataState by plazaViewModel.dataState.collectAsStateWithLifecycle()
+
+    val currentTab by remember {
+        derivedStateOf {
+            listOf(Source.SEARCH, Source.SEARCH_INSTALLED, Source.SEARCH_NEW, Source.SEARCH_FAVORITES)
+                .indexOf(pageState.source)
+        }
+    }
+
+    val notModifiedSortFilter by remember(pageState.sortFilter) {
+        derivedStateOf {
+            Preferences[Preferences.Key.SortOrderSearch] == Preferences.Key.SortOrderSearch.default.value &&
+                    Preferences[Preferences.Key.SortOrderAscendingSearch] == Preferences.Key.SortOrderAscendingSearch.default.value &&
+                    Preferences[Preferences.Key.ReposFilterSearch] == Preferences.Key.ReposFilterSearch.default.value &&
+                    Preferences[Preferences.Key.CategoriesFilterSearch] == Preferences.Key.CategoriesFilterSearch.default.value &&
+                    Preferences[Preferences.Key.LicensesFilterSearch] == Preferences.Key.LicensesFilterSearch.default.value &&
+                    Preferences[Preferences.Key.AntifeaturesFilterSearch] == Preferences.Key.AntifeaturesFilterSearch.default.value &&
+                    Preferences[Preferences.Key.TargetSDKSearch] == Preferences.Key.TargetSDKSearch.default.value &&
+                    Preferences[Preferences.Key.MinSDKSearch] == Preferences.Key.MinSDKSearch.default.value
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        Preferences.addPreferencesChangeListener {
+            when (it) {
+                Preferences.Key.ReposFilterSearch,
+                Preferences.Key.CategoriesFilterSearch,
+                Preferences.Key.AntifeaturesFilterSearch,
+                Preferences.Key.LicensesFilterSearch,
+                Preferences.Key.SortOrderSearch,
+                Preferences.Key.SortOrderAscendingSearch,
+                Preferences.Key.TargetSDKSearch,
+                Preferences.Key.MinSDKSearch,
+                    -> viewModel.setSortFilter(
+                    listOf(
+                        Preferences[Preferences.Key.ReposFilterSearch],
+                        Preferences[Preferences.Key.CategoriesFilterSearch],
+                        Preferences[Preferences.Key.AntifeaturesFilterSearch],
+                        Preferences[Preferences.Key.LicensesFilterSearch],
+                        Preferences[Preferences.Key.SortOrderSearch],
+                        Preferences[Preferences.Key.SortOrderAscendingSearch],
+                        Preferences[Preferences.Key.TargetSDKSearch],
+                        Preferences[Preferences.Key.MinSDKSearch],
+                    ).toString()
+                )
+
+                else -> {}
+            }
+        }
+    }
+
+    val searchBar: @Composable (() -> Unit) = {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            TopBar(
+                withTopBarInsets = !Preferences[Preferences.Key.BottomSearchBar],
+            ) {
+                WideSearchField(
+                    query = pageState.query,
+                    modifier = Modifier.fillMaxWidth(),
+                    showCloseButton = true,
+                    onQueryChanged = { newQuery ->
+                        if (newQuery != pageState.query)
+                            viewModel.setSearchQuery(newQuery)
+                    },
+                    onCleanQuery = {
+                        viewModel.setSearchQuery("")
+                    },
+                    onClose = onDismiss
+                )
+            }
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                contentPadding = PaddingValues(horizontal = 8.dp),
+            ) {
+                item {
+                    SelectChip(
+                        text = stringResource(id = R.string.all),
+                        icon = Phosphor.CirclesFour,
+                        checked = currentTab == 0,
+                        alwaysShowIcon = true,
+                    ) {
+                        viewModel.setSearchSource(Source.SEARCH)
+                    }
+                }
+                item {
+                    SelectChip(
+                        text = stringResource(id = R.string.installed),
+                        icon = Phosphor.ArrowSquareOut,
+                        checked = currentTab == 1,
+                        alwaysShowIcon = true,
+                    ) {
+                        viewModel.setSearchSource(Source.SEARCH_INSTALLED)
+                    }
+                }
+                item {
+                    SelectChip(
+                        text = stringResource(id = R.string.new_applications),
+                        icon = Phosphor.CircleWavyWarning,
+                        checked = currentTab == 2,
+                        alwaysShowIcon = true,
+                    ) {
+                        viewModel.setSearchSource(Source.SEARCH_NEW)
+                    }
+                }
+                item {
+                    SelectChip(
+                        text = stringResource(id = R.string.favorite_applications),
+                        icon = Phosphor.HeartStraight,
+                        checked = currentTab == 3,
+                        alwaysShowIcon = true,
+                    ) {
+                        viewModel.setSearchSource(Source.SEARCH_FAVORITES)
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                SortFilterChip(
+                    notModified = notModifiedSortFilter,
+                    fullWidth = true,
+                ) {
+                navigator.navigate(SortFilterSheet)
+                }
+            }
+        }
+    }
+
+    val productsList: @Composable ((paddingValues: PaddingValues) -> Unit) =
+        { paddingValues: PaddingValues ->
+            LazyColumn(
+                modifier = Modifier
+                    .padding(paddingValues)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                state = listState,
+            ) {
+                items(
+                    items = pageState.filteredProducts,
+                    key = { it.packageName },
+                ) { item ->
+                    ProductsListItem(
+                        item = item,
+                        repo = dataState.reposMap[item.repositoryId],
+                        isFavorite = dataState.favorites.contains(item.packageName),
+                        onUserClick = {
+                        navigator.navigate(AppPage(it.packageName))
+                        },
+                        onFavouriteClick = {
+                            plazaViewModel.setFavorite(
+                                it.packageName,
+                                !dataState.favorites.contains(it.packageName)
+                            )
+                        },
+                        installed = pageState.installedMap[item.packageName],
+                        onActionClick = {
+                            val installed = pageState.installedMap[it.packageName]
+                            val action = {
+                                BBQApplication.wm.install(
+                                    Pair(it.packageName, it.repositoryId)
+                                )
+                            }
+                            if (installed != null && installed.launcherActivities.isNotEmpty())
+                                context.onLaunchClick(
+                                    installed,
+                                    mainActivity.supportFragmentManager
+                                )
+                            else if (Preferences[Preferences.Key.DownloadShowDialog]) {
+                                dialogKey.value = DialogKey.Download(it.name, action)
+                                openDialog.value = true
+                            } else action()
+                        }
+                    )
+                }
+            }
+        }
+
+    Scaffold(
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        topBar = {
+            if (!Preferences[Preferences.Key.BottomSearchBar]) {
+                Column {
+                    searchBar()
+                    HorizontalDivider(thickness = 0.5.dp)
+                }
+            }
+        },
+        bottomBar = {
+            if (Preferences[Preferences.Key.BottomSearchBar]) {
+                Column(
+                    modifier = Modifier.windowInsetsPadding(BottomAppBarDefaults.windowInsets)
+                ) {
+                    HorizontalDivider(thickness = 0.5.dp)
+                    searchBar()
+                }
+            }
+        },
+    ) { paddingValues ->
+        if (pageState.filteredProducts.isEmpty() && pageState.query.isNotBlank())
+            Column(
+                modifier = Modifier
+                    .padding(paddingValues)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = stringResource(id = R.string.application_not_found)
+                )
+            }
+        else
+            productsList(paddingValues)
+    }
+
+    if (openDialog.value) {
+        BaseDialog(openDialogCustom = openDialog) {
+            when (dialogKey.value) {
+                is DialogKey.Download -> KeyDialogUI(
+                    key = dialogKey.value,
+                    openDialog = openDialog,
+                    primaryAction = {
+                        if (Preferences[Preferences.Key.ActionLockDialog] != Preferences.ActionLock.None)
+                            mainActivity.launchLockPrompt {
+                                (dialogKey.value as DialogKey.Download).action()
+                                openDialog.value = false
+                            }
+                        else {
+                            (dialogKey.value as DialogKey.Download).action()
+                            openDialog.value = false
+                        }
+                    },
+                    onDismiss = {
+                        dialogKey.value = null
+                        openDialog.value = false
+                    }
+                )
+
+                else                  -> {}
+            }
+        }
+    }
+}

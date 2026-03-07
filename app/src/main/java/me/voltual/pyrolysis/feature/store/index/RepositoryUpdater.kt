@@ -1,0 +1,969 @@
+/*
+ * This file is adapted from Neo Store (https://github.com/NeoApplications/Neo-Store)
+ * Modified by Voltual to fit Pyrolysis architecture.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License.
+ */
+package me.voltual.pyrolysis.feature.store.index
+
+import android.content.Context
+import android.util.Log
+import androidx.core.net.toUri
+import me.voltual.pyrolysis.BUFFER_SIZE
+import me.voltual.pyrolysis.data.content.Cache
+import me.voltual.pyrolysis.data.content.Preferences
+import me.voltual.pyrolysis.core.database.FdroidDatabase
+import me.voltual.pyrolysis.core.database.entity.AntiFeatureTemp
+import me.voltual.pyrolysis.core.database.entity.CategoryTemp
+import me.voltual.pyrolysis.core.database.entity.IndexProduct
+import me.voltual.pyrolysis.core.database.entity.Release
+import me.voltual.pyrolysis.core.database.entity.RepoCategoryTemp
+import me.voltual.pyrolysis.core.database.entity.Repository
+import me.voltual.pyrolysis.core.database.entity.asProductTemp
+import me.voltual.pyrolysis.core.database.entity.asReleaseTemp
+import me.voltual.pyrolysis.feature.store.index.v0.IndexV0Parser
+import me.voltual.pyrolysis.feature.store.index.v1.IndexV1Parser
+import me.voltual.pyrolysis.feature.store.index.v2.IdMap
+import me.voltual.pyrolysis.feature.store.index.v2.IndexV2
+import me.voltual.pyrolysis.feature.store.index.v2.IndexV2Merger
+import me.voltual.pyrolysis.feature.store.index.v2.IndexV2Parser
+import me.voltual.pyrolysis.feature.store.index.v2.IndexV2Parser.Companion.hasCachedIndex
+import me.voltual.pyrolysis.feature.store.index.v2.findLocalized
+import me.voltual.pyrolysis.manager.network.Downloader
+import me.voltual.pyrolysis.manager.network.HttpResponseException
+import me.voltual.pyrolysis.feature.store.worker.SyncWorker
+import me.voltual.pyrolysis.core.utils.ProgressInputStream
+import me.voltual.pyrolysis.core.utils.extension.text.nullIfEmpty
+import me.voltual.pyrolysis.core.utils.extension.text.unhex
+//import com.machiav3lli.fdroid.utils.notifyDebugStatus
+import io.ktor.http.HttpStatusCode
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
+import java.io.File
+import java.io.InputStream
+import java.security.MessageDigest
+import java.security.cert.Certificate
+import java.security.cert.CertificateEncodingException
+import java.security.cert.X509Certificate
+import java.util.Locale
+import java.util.jar.JarEntry
+import java.util.jar.JarFile
+
+// TODO remove unneeded Coroutine context switches
+object RepositoryUpdater : KoinComponent {
+    enum class Stage {
+        DOWNLOAD, PROCESS, MERGE, COMMIT
+    }
+
+    enum class ErrorType {
+        NONE, NETWORK, HTTP, VALIDATION, PARSING
+    }
+
+    class UpdateException : Exception {
+        val errorType: ErrorType
+
+        constructor(errorType: ErrorType, message: String) : super(message) {
+            this.errorType = errorType
+        }
+
+        constructor(errorType: ErrorType, message: String, cause: Throwable) : super(
+            message,
+            cause
+        ) {
+            this.errorType = errorType
+        }
+    }
+
+    private val updaterMutex = Mutex()
+    private val cleanupMutex = Mutex()
+    private val db: FdroidDatabase by inject()
+
+    fun init() {
+        var lastDisabled = setOf<Long>()
+
+        runBlocking(Dispatchers.IO) {
+            val newDisabled = db.getRepositoryDao().getAllDisabledIds().toSet()
+            val disabled = newDisabled - lastDisabled
+            lastDisabled = newDisabled
+
+            if (disabled.isNotEmpty()) {
+                val pairs = disabled.asSequence().map { Pair(it, false) }.toSet()
+
+                cleanupMutex.withLock {
+                    db.cleanUp(pairs)
+                }
+            }
+        }
+    }
+
+    suspend fun await() {
+        updaterMutex.withLock { }
+    }
+
+    suspend fun update(
+        context: Context,
+        repository: Repository, unstable: Boolean,
+        callback: (Stage, Long, Long?) -> Unit,
+    ): Boolean {
+        return update(
+            context = context,
+            repository = repository,
+            indexTypes = listOfNotNull(
+                if (Preferences[Preferences.Key.IndexV2]) IndexType.INDEX_V2_ENTRY else null,
+                if (Preferences[Preferences.Key.IndexV2]) IndexType.INDEX_V2 else null,
+                IndexType.INDEX_V1,
+                IndexType.INDEX
+            ),
+            unstable = unstable,
+            callback = callback
+        )
+    }
+
+    private suspend fun update(
+        context: Context,
+        repository: Repository, indexTypes: List<IndexType>, unstable: Boolean,
+        entryLastModified: String? = null,
+        entryEntityTag: String? = null,
+        callback: (Stage, Long, Long?) -> Unit,
+    ): Boolean {
+        val indexType = indexTypes[0]
+        val (result, file) = downloadIndex(
+            context = context,
+            repository = repository,
+            indexType = indexType,
+            lastModified = if (indexType == IndexType.INDEX_V2_ENTRY) repository.entryLastModified
+            else repository.lastModified,
+            entityTag = if (indexType == IndexType.INDEX_V2_ENTRY) repository.entryEntityTag
+            else repository.entityTag,
+            callback = callback
+        )
+
+        return when {
+            result.isNotModified -> {
+                file.delete()
+                false
+            }
+
+            !result.success      -> {
+                file.delete()
+                if (result.statusCode == HttpStatusCode.NotFound && indexTypes.size > 1) {
+                    update(
+                        context = context,
+                        repository = repository,
+                        indexTypes = indexTypes.drop(1),
+                        unstable = unstable,
+                        callback = callback
+                    )
+                } else {
+                    throw UpdateException(
+                        ErrorType.HTTP,
+                        "Invalid response: HTTP ${result.statusCode}"
+                    )
+                }
+            }
+
+            else                 -> {
+                val hasCachedIndex = hasCachedIndex(context, repository.id)
+                Log.d(
+                    "RepositoryUpdater",
+                    "downloaded repository file, repoID = ${repository.id}, indexType = $indexType, hasCachedIndex = $hasCachedIndex"
+                )
+                when (indexType) {
+                    IndexType.INDEX_V2_ENTRY -> {
+                        if (hasCachedIndex) {
+                            downloadIndexV2Diff(
+                                context, repository, unstable,
+                                file, result.lastModified.nullIfEmpty(),
+                                result.entityTag.nullIfEmpty(), callback
+                            )
+                        } else {
+                            update(
+                                context = context,
+                                repository = repository,
+                                indexTypes = indexTypes.drop(1),
+                                unstable = unstable,
+                                entryLastModified = result.lastModified.nullIfEmpty(),
+                                entryEntityTag = result.entityTag.nullIfEmpty(),
+                                callback = callback
+                            )
+                        }
+                    }
+
+                    else                     -> processFile(
+                        context, repository, indexType,
+                        unstable, file, result.lastModified, entryLastModified,
+                        result.entityTag, entryEntityTag, callback
+                    )
+                }
+                true
+            }
+        }
+    }
+
+    private suspend fun downloadIndex(
+        context: Context,
+        repository: Repository, indexType: IndexType,
+        lastModified: String, entityTag: String,
+        callback: (Stage, Long, Long?) -> Unit,
+    ): Pair<Downloader.Result, File> {
+        val file = Cache.getTemporaryFile(context)
+        return try {
+            val result = Downloader.download(
+                url = repository.downloadAddress.toUri().buildUpon()
+                    .appendPath(
+                        if (indexType != IndexType.INDEX_V2) indexType.jarName
+                        else indexType.contentName
+                    )
+                    .build().toString(),
+                target = file,
+                lastModified = lastModified,
+                entityTag = entityTag,
+                authentication = repository.authentication,
+                rated = true,
+            ) { read, total, _ -> callback(Stage.DOWNLOAD, read, total) }
+            Pair(result, file)
+        } catch (e: Exception) {
+            // onErrorResumeNext replacement?
+            file.delete()
+            if (e is HttpResponseException) throw UpdateException(
+                ErrorType.HTTP,
+                "Invalid response ${e.responseStatus.value}: ${e.responseStatus.description}.\n${e.message}",
+                e
+            ) else throw UpdateException(
+                ErrorType.NETWORK,
+                "Network error: ${e.message}\n${e.cause?.message}",
+                e
+            )
+        }
+    }
+
+    private suspend fun downloadIndexV2Diff(
+        context: Context,
+        repository: Repository,
+        unstable: Boolean,
+        file: File,
+        entryLastModified: String?,
+        entryEntityTag: String?,
+        callback: (Stage, Long, Long?) -> Unit
+    ): Boolean {
+        val fallbackUpdate = suspend {
+            update(
+                context = context,
+                repository = repository,
+                indexTypes = persistentListOf(
+                    IndexType.INDEX_V2,
+                    IndexType.INDEX_V1,
+                    IndexType.INDEX,
+                ),
+                unstable = unstable,
+                entryLastModified = entryLastModified,
+                entryEntityTag = entryEntityTag,
+                callback = callback
+            )
+        }
+        val (jarFile, indexEntry) = JarFile(file, true)
+            .let { Pair(it, it.getEntry(IndexType.INDEX_V2_ENTRY.contentName) as JarEntry?) }
+        return jarFile.getInputStream(indexEntry)?.let { entryStream ->
+            val entry = IndexV2.Entry.fromJsonStream(entryStream)
+
+            if (entry.timestamp == repository.timestamp) {
+                file.delete()
+                return false
+            }
+
+            val diffAddress = entry.getDiff(repository.timestamp)?.name
+                ?: return fallbackUpdate()
+
+            val (result, diffFile) = downloadDiffFile(
+                context, repository,
+                entry.timestamp,
+                diffAddress,
+                callback
+            )
+            val hasCachedIndex = hasCachedIndex(context, repository.id)
+            Log.d(
+                "RepositoryUpdater",
+                "downloaded diff file, repoID = ${repository.id}, result.statusCode = ${result.statusCode}, hasCachedIndex = $hasCachedIndex"
+            )
+            when {
+                result.isNotModified -> {
+                    diffFile.delete()
+                    false
+                }
+
+                !result.success      -> {
+                    diffFile.delete()
+                    if (result.statusCode == HttpStatusCode.NotFound) fallbackUpdate()
+                    else {
+                        throw UpdateException(
+                            ErrorType.HTTP,
+                            "Invalid response: HTTP ${result.statusCode}"
+                        )
+                    }
+                }
+
+                else                 -> {
+                    if (hasCachedIndex) processFile(
+                        context, repository, IndexType.INDEX_V2_DIFF, unstable,
+                        diffFile, result.lastModified, entryLastModified,
+                        result.entityTag, entryEntityTag, callback,
+                    ) else fallbackUpdate()
+                }
+            }
+        } ?: fallbackUpdate()
+    }
+
+    private suspend fun downloadDiffFile(
+        context: Context, repository: Repository,
+        entryTimestamp: Long, diffAddress: String,
+        callback: (Stage, Long, Long?) -> Unit,
+    ): Pair<Downloader.Result, File> {
+        val file = Cache.getTemporaryFile(context)
+        val diffUrl = (repository.downloadAddress + diffAddress)
+        return try {
+            val result = Downloader.download(
+                url = diffUrl,
+                target = file,
+                lastModified = "",
+                entityTag = "",
+                authentication = repository.authentication,
+                rated = true,
+            ) { read, total, _ -> callback(Stage.DOWNLOAD, read, total) }
+            Log.d(
+                "RepositoryUpdater",
+                "downloading diff file from entry, repoID = ${repository.id}, timestamp = ${repository.timestamp}, entry.timestamp = $entryTimestamp, downloadUrl = $diffUrl"
+            )
+            Pair(result, file)
+        } catch (e: Exception) {
+            // onErrorResumeNext replacement?
+            file.delete()
+            if (e is HttpResponseException) throw UpdateException(
+                ErrorType.HTTP,
+                "Invalid response ${e.responseStatus.value}: ${e.responseStatus.description}.\n${e.message}",
+                e
+            ) else throw UpdateException(
+                ErrorType.NETWORK,
+                "Network error: ${e.message}\n${e.cause?.message}",
+                e
+            )
+        }
+    }
+
+    private suspend fun processFile(
+        context: Context,
+        repository: Repository, indexType: IndexType, unstable: Boolean,
+        file: File, lastModified: String, entryLastModified: String?,
+        entityTag: String, entryEntityTag: String?, callback: (Stage, Long, Long?) -> Unit,
+    ): Boolean {
+        var rollback = true
+        Log.d(
+            "RepositoryUpdater",
+            "processing file, repoID = ${repository.id}, indexType = $indexType, lastModified = $lastModified, entryLastModified = $entryLastModified"
+        )
+        return updaterMutex.withLock {
+            try {
+                val (jarFile, indexEntry) = when (indexType) {
+                    IndexType.INDEX_V2_DIFF,
+                    IndexType.INDEX_V2 -> Pair(null, null)
+
+                    else               -> JarFile(file, true)
+                        .let { Pair(it, it.getEntry(indexType.contentName) as JarEntry?) }
+                }
+                val index = when (indexType) {
+                    IndexType.INDEX_V2      -> file
+                    IndexType.INDEX_V2_DIFF -> {
+                        Cache.getIndexV2File(context, repository.id)
+                            .takeIf { it.exists() && it.length() > 0 }
+                            ?.let { indexFile ->
+                                IndexV2Merger(indexFile).use { merger ->
+                                    merger.processDiff(
+                                        file.inputStream()
+                                    ).let {
+/*                                        notifyDebugStatus(
+                                            context,
+                                            "RepositoryUpdater",
+                                            "merged diff file, repoID = ${repository.id}, succcess = $it, indexFile = $indexFile."
+                                        )*/
+                                    }
+                                }
+                                indexFile
+                            } ?: file
+                    }
+
+                    else                    -> null
+                }
+                val total = when (indexType) {
+                    IndexType.INDEX_V2_DIFF,
+                    IndexType.INDEX_V2 -> file.length()
+
+                    else               -> indexEntry?.size
+                }
+                db.getProductTempDao().emptyTable()
+                db.getReleaseTempDao().emptyTable()
+                db.getCategoryTempDao().emptyTable()
+
+                Log.d(
+                    "RepositoryUpdater",
+                    "parsing index file, repoID = ${repository.id}, indexType = $indexType, total = $total, lastModified = $lastModified, entryLastModified = $entryLastModified"
+                )
+                val (changedRepository, certificateFromIndex) = when (indexType) {
+                    IndexType.INDEX    -> processIndexV0(
+                        context,
+                        repository,
+                        jarFile?.getInputStream(indexEntry)!!,
+                        unstable,
+                        lastModified,
+                        entityTag,
+                        total!!,
+                        callback,
+                    )
+
+                    IndexType.INDEX_V1 -> processIndexV1(
+                        context,
+                        repository,
+                        jarFile?.getInputStream(indexEntry)!!,
+                        unstable,
+                        lastModified,
+                        entityTag,
+                        total!!,
+                        callback,
+                    )
+
+                    IndexType.INDEX_V2_DIFF,
+                    IndexType.INDEX_V2 -> processIndexV2(
+                        context,
+                        repository,
+                        index!!,
+                        unstable,
+                        lastModified,
+                        entryLastModified.orEmpty(),
+                        entityTag,
+                        entryEntityTag.orEmpty(),
+                        total!!,
+                        callback,
+                    )
+
+                    else               -> throw IllegalArgumentException("Illegal index type was sent to processing: $indexType")
+                }
+
+                val workRepository = changedRepository ?: repository
+                // TODO add better validation for Index-V2
+                when {
+                    workRepository.timestamp < repository.timestamp -> {
+                        throw UpdateException(
+                            ErrorType.VALIDATION, "New index is older than current index: " +
+                                    "${workRepository.timestamp} < ${repository.timestamp}"
+                        )
+                    }
+
+                    indexType != IndexType.INDEX_V2
+                            && indexType != IndexType.INDEX_V2_DIFF -> {
+                        val fingerprint = run {
+                            val certificateFromJar = validateCertificate(indexEntry)
+                            val fingerprintFromJar = calculateFingerprint(certificateFromJar)
+                            if (indexType.certificateFromIndex) {
+                                val fingerprintFromIndex =
+                                    certificateFromIndex?.unhex()?.let(::calculateFingerprint)
+                                if (fingerprintFromIndex == null || fingerprintFromJar != fingerprintFromIndex) {
+                                    throw UpdateException(
+                                        ErrorType.VALIDATION,
+                                        "index.xml contains invalid public key"
+                                    )
+                                }
+                                fingerprintFromIndex
+                            } else {
+                                fingerprintFromJar
+                            }
+                        }
+
+                        commitChanges(workRepository, fingerprint, callback)
+                        rollback = false
+                        true
+                    }
+
+                    else                                            -> {
+                        val valid = workRepository.fingerprint.isNotBlank()
+                        commitChanges(workRepository, workRepository.fingerprint, callback)
+                        rollback = !valid
+                        valid
+                    }
+                }
+            } catch (e: Exception) {
+                when (e) {
+                    is UpdateException,
+                    is InterruptedException,
+                         -> throw e
+
+                    is IndexV2Parser.ParsingException,
+                         -> when (e.cause) {
+                        is IndexV2Parser.BaseParsingException
+                             -> {
+                            Cache.getIndexV2File(context, repository.id).delete()
+                            SyncWorker.enqueueManual(Pair(repository.id, repository.name))
+                            false
+                        }
+
+                        is IndexV2Parser.DiffParsingException
+                             -> throw UpdateException(
+                            ErrorType.PARSING,
+                            "Error parsing index: ${e.message}\n${e.cause?.message}",
+                            e.cause ?: e
+                        )
+
+                        else -> throw UpdateException(
+                            ErrorType.PARSING,
+                            "Error parsing index: ${e.message}\n${e.cause?.message}",
+                            e.cause ?: e
+                        )
+                    }
+
+                    else -> throw UpdateException(
+                        ErrorType.PARSING,
+                        "Error parsing index: ${e.message}\n${e.cause?.message}",
+                        e
+                    )
+                }
+            } finally {
+                file.delete()
+                if (rollback) {
+                    db.finishTemporary(repository, false)
+                }
+            }
+        }
+    }
+
+    private fun processIndexV0(
+        context: Context,
+        repository: Repository,
+        inputStream: InputStream,
+        unstable: Boolean,
+        lastModified: String,
+        entityTag: String,
+        total: Long,
+        callback: (Stage, Long, Long?) -> Unit
+    ): Pair<Repository?, String?> {
+        var changedRepository: Repository? = null
+        var certificateFromIndex: String? = null
+        val products = mutableListOf<IndexProduct>()
+        val features = context.packageManager.systemAvailableFeatures
+            .asSequence().map { it.name }.toSet() + setOf("android.hardware.touchscreen")
+
+        val parser = IndexV0Parser(repository.id, object : IndexV0Parser.Callback {
+            override fun onRepository(
+                mirrors: List<String>, name: String, description: String,
+                certificate: String, version: Int, timestamp: Long,
+            ) {
+                changedRepository = repository.update(
+                    mirrors = mirrors,
+                    name = name,
+                    description = description,
+                    version = version,
+                    lastModified = lastModified,
+                    entityTag = entityTag,
+                    timestamp = timestamp,
+                    webBaseUrl = null,
+                    entryLastModified = null,
+                    entryEntityTag = null,
+                )
+                certificateFromIndex = certificate.lowercase(Locale.US)
+            }
+
+            override fun onProduct(product: IndexProduct) {
+                if (Thread.interrupted()) throw InterruptedException()
+
+                products += product.apply {
+                    refreshReleases(features, unstable)
+                }
+                if (products.size >= 100) {
+                    runBlocking(Dispatchers.IO) {
+                        insertProductBatch(products)
+                        products.clear()
+                    }
+                }
+            }
+        })
+
+        runBlocking(Dispatchers.IO) {
+            ProgressInputStream(inputStream) {
+                callback(Stage.PROCESS, it, total)
+            }.use { parser.parse(it) }
+
+            if (Thread.interrupted()) throw InterruptedException()
+
+            if (products.isNotEmpty()) {
+                insertProductBatch(products)
+                products.clear()
+            }
+        }
+        return Pair(changedRepository, certificateFromIndex)
+    }
+
+    private fun processIndexV1(
+        context: Context,
+        repository: Repository,
+        inputStream: InputStream,
+        unstable: Boolean,
+        lastModified: String,
+        entityTag: String,
+        total: Long,
+        callback: (Stage, Long, Long?) -> Unit
+    ): Pair<Repository?, String?> {
+        var changedRepository: Repository? = null
+        val features = context.packageManager.systemAvailableFeatures
+            .asSequence().map { it.name }.toSet() + setOf("android.hardware.touchscreen")
+
+        val mergerFile = Cache.getTemporaryFile(context)
+        try {
+            val unmergedProducts = mutableListOf<IndexProduct>()
+            val unmergedReleases = mutableListOf<Pair<String, List<Release>>>()
+            IndexContentMerger(mergerFile).use { indexMerger ->
+                ProgressInputStream(inputStream) {
+                    callback(
+                        Stage.PROCESS,
+                        it,
+                        total
+                    )
+                }.use { progressInputStream ->
+                    IndexV1Parser(
+                        repository.id,
+                        object : IndexV1Parser.Callback {
+                            override fun onRepository(
+                                mirrors: List<String>,
+                                name: String,
+                                description: String,
+                                version: Int,
+                                timestamp: Long,
+                            ) {
+                                changedRepository = repository.update(
+                                    mirrors = mirrors,
+                                    name = name,
+                                    description = description,
+                                    version = version,
+                                    lastModified = lastModified,
+                                    entityTag = entityTag,
+                                    timestamp = timestamp,
+                                    webBaseUrl = null,
+                                    entryLastModified = null,
+                                    entryEntityTag = null,
+                                )
+                            }
+
+                            override fun onProduct(product: IndexProduct) {
+                                if (Thread.interrupted()) throw InterruptedException()
+
+                                unmergedProducts += product
+                                if (unmergedProducts.size >= 100) {
+                                    indexMerger.addProducts(unmergedProducts)
+                                    unmergedProducts.clear()
+                                }
+                            }
+
+                            override fun onReleases(
+                                packageName: String,
+                                releases: List<Release>,
+                            ) {
+                                if (Thread.interrupted()) throw InterruptedException()
+
+                                unmergedReleases += Pair(packageName, releases)
+                                if (unmergedReleases.size >= 100) {
+                                    indexMerger.addReleases(unmergedReleases)
+                                    unmergedReleases.clear()
+                                }
+                            }
+                        }
+                    ).parse(progressInputStream)
+
+                    if (Thread.interrupted()) throw InterruptedException()
+
+                    if (unmergedProducts.isNotEmpty()) {
+                        indexMerger.addProducts(unmergedProducts)
+                        unmergedProducts.clear()
+                    }
+                    if (unmergedReleases.isNotEmpty()) {
+                        indexMerger.addReleases(unmergedReleases)
+                        unmergedReleases.clear()
+                    }
+                    var progress = 0
+                    indexMerger.forEach(
+                        repository.id,
+                        100
+                    ) { products, totalCount ->
+                        if (Thread.interrupted()) throw InterruptedException()
+
+                        progress += products.size
+                        callback(
+                            Stage.MERGE,
+                            progress.toLong(),
+                            totalCount.toLong()
+                        )
+                        runBlocking(Dispatchers.IO) {
+                            products.map {
+                                it.apply {
+                                    refreshReleases(features, unstable)
+                                }
+                            }.let { updatedProducts ->
+                                insertProductBatch(updatedProducts)
+                            }
+                        }
+                    }
+                }
+            }
+        } finally {
+            mergerFile.delete()
+        }
+        return Pair(changedRepository, null)
+    }
+
+    private fun processIndexV2(
+        context: Context,
+        repository: Repository,
+        indexFile: File,
+        unstable: Boolean,
+        lastModified: String,
+        entryLastModified: String,
+        entityTag: String,
+        entryEntityTag: String,
+        total: Long,
+        callback: (Stage, Long, Long?) -> Unit
+    ): Pair<Repository?, String?> {
+        var changedRepository: Repository? = null
+        val repoCategories: MutableSet<RepoCategoryTemp> = mutableSetOf()
+        val repoAntifeatures: MutableSet<AntiFeatureTemp> = mutableSetOf()
+        val features = context.packageManager.systemAvailableFeatures
+            .asSequence().map { it.name }.toSet() + setOf("android.hardware.touchscreen")
+
+        val mergerFile = Cache.getTemporaryFile(context)
+        try {
+            val unmergedProducts = mutableListOf<IndexProduct>()
+            val unmergedReleases = mutableListOf<Pair<String, List<Release>>>()
+            IndexContentMerger(mergerFile).use { indexMerger ->
+                ProgressInputStream(indexFile.inputStream()) {
+                    callback(Stage.PROCESS, it, total)
+                }.use { progressInputStream ->
+                    IndexV2Parser(
+                        repository.id,
+                        object : IndexV2Parser.Callback {
+                            override fun onRepository(
+                                mirrors: List<String>,
+                                name: String,
+                                description: String,
+                                version: Int,
+                                timestamp: Long,
+                                webBaseUrl: String?,
+                                categories: IdMap<IndexV2.Category>,
+                                antiFeatures: IdMap<IndexV2.AntiFeature>,
+                            ) {
+                                repoCategories.addAll(categories.map {
+                                    RepoCategoryTemp(
+                                        repository.id,
+                                        it.key,
+                                        it.value.name.findLocalized(""),
+                                        it.value.icon.findLocalized(IndexV2.File("")).name,
+                                    )
+                                })
+                                repoAntifeatures.addAll(antiFeatures.map {
+                                    AntiFeatureTemp(
+                                        repository.id,
+                                        it.key,
+                                        it.value.name.findLocalized(""),
+                                        it.value.description.findLocalized(""),
+                                        it.value.icon.findLocalized(IndexV2.File("")).name,
+                                    )
+                                })
+                                changedRepository = repository.update(
+                                    mirrors = mirrors,
+                                    name = name,
+                                    description = description,
+                                    version = version,
+                                    lastModified = lastModified,
+                                    entityTag = entityTag,
+                                    timestamp = timestamp,
+                                    webBaseUrl = webBaseUrl,
+                                    entryLastModified = entryLastModified,
+                                    entryEntityTag = entryEntityTag,
+                                )
+                            }
+
+                            override fun onProduct(product: IndexProduct) {
+                                if (Thread.interrupted()) throw InterruptedException()
+
+                                unmergedProducts += product
+                                if (unmergedProducts.size >= 100) {
+                                    indexMerger.addProducts(unmergedProducts)
+                                    unmergedProducts.clear()
+                                }
+                            }
+
+                            override fun onReleases(
+                                packageName: String,
+                                releases: List<Release>,
+                            ) {
+                                if (Thread.interrupted()) throw InterruptedException()
+
+                                unmergedReleases += Pair(packageName, releases)
+                                if (unmergedReleases.size >= 100) {
+                                    indexMerger.addReleases(unmergedReleases)
+                                    unmergedReleases.clear()
+                                }
+                            }
+                        }
+                    ).parse(progressInputStream)
+
+                    if (Thread.interrupted()) throw InterruptedException()
+
+                    if (unmergedProducts.isNotEmpty()) {
+                        indexMerger.addProducts(unmergedProducts)
+                        unmergedProducts.clear()
+                    }
+                    if (unmergedReleases.isNotEmpty()) {
+                        indexMerger.addReleases(unmergedReleases)
+                        unmergedReleases.clear()
+                    }
+                    var progress = 0
+                    indexMerger.forEach(
+                        repository.id,
+                        100
+                    ) { products, totalCount ->
+                        if (Thread.interrupted()) throw InterruptedException()
+
+                        progress += products.size
+                        callback(
+                            Stage.MERGE,
+                            progress.toLong(),
+                            totalCount.toLong()
+                        )
+                        runBlocking(Dispatchers.IO) {
+                            products.map {
+                                it.apply {
+                                    refreshReleases(features, unstable)
+                                }
+                            }.let { updatedProducts ->
+                                insertProductBatch(updatedProducts)
+                            }
+                        }
+                    }
+                    runBlocking(Dispatchers.IO) {
+                        db.getRepoCategoryTempDao().insert(*repoCategories.toTypedArray())
+                        db.getAntiFeatureTempDao().insert(*repoAntifeatures.toTypedArray())
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("RepositoryUpdater", "Error processing index-v2", e)
+            throw UpdateException(
+                ErrorType.PARSING,
+                "Error processing index-v2: ${e.message}\n${e.cause?.message}",
+                e
+            )
+        } finally {
+            Cache.getIndexV2File(context, repository.id).let {
+                if (it != indexFile) indexFile.copyTo(
+                    it,
+                    true,
+                    BUFFER_SIZE,
+                )
+            }
+            mergerFile.delete()
+        }
+        return Pair(changedRepository, null)
+    }
+
+    private suspend fun insertProductBatch(products: List<IndexProduct>) {
+        db.getProductTempDao().insert(
+            *products.map { it.toV2().asProductTemp() }.toTypedArray()
+        )
+        db.getCategoryTempDao().insert(
+            *products.flatMap {
+                it.categories.distinct().map { category ->
+                    CategoryTemp(
+                        repositoryId = it.repositoryId,
+                        packageName = it.packageName,
+                        name = category,
+                    )
+                }
+            }.toTypedArray()
+        )
+        db.getReleaseTempDao().insert(
+            *products.flatMap { it.releases }.map { it.asReleaseTemp() }.toTypedArray()
+        )
+    }
+
+    private fun validateCertificate(indexEntry: JarEntry?): X509Certificate {
+        val codeSigners = indexEntry?.codeSigners
+        if (codeSigners == null || codeSigners.size != 1) {
+            throw UpdateException(
+                ErrorType.VALIDATION,
+                "Index must be signed by a single code signer"
+            )
+        }
+        val certificates = codeSigners[0].signerCertPath?.certificates.orEmpty()
+        if (certificates.size != 1) {
+            throw UpdateException(
+                ErrorType.VALIDATION,
+                "Index code signer should have only one certificate"
+            )
+        }
+        return certificates[0] as X509Certificate
+    }
+
+    private fun calculateFingerprint(certificate: Certificate): String {
+        val encoded = try {
+            certificate.encoded
+        } catch (e: CertificateEncodingException) {
+            null
+        }
+        return encoded?.let(::calculateFingerprint).orEmpty()
+    }
+
+    private fun calculateFingerprint(key: ByteArray): String {
+        return if (key.size >= 256) {
+            try {
+                val fingerprint = MessageDigest.getInstance("SHA-256").digest(key)
+                val builder = StringBuilder()
+                for (byte in fingerprint) {
+                    builder.append("%02X".format(Locale.US, byte.toInt() and 0xff))
+                }
+                builder.toString()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                ""
+            }
+        } else {
+            ""
+        }
+    }
+
+    private fun commitChanges(
+        workRepository: Repository,
+        fingerprint: String,
+        callback: (Stage, Long, Long?) -> Unit,
+    ): Boolean {
+        val commitRepository = if (workRepository.fingerprint != fingerprint) {
+            if (workRepository.fingerprint.isEmpty()) {
+                workRepository.copy(fingerprint = fingerprint)
+            } else {
+                throw UpdateException(
+                    ErrorType.VALIDATION,
+                    "Certificate fingerprints do not match"
+                )
+            }
+        } else {
+            workRepository
+        }
+        if (Thread.interrupted()) {
+            throw InterruptedException()
+        }
+        callback(Stage.COMMIT, 0, null)
+        runBlocking(Dispatchers.IO) {
+            db.finishTemporary(commitRepository, true)
+        }
+        return true
+    }
+}

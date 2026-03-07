@@ -1,0 +1,550 @@
+package me.voltual.pyrolysis.core.utils
+
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageInstaller
+import android.content.pm.PackageManager
+import android.graphics.Color
+import android.os.Build
+import android.text.SpannableStringBuilder
+import android.text.style.ForegroundColorSpan
+import android.view.ContextThemeWrapper
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
+import me.voltual.pyrolysis.NOTIFICATION_CHANNEL_DEBUG
+import me.voltual.pyrolysis.NOTIFICATION_CHANNEL_DOWNLOADING
+import me.voltual.pyrolysis.NOTIFICATION_CHANNEL_DOWNLOAD_STATS
+import me.voltual.pyrolysis.NOTIFICATION_CHANNEL_INSTALLER
+import me.voltual.pyrolysis.NOTIFICATION_CHANNEL_SYNCING
+import me.voltual.pyrolysis.NOTIFICATION_CHANNEL_VULNS
+import me.voltual.pyrolysis.NOTIFICATION_ID_DEBUG
+import me.voltual.pyrolysis.NOTIFICATION_ID_INSTALLER
+import me.voltual.pyrolysis.NOTIFICATION_ID_SYNCING
+import me.voltual.pyrolysis.NOTIFICATION_ID_VULNS
+import me.voltual.pyrolysis.MainActivity
+import me.voltual.pyrolysis.BBQApplication
+import me.voltual.pyrolysis.R
+import me.voltual.pyrolysis.data.content.Preferences
+import me.voltual.pyrolysis.data.entity.DownloadState
+import me.voltual.pyrolysis.data.entity.ProductItem
+import me.voltual.pyrolysis.data.entity.SyncState
+import me.voltual.pyrolysis.data.entity.ValidationError
+import me.voltual.pyrolysis.feature.store.index.RepositoryUpdater
+import me.voltual.pyrolysis.manager.service.InstallerReceiver
+import me.voltual.pyrolysis.manager.service.installIntent
+import me.voltual.pyrolysis.feature.store.worker.BatchSyncWorker
+import me.voltual.pyrolysis.core.utils.extension.android.Android
+import me.voltual.pyrolysis.core.utils.extension.android.notificationManager
+import me.voltual.pyrolysis.core.utils.extension.resources.getColorFromAttr
+import me.voltual.pyrolysis.core.utils.extension.text.formatSize
+import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+fun Context.displayVulnerabilitiesNotification(
+    productItems: List<ProductItem>,
+) {
+    fun <T> T.applyHack(callback: T.() -> Unit): T = apply(callback)
+    if (productItems.isNotEmpty())
+        notificationManager.notify(
+            NOTIFICATION_ID_VULNS, NotificationCompat
+                .Builder(this, NOTIFICATION_CHANNEL_VULNS)
+                .setSmallIcon(R.drawable.ic_new_releases)
+                .setContentTitle(
+                    getString(
+                        if (productItems.isNotEmpty()) R.string.vulnerabilities_installed_apps
+                        else R.string.no_vulnerabilities_installed_apps
+                    )
+                )
+                .setContentIntent(
+                    PendingIntent.getActivity(
+                        this,
+                        0,
+                        Intent(this, MainActivity::class.java)
+                            .setAction(MainActivity.ACTION_UPDATES)
+                            .putExtra(
+                                MainActivity.EXTRA_UPDATES,
+                                productItems.map { it.packageName }.toTypedArray()
+                            ),
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                )
+                .setStyle(NotificationCompat.InboxStyle().applyHack {
+                    productItems.forEach { productItem ->
+                        val builder = SpannableStringBuilder(productItem.name)
+                        builder.setSpan(
+                            ForegroundColorSpan(Color.BLACK), 0, builder.length,
+                            SpannableStringBuilder.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                        builder.append(' ').append(productItem.version)
+                        addLine(builder)
+                    }
+                })
+                .build()
+        )
+    else notificationManager.cancel(NOTIFICATION_ID_VULNS)
+}
+
+fun Context.buildSyncLine(syncInfo: BatchSyncWorker.SyncProgressInfo): String {
+    return when (syncInfo.state) {
+        SyncState.CONNECTING -> {
+            "${syncInfo.repoName}: ${getString(R.string.connecting)}"
+        }
+
+        SyncState.SYNCING    -> {
+            val progress = syncInfo.progress
+            if (progress != null) {
+                val progressText = when (progress.stage) {
+                    RepositoryUpdater.Stage.DOWNLOAD -> {
+                        if (progress.total >= 1) {
+                            "${progress.read.formatSize()} / ${progress.total.formatSize()}"
+                        } else {
+                            progress.read.formatSize()
+                            //context.getString(R.string.downloading)
+                        }
+                    }
+
+                    RepositoryUpdater.Stage.PROCESS  -> getString(
+                        R.string.processing_FORMAT,
+                        "${progress.percentage}%"
+                    )
+
+                    RepositoryUpdater.Stage.MERGE    -> getString(
+                        R.string.merging_FORMAT,
+                        "${progress.read} / ${progress.total}"
+                    )
+
+                    RepositoryUpdater.Stage.COMMIT   -> getString(R.string.saving_details)
+                }
+                "${syncInfo.repoName}: $progressText"
+            } else {
+                "${syncInfo.repoName}: ${getString(R.string.syncing)}"
+            }
+        }
+
+        else                 -> "${syncInfo.repoName}: ${getString(R.string.syncing)}"
+    }
+}
+
+fun Context.downloadNotificationBuilder(title: String, content: String = "", percent: Int = -1) =
+    NotificationCompat
+        .Builder(this, NOTIFICATION_CHANNEL_DOWNLOADING)
+        .setGroup(NOTIFICATION_CHANNEL_DOWNLOADING)
+        .setSmallIcon(android.R.drawable.stat_sys_download)
+        .setContentTitle(title)
+        .setTicker(title)
+        .setContentText(content)
+        .setOngoing(true)
+        .setSilent(true)
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+        .setProgress(100, percent, percent == -1)
+        .setContentIntent(
+            PendingIntent.getActivity(
+                this, 0,
+                Intent(this, MainActivity::class.java).setAction(MainActivity.ACTION_UPDATES),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+        )
+
+fun Context.downloadStatsNotificationBuilder(total: Int = 1, done: Int = -1) =
+    NotificationCompat
+        .Builder(this, NOTIFICATION_CHANNEL_DOWNLOAD_STATS)
+        .setGroup(NOTIFICATION_CHANNEL_DOWNLOAD_STATS)
+        .setSmallIcon(android.R.drawable.stat_sys_download)
+        .setContentTitle(getString(R.string.download_stats_notification_title))
+        .setTicker(getString(R.string.download_stats_notification_title))
+        .setContentText(getString(R.string.download_stats_notification_pending))
+        .setOngoing(true)
+        .setSilent(true)
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+        .setProgress(total, done, done == -1)
+
+fun Context.installNotificationBuilder() = NotificationCompat
+    .Builder(this, NOTIFICATION_CHANNEL_INSTALLER)
+    .setSmallIcon(android.R.drawable.stat_sys_download_done)
+    .setGroup(NOTIFICATION_CHANNEL_INSTALLER)
+    .setOngoing(true)
+    .setSilent(true)
+    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+    .setCategory(NotificationCompat.CATEGORY_STATUS)
+
+fun Context.reportSyncFail(
+    repoId: Long,
+    repoName: String,
+    error: String,
+    errorType: RepositoryUpdater.ErrorType
+) {
+    val title = getString(
+        R.string.syncing_FORMAT,
+        repoName
+    )
+
+    val builder = NotificationCompat
+        .Builder(this, NOTIFICATION_CHANNEL_SYNCING)
+        .setGroup(NOTIFICATION_CHANNEL_SYNCING)
+        .setSmallIcon(android.R.drawable.stat_sys_warning)
+        .setContentTitle(title)
+        .setContentText(
+            "${
+                getString(
+                    when (errorType) {
+                        RepositoryUpdater.ErrorType.NETWORK    -> R.string.network_error_DESC
+                        RepositoryUpdater.ErrorType.HTTP       -> R.string.http_error_DESC
+                        RepositoryUpdater.ErrorType.VALIDATION -> R.string.validation_index_error_DESC
+                        RepositoryUpdater.ErrorType.PARSING    -> R.string.parsing_index_error_DESC
+                        else                                   -> R.string.unknown_error_DESC // RepositoryUpdater.ErrorType.NONE
+                    }
+                )
+            }\n$error"
+        )
+        .setStyle(
+            NotificationCompat.InboxStyle().also { style ->
+                style.addLine(
+                    getString(
+                        when (errorType) {
+                            RepositoryUpdater.ErrorType.NETWORK    -> R.string.network_error_DESC
+                            RepositoryUpdater.ErrorType.HTTP       -> R.string.http_error_DESC
+                            RepositoryUpdater.ErrorType.VALIDATION -> R.string.validation_index_error_DESC
+                            RepositoryUpdater.ErrorType.PARSING    -> R.string.parsing_index_error_DESC
+                            else                                   -> R.string.unknown_error_DESC // RepositoryUpdater.ErrorType.NONE
+                        }
+                    )
+                )
+                error.split("\n").forEach { style.addLine(it) }
+            }
+        )
+        .setTicker(title)
+        .setOngoing(false)
+        .setSilent(true)
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .setContentIntent(
+            PendingIntent.getActivity(
+                this, 0,
+                Intent(this, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+        )
+
+    if (ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    ) notificationManager.notify(
+        "$NOTIFICATION_CHANNEL_SYNCING$repoId".hashCode(),
+        builder.build()
+    )
+}
+
+fun Context.notifySensitivePermissionsChanged(
+    packageName: String,
+    label: String,
+    newPermissions: Set<String>
+) {
+    val intent = Intent(this, MainActivity::class.java).apply {
+        action = Intent.ACTION_SHOW_APP_INFO
+        putExtra(Intent.EXTRA_PACKAGE_NAME, packageName)
+    }
+
+    val pendingIntent = PendingIntent.getActivity(
+        this,
+        packageName.hashCode(),
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_INSTALLER)
+        .setSmallIcon(android.R.drawable.stat_sys_warning)
+        .setContentTitle(label)
+        .setContentText(getString(R.string.sensitive_permission_detected_FORMAT, label))
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .setAutoCancel(true)
+        .setContentIntent(pendingIntent)
+        .setStyle(
+            NotificationCompat.InboxStyle().also { style ->
+                style.addLine(getString(R.string.sensitive_permission_detected_list))
+                newPermissions.forEach { style.addLine("• $it") }
+            }
+        )
+        .build()
+
+    notificationManager.notify(
+        "SENSITIVE-$packageName",
+        NOTIFICATION_ID_INSTALLER + 99,
+        notification
+    )
+}
+
+fun Context.notifyDuplicateRepoAddress(
+    address: String,
+) {
+    val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_SYNCING)
+        .setSmallIcon(android.R.drawable.ic_dialog_alert)
+        .setContentTitle(getString(R.string.duplicate_repo_address_title))
+        .setContentText(getString(R.string.duplicate_repo_address_FORMAT, address))
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .setAutoCancel(true)
+        .build()
+
+    notificationManager.notify(
+        "Duplicate-$address",
+        NOTIFICATION_ID_SYNCING - 1,
+        notification
+    )
+}
+
+fun NotificationCompat.Builder.updateWithError(
+    context: Context,
+    state: DownloadState.Error,
+    errorType: ValidationError,
+) = apply {
+    setSmallIcon(android.R.drawable.stat_sys_warning)
+    setContentTitle(
+        context.getString(
+            R.string.downloading_error_FORMAT,
+            "${state.name} (${state.version})"
+        )
+    )
+
+    setContentText(
+        context.getString(
+            R.string.validation_error_FORMAT,
+            when (errorType) {
+                ValidationError.INTEGRITY            -> context.getString(R.string.integrity_check_failed)
+                ValidationError.HASHING              -> context.getString(R.string.integrity_check_hashing)
+                ValidationError.FORMAT               -> context.getString(R.string.file_format_error_DESC)
+                ValidationError.METADATA             -> context.getString(R.string.invalid_metadata_error)
+                ValidationError.SIGNATURE            -> context.getString(R.string.invalid_signature_error_DESC)
+                ValidationError.PERMISSIONS          -> context.getString(R.string.invalid_permissions_error_DESC)
+                ValidationError.FILE_SIZE            -> context.getString(R.string.file_size_error_DESC)
+                ValidationError.SENSITIVE_PERMISSION -> context.getString(R.string.sensitive_permission_error_DESC)
+                ValidationError.UNKNOWN              -> context.getString(R.string.unknown_error_DESC)
+                ValidationError.CONNECTION           -> HttpStatusCode.fromValue(state.resultCode)
+                    .let {
+                        context.getString(
+                            R.string.connection_error_FORMAT,
+                            it.value.toString(), it.description
+                        )
+                    }
+
+                ValidationError.NONE                 -> context.getString(R.string.no_validation_error)
+            }
+        )
+    )
+}
+
+/**
+ * Notifies user of installer outcome. This can be success, error, or a request for user action
+ * if installation cannot proceed automatically.
+ *
+ * @param intent provided by PackageInstaller to the callback service/activity.
+ */
+fun notifyStatus(context: Context, intent: Intent?) {
+
+    if (Android.sdk(Build.VERSION_CODES.O)) {
+        NotificationChannel(
+            NOTIFICATION_CHANNEL_INSTALLER,
+            context.getString(R.string.install), NotificationManager.IMPORTANCE_LOW
+        )
+            .let(context.notificationManager::createNotificationChannel)
+    }
+
+    val scope = CoroutineScope(Dispatchers.IO)
+    // unpack from intent
+    val status = intent?.getIntExtra(PackageInstaller.EXTRA_STATUS, -1)
+    val sessionId = intent?.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1) ?: 0
+
+    // get package information from session
+    val sessionInstaller = context.packageManager.packageInstaller
+    val session = if (sessionId > 0) sessionInstaller.getSessionInfo(sessionId) else null
+
+    val packageName =
+        session?.appPackageName ?: intent?.getStringExtra(PackageInstaller.EXTRA_PACKAGE_NAME)
+    val message = intent?.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
+    val installerAction = intent?.getStringExtra(InstallerReceiver.KEY_ACTION)
+
+    // get application name for notifications
+    val appLabel = session?.appLabel ?: intent?.getStringExtra(InstallerReceiver.KEY_PACKAGE_LABEL)
+    ?: try {
+        if (packageName != null) context.packageManager.getApplicationLabel(
+            context.packageManager.getApplicationInfo(
+                packageName,
+                PackageManager.GET_META_DATA
+            )
+        ) else null
+    } catch (_: Exception) {
+        null
+    }
+
+    val notificationTag = "${InstallerReceiver.NOTIFICATION_TAG_PREFIX}$packageName"
+
+    // start building
+    val builder = NotificationCompat
+        .Builder(context, NOTIFICATION_CHANNEL_INSTALLER)
+        .setAutoCancel(true)
+
+    when (status) {
+        PackageInstaller.STATUS_PENDING_USER_ACTION -> {
+            // request user action with "downloaded" notification that triggers a working prompt
+            context.notificationManager.notify(
+                notificationTag, NOTIFICATION_ID_INSTALLER, builder
+                    .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                    .setContentIntent(installIntent(context, intent))
+                    .setContentTitle(context.getString(R.string.downloaded_FORMAT, appLabel))
+                    .setContentText(context.getString(R.string.tap_to_install_DESC))
+                    .build()
+            )
+        }
+
+        PackageInstaller.STATUS_SUCCESS             -> {
+            if (installerAction == InstallerReceiver.ACTION_UNINSTALL) {
+                // remove any notification for this app
+                context.notificationManager.cancel(notificationTag, NOTIFICATION_ID_INSTALLER)
+            } else {
+                packageName?.let {
+                    scope.launch {
+                        BBQApplication.db.getInstallTaskDao().delete(it)
+                    }
+                }
+                val notification = builder
+                    .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                    .setContentTitle(context.getString(R.string.installed))
+                    .setContentText(appLabel)
+                    .apply {
+                        if (!Preferences[Preferences.Key.KeepInstallNotification])
+                            setTimeoutAfter(InstallerReceiver.INSTALLED_NOTIFICATION_TIMEOUT)
+                        else
+                            setContentIntent(
+                                PendingIntent.getActivity(
+                                    context,
+                                    0,
+                                    Intent(context, MainActivity::class.java)
+                                        .setAction(Intent.ACTION_VIEW)
+                                        .setData("market://details?id=$packageName".toUri()),
+                                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                                )
+                            )
+                    }
+                    .build()
+                context.notificationManager.notify(
+                    notificationTag,
+                    NOTIFICATION_ID_INSTALLER,
+                    notification
+                )
+            }
+        }
+
+        PackageInstaller.STATUS_FAILURE_ABORTED     -> {
+            // do nothing if user cancels
+        }
+
+        else                                        -> {
+            // problem occurred when installing/uninstalling package
+            // STATUS_FAILURE, STATUS_FAILURE_STORAGE ,STATUS_FAILURE_BLOCKED, STATUS_FAILURE_INCOMPATIBLE, STATUS_FAILURE_CONFLICT, STATUS_FAILURE_INVALID
+            packageName?.let { scope.launch { BBQApplication.db.getInstallTaskDao().delete(it) } }
+            val notification = builder
+                .setSmallIcon(android.R.drawable.stat_notify_error)
+                .setContentTitle(context.getString(R.string.installing_error_FORMAT, appLabel))
+                .setContentText(
+                    message ?: context.getString(
+                        when (status) {
+                            PackageInstaller.STATUS_FAILURE_STORAGE
+                                 -> R.string.installing_error_storage_DESC
+
+                            PackageInstaller.STATUS_FAILURE_BLOCKED
+                                 -> R.string.installing_error_blocked_DESC
+
+                            PackageInstaller.STATUS_FAILURE_INCOMPATIBLE
+                                 -> R.string.installing_error_incompatible_DESC
+
+                            PackageInstaller.STATUS_FAILURE_CONFLICT
+                                 -> R.string.installing_error_conflict_DESC
+
+                            PackageInstaller.STATUS_FAILURE_TIMEOUT
+                                 -> R.string.installing_error_timeout_DESC
+
+                            PackageInstaller.STATUS_FAILURE_INVALID
+                                 -> R.string.installing_error_invalid_DESC
+
+                            else -> R.string.installing_error_unknown_DESC // PackageInstaller.STATUS_FAILURE & unknown
+                        }
+                    )
+                )
+                .build()
+            context.notificationManager.notify(
+                notificationTag,
+                NOTIFICATION_ID_INSTALLER,
+                notification
+            )
+        }
+    }
+}
+
+fun notifyDebugStatus(context: Context, title: String, message: String) =
+    if (context.packageName.endsWith("debug")) {
+        if (Android.sdk(Build.VERSION_CODES.O)) {
+            NotificationChannel(
+                NOTIFICATION_CHANNEL_DEBUG,
+                context.getString(R.string.notify_channel_debug), NotificationManager.IMPORTANCE_LOW
+            )
+                .let(context.notificationManager::createNotificationChannel)
+        }
+
+        val notificationTag = "${InstallerReceiver.NOTIFICATION_TAG_PREFIX}-debug"
+
+        // start building
+        val builder = NotificationCompat
+            .Builder(context, NOTIFICATION_CHANNEL_DEBUG)
+            .setAutoCancel(false)
+
+        val notification = builder
+            .setSmallIcon(android.R.drawable.stat_notify_error)
+            .setContentTitle(title)
+            .setContentText(message)
+            .build()
+        context.notificationManager.notify(
+            notificationTag,
+            NOTIFICATION_ID_DEBUG,
+            notification
+        )
+    } else {
+    }
+
+fun notifyFinishedInstall(context: Context, packageName: String) {
+    val notificationTag = "${InstallerReceiver.NOTIFICATION_TAG_PREFIX}$packageName"
+
+    val notification = NotificationCompat
+        .Builder(context, NOTIFICATION_CHANNEL_INSTALLER)
+        .setAutoCancel(true)
+        .setSmallIcon(android.R.drawable.stat_sys_download_done)
+        .setContentTitle(context.getString(R.string.installed))
+        .setContentText(
+            try {
+                context.packageManager.getApplicationLabel(
+                    context.packageManager.getApplicationInfo(
+                        packageName,
+                        PackageManager.GET_META_DATA
+                    )
+                )
+            } catch (_: Exception) {
+                null
+            }
+        )
+        .apply {
+            if (!Preferences[Preferences.Key.KeepInstallNotification])
+                setTimeoutAfter(InstallerReceiver.INSTALLED_NOTIFICATION_TIMEOUT)
+        }
+        .build()
+    context.notificationManager.notify(
+        notificationTag,
+        NOTIFICATION_ID_INSTALLER,
+        notification
+    )
+}

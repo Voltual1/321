@@ -1,0 +1,142 @@
+[versions]
+pyrolysis-agp = "8.13.0"
+pyrolysis-kotlin = "2.2.21"
+pyrolysis-compose-bom = "2026.01.00"
+pyrolysis-navigation = "2.9.6"
+
+# 功能库
+desugar = "2.0.3"
+material = "1.9.0"
+okhttp = "5.3.2"
+photoview = "2.3.0"
+coil = "3.3.0"
+coroutines = "1.10.2"
+imagepicker = "2.1"
+ijkplayer = "0.0.2"
+palette = "1.0.0"
+fragment = "1.8.5"
+pyrolysis-room = "2.7.2"
+datastore = "1.1.7"
+biometric = "1.2.0-alpha05"
+koin = "4.1.1"
+koin-annotations = "2.3.1"
+pyrolysis-ktor = "3.3.3"
+pyrolysis-serialization = "1.9.0"
+libsu = "6.0.0"
+navigation3 = "1.0.0"
+shizuku = "13.1.5"
+shizuku-hidden = "4.4.0"
+shizuku-refine = "4.4.0"    
+tink = "1.20.0"
+protobuf = "4.32.1"
+vico = "2.3.6"
+zxing = "3.5.4"
+simple-storage = "2.2.0"
+work = "2.11.0"
+# 插件版本
+protobuf-plugin = "0.9.5"
+markdown = "0.7.3"
+
+# --- Neo Store 兼容层 ---
+kotlinx-datetime = "0.7.1"
+kotlinx-collections = "0.4.0"
+html-converter = "1.1.0"
+
+[libraries]
+# 基础
+android-desugar = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar" }
+google-material = { module = "com.google.android.material:material", version.ref = "material" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+photoview = { module = "com.github.chrisbanes:PhotoView", version.ref = "photoview" }
+work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
+biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
+
+# Compose
+compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "pyrolysis-compose-bom" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose" }
+androidx-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "pyrolysis-navigation" }
+compose-navigation3 = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
+compose-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
+
+libsu-core = { module = "com.github.topjohnwu.libsu:core", version.ref = "libsu" }
+
+# 图片与异步
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+imagepicker = { module = "com.github.dhaval2404:imagepicker", version.ref = "imagepicker" }
+
+shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }
+shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref = "shizuku" }
+shizuku-hidden = { module = "dev.rikka.hidden:stub", version.ref = "shizuku-hidden" }
+shizuku-refine = { module = "dev.rikka.tools.refine:runtime", version.ref = "shizuku-refine" }
+
+
+simple-storage = { module = "com.anggrayudi:storage", version.ref = "simple-storage" }
+
+# 媒体与 UI
+ijkplayer = { module = "com.sdtv.haikan:ijkplayer", version.ref = "ijkplayer" }
+androidx-palette = { module = "androidx.palette:palette-ktx", version.ref = "palette" }
+markdown = { module = "org.jetbrains:markdown", version.ref = "markdown" }
+
+# 包含 FragmentManager 和核心逻辑
+fragment = { module = "androidx.fragment:fragment-ktx", version.ref = "fragment" }
+
+# 存储
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "pyrolysis-room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "pyrolysis-room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "pyrolysis-room" }
+datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+datastore-core = { module = "androidx.datastore:datastore", version.ref = "datastore" }
+
+vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
+vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
+
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
+
+# 注入
+koin-android-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-workmanager = { module = "io.insert-koin:koin-androidx-workmanager",version.ref = "koin" }
+koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koin-annotations" }
+koin-ksp-compiler = { module = "io.insert-koin:koin-ksp-compiler", version.ref = "koin-annotations" }
+koin-startup = { module = "io.insert-koin:koin-androidx-startup",version.ref = "koin"}
+compose-adaptive = { module = "androidx.compose.material3.adaptive:adaptive" }
+compose-adaptive-layout = { module = "androidx.compose.material3.adaptive:adaptive-layout" }
+compose-adaptive-navigation = { module = "androidx.compose.material3.adaptive:adaptive-navigation" }
+
+# 网络与序列化
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "pyrolysis-ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "pyrolysis-ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "pyrolysis-ktor" }
+ktor-serialization-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "pyrolysis-ktor" }
+ktor-io = { module = "io.ktor:ktor-io", version.ref = "pyrolysis-ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "pyrolysis-ktor" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "pyrolysis-serialization" }
+
+# 加密与 Protobuf
+tink-android = { module = "com.google.crypto.tink:tink-android", version.ref = "tink" }
+protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref = "protobuf" }
+protoc-artifact = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }
+
+# --- Neo Store 依赖 ---
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "kotlinx-collections" }
+compose-html-converter = { module = "be.digitalia.compose.htmlconverter:htmlconverter", version.ref = "html-converter" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "pyrolysis-agp" }
+android-library = { id = "com.android.library", version.ref = "pyrolysis-agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "pyrolysis-kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "pyrolysis-kotlin" }
+ksp = { id = "com.google.devtools.ksp", version = "2.2.21-2.0.5" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "pyrolysis-kotlin" }
+protobuf = { id = "com.google.protobuf", version.ref = "protobuf-plugin" }
+shizuku-refine = { id = "dev.rikka.tools.refine", version.ref = "shizuku-refine" }
