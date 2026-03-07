@@ -57,7 +57,7 @@ android {
         variant.outputs.all {
             val output = this as com.android.build.gradle.internal.api.ApkVariantOutputImpl
             val abi = output.getFilter(com.android.build.OutputFile.ABI) ?: "universal"
-            output.outputFileName = "Pyrolysis${variant.versionName}-$abi-${variant.buildType.name}.apk"
+            output.outputFileName = "A321${variant.versionName}-$abi-${variant.buildType.name}.apk"
         }
     }
 
