@@ -61,7 +61,7 @@ import me.voltual.pyrolysis.core.utils.UpdateChecker
 import org.koin.android.ext.android.inject
 import java.io.IOException
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
     private val agreementDataStore: UserAgreementDataStore by inject()
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -183,17 +183,7 @@ class MainActivity : AppCompatActivity() {
 /** 定义所有顶层路由（对应抽屉中独立返回堆栈的页面）*/
 val topLevelRoutes: Set<NavKey> = setOf(
     Home,
-    ResourcePlaza(isMyResource = false),   // 资源广场
-    Community,
-    MessageCenter,
-    RankingList,
-    CreateAppRelease,
-    LogViewer,
-    StoreManager,
-    Download,
-    UpdateSettings,
-    ThemeCustomize,
-    SignInSettings
+    ThemeCustomize
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -301,20 +291,6 @@ isLoggedIn.value = credentials.userId != 0L
                             }
                         },
                         actions = {
-                            if (currentRoute != Login) {
-                                IconButton(onClick = {
-                                    // Search 需要参数，但默认搜索全部
-                                    navigator.navigate(Search(userId = null, nickname = null))
-                                }) {
-                                    Icon(Icons.Default.Search, "搜索", tint = MaterialTheme.colorScheme.onSurface)
-                                }
-                                IconButton(onClick = { navigator.navigate(CreatePost) }) {
-                                    Icon(Icons.Default.Add, "发帖", tint = MaterialTheme.colorScheme.onSurface)
-                                }
-                                IconButton(onClick = { navigator.navigate(BrowseHistory) }) {
-                                    Icon(Icons.Default.History, "浏览历史", tint = MaterialTheme.colorScheme.onSurface)
-                                }
-                            }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.surface,
@@ -395,6 +371,7 @@ fun CheckForUpdates(snackbarHostState: SnackbarHostState) {
         }
     }
 }
+}
 
 fun restartMainActivity(context: Context) {
     val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
@@ -407,7 +384,6 @@ fun restartMainActivity(context: Context) {
         )
         context.startActivity(it, options.toBundle())
     }
-}
 }
 
 @Composable

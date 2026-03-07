@@ -31,8 +31,8 @@ object UpdateSettingsDataStore {
         }
 
 suspend fun setAutoCheckUpdates(value: Boolean) {
-    BBQApplication.instance.applicationContext.updateSettingsDataStore.edit { 
+/*    BBQApplication.instance.applicationContext.updateSettingsDataStore.edit { 
         it[AUTO_CHECK_UPDATES] = value
-    }
+    }*/
 }
 }
