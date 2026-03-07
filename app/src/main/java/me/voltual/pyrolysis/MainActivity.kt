@@ -321,7 +321,7 @@ fun CheckForUpdates(snackbarHostState: SnackbarHostState) {
     val coroutineScope = rememberCoroutineScope()
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var showDialog by remember { mutableStateOf(false) }
-
+/*
     LaunchedEffect(Unit) {
         val autoCheckUpdates = UpdateSettingsDataStore.autoCheckUpdates.first()
         if (autoCheckUpdates) {
@@ -344,7 +344,7 @@ fun CheckForUpdates(snackbarHostState: SnackbarHostState) {
                 }
             }
         }
-    }
+    }*/
 
     updateInfo?.let { info ->
         if (showDialog) {
