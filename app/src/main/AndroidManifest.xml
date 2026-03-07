@@ -46,23 +46,6 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".HeartbeatService" />
-
-        <service
-            android:name="androidx.work.impl.foreground.SystemForegroundService"
-            android:foregroundServiceType="dataSync"
-            android:exported="false"
-            tools:node="merge" />
-            
-        <receiver
-    android:name=".manager.service.ActionReceiver"
-    android:exported="false">
-</receiver>            
-<receiver
-    android:name=".manager.service.InstallerReceiver"
-    android:exported="false">
-</receiver>            
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

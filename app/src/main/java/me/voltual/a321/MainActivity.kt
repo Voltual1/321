@@ -96,11 +96,6 @@ class MainActivity : ComponentActivity() {
 
                 // 协议状态监听
                 val userAccepted by agreementDataStore.isUserAgreementAccepted.collectAsState(initial = true)
-                val xiaoquAccepted by agreementDataStore.isXiaoquAccepted.collectAsState(initial = true)
-                val sineAgreementAccepted by agreementDataStore.isSineAgreementAccepted.collectAsState(initial = true)
-                val sinePrivacyAccepted by agreementDataStore.isSinePrivacyAccepted.collectAsState(initial = true)
-                val lingAccepted by agreementDataStore.isLingAgreementAccepted.collectAsState(initial = true)
-
                 var isAgreementDataLoaded by remember { mutableStateOf(false) }
                 LaunchedEffect(Unit) {
                     delay(150)
@@ -108,8 +103,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val showAgreementDialog = isAgreementDataLoaded && !(
-                    userAccepted && xiaoquAccepted &&
-                    sineAgreementAccepted && sinePrivacyAccepted && lingAccepted
+                    userAccepted 
                 )
 
 

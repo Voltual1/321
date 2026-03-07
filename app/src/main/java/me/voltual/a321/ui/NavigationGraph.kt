@@ -1,4 +1,11 @@
-// Copyright (C) 2025 Voltual
+//Copyright (C) 2025 Voltual
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+//（或任意更新的版本）的条款重新分发和/或修改它。
+//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.a321.ui
 
 import android.app.Activity
@@ -19,6 +26,7 @@ import me.voltual.a321.core.ui.components.IDMTransferDialog
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.*
 import androidx.navigation3.ui.NavDisplay
+import me.voltual.a321.core.ui.theme.ThemeCustomizeScreen
 import org.koin.androidx.compose.koinViewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
@@ -68,6 +76,10 @@ fun BBQNavDisplay(
         entryProvider = { key ->
             when (key) {
                 is Home -> NavEntry(key) {
+                }
+                
+                is ThemeCustomize -> NavEntry(key) {
+                    ThemeCustomizeScreen(modifier = Modifier.fillMaxSize())
                 }
 
                 // 保底逻辑
