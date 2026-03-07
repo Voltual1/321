@@ -207,14 +207,6 @@ fun MainScreenContent(
     val drawerHeaderBackgroundUri = if (useDarkTheme) darkBgUri else lightBgUri
 
     val isLoggedIn = remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        val credentials = AuthManager.getCredentials(context).first()
-        // 逻辑：如果 userId 不等于 0，则认为已登录
-        isLoggedIn.value = credentials.userId != 0L
-        if (isLoggedIn.value) {
-//            tryAutoLogin(credentials.username, credentials.password, context, navigator, snackbarHostState)
-        }
-    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
