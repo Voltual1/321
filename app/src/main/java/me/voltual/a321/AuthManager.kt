@@ -51,53 +51,18 @@ object AuthManager {
 
     suspend fun saveCredentials(
         context: Context,
-        username: String,
-        password: String,
         token: String,
-        userId: Long
     ) {
         context.credentialsStore.updateData { current ->
             current.toBuilder()
-                .setUsername(username)
-                .setPassword(password)
                 .setToken(token)
-                .setUserId(userId)
-                // 如果设备 ID 为空则生成一个新的
-                .setDeviceId(current.deviceId.ifEmpty { generateDeviceId() })
                 .build()
         }
-    }
-
-    suspend fun saveSineMarketToken(context: Context, token: String) {
-        context.credentialsStore.updateData { it.toBuilder().setSineMarketToken(token).build() }
-    }
-
-    suspend fun saveSineOpenMarketToken(context: Context, token: String) {
-        context.credentialsStore.updateData { it.toBuilder().setSineOpenMarketToken(token).build() }
-    }
-
-    suspend fun saveLingMarketToken(context: Context, token: String) {
-        context.credentialsStore.updateData { it.toBuilder().setLingMarketToken(token).build() }
-    }
+    }    
 
     // --- 2. 读取逻辑 ---
 
-    fun getCredentials(context: Context): Flow<UserCredentials> = context.credentialsStore.data
-
-    fun getSineMarketToken(context: Context): Flow<String> = 
-        getCredentials(context).map { it.sineMarketToken }
-
-    fun getSineOpenMarketToken(context: Context): Flow<String> = 
-        getCredentials(context).map { it.sineOpenMarketToken }
-
-    fun getLingMarketToken(context: Context): Flow<String> = 
-        getCredentials(context).map { it.lingMarketToken }
-
-    fun getUserId(context: Context): Flow<Long> = 
-        getCredentials(context).map { it.userId }
-
-    fun getDeviceId(context: Context): Flow<String> = 
-        getCredentials(context).map { it.deviceId.ifEmpty { generateDeviceId() } }
+    fun getCredentials(context: Context): Flow<UserCredentials> = context.credentialsStore.data       
 
     // --- 3. 清理逻辑 ---
 
