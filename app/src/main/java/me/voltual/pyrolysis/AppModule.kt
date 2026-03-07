@@ -19,13 +19,13 @@ import me.voltual.pyrolysis.ui.community.HotPostsViewModel
 import me.voltual.pyrolysis.data.DeviceNameDataStore
 import me.voltual.pyrolysis.ui.user.UserProfileViewModel
 import me.voltual.pyrolysis.ui.community.MyLikesViewModel
-import me.voltual.pyrolysis.ui.payment.PaymentViewModel
+//import me.voltual.pyrolysis.ui.payment.PaymentViewModel
 import me.voltual.pyrolysis.ui.user.MyReviewsViewModel
 import me.voltual.pyrolysis.feature.store.worker.workmanagerModule
 import me.voltual.pyrolysis.ui.log.LogViewModel
 import me.voltual.pyrolysis.ui.user.UserListViewModel
 import me.voltual.pyrolysis.ui.settings.PrefsVM
-import me.voltual.pyrolysis.ui.message.MessageViewModel
+//import me.voltual.pyrolysis.ui.message.MessageViewModel
 import me.voltual.pyrolysis.ui.community.PostCreateViewModel
 import me.voltual.pyrolysis.ui.plaza.*
 import me.voltual.pyrolysis.ui.player.PlayerViewModel
@@ -42,7 +42,7 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import me.voltual.pyrolysis.ui.community.BrowseHistoryViewModel
 import me.voltual.pyrolysis.ui.community.PostDetailViewModel
-import me.voltual.pyrolysis.ui.rank.RankingListViewModel
+//import me.voltual.pyrolysis.ui.rank.RankingListViewModel
 import me.voltual.pyrolysis.ui.settings.update.UpdateSettingsViewModel
 import me.voltual.pyrolysis.ui.home.HomeViewModel
 import me.voltual.pyrolysis.data.UserFilterDataStore
@@ -59,7 +59,7 @@ val appModule = module {
     viewModel { HotPostsViewModel() }
     viewModel { MyLikesViewModel(androidApplication()) }
     viewModel { LogViewModel(androidApplication()) }
-    viewModel { MessageViewModel(androidApplication()) }   
+//    viewModel { MessageViewModel(androidApplication()) }   
     viewModel { AppDetailComposeViewModel(androidApplication(), get()) }
     
     viewModel { AppReleaseViewModel(androidApplication()) }
@@ -73,14 +73,14 @@ val appModule = module {
     viewModel { UserListViewModel(androidApplication()) }
     viewModel { PostCreateViewModel(androidApplication()) }
     viewModel { MyPostsViewModel(get()) }
-    viewModel { PaymentViewModel(androidApplication()) }
+//    viewModel { PaymentViewModel(androidApplication()) }
     viewModel { VersionListViewModel(androidApplication(), get()) }
     viewModel { UserDetailViewModel(androidApplication()) }
     viewModel { StoreManagerViewModel(androidApplication()) }
     
     viewModel { BrowseHistoryViewModel(androidApplication()) }
     viewModel { PostDetailViewModel(androidApplication()) }
-    viewModel { RankingListViewModel() }
+//    viewModel { RankingListViewModel() }
     viewModel { UpdateSettingsViewModel() }
     viewModel { SignInSettingsViewModel() }
     viewModel { HomeViewModel() }

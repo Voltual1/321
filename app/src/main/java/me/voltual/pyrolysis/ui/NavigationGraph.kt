@@ -29,16 +29,16 @@ import me.voltual.pyrolysis.core.ui.components.IDMTransferDialog
 import me.voltual.pyrolysis.ui.home.*
 import me.voltual.pyrolysis.ui.log.LogScreen
 import me.voltual.pyrolysis.ui.log.LogViewModel
-import me.voltual.pyrolysis.ui.message.MessageCenterScreen
-import me.voltual.pyrolysis.ui.message.MessageViewModel
-import me.voltual.pyrolysis.ui.payment.PaymentCenterScreen
-import me.voltual.pyrolysis.ui.payment.PaymentType
-import me.voltual.pyrolysis.ui.payment.PaymentViewModel
+//import me.voltual.pyrolysis.ui.message.MessageCenterScreen
+//import me.voltual.pyrolysis.ui.message.MessageViewModel
+//import me.voltual.pyrolysis.ui.payment.PaymentCenterScreen
+//import me.voltual.pyrolysis.ui.payment.PaymentType
+//import me.voltual.pyrolysis.ui.payment.PaymentViewModel
 import me.voltual.pyrolysis.ui.player.PlayerScreen
 import me.voltual.pyrolysis.ui.player.PlayerViewModel
 import me.voltual.pyrolysis.ui.settings.repos.PrefsReposPage
 import me.voltual.pyrolysis.ui.plaza.*
-import me.voltual.pyrolysis.ui.rank.RankingListScreen
+//import me.voltual.pyrolysis.ui.rank.RankingListScreen
 import me.voltual.pyrolysis.ui.search.SearchScreen
 import me.voltual.pyrolysis.ui.search.SearchViewModel
 import me.voltual.pyrolysis.ui.settings.signin.SignInSettingsScreen
@@ -390,65 +390,13 @@ fun BBQNavDisplay(
                 }
 
                 is MessageCenter -> NavEntry(key) {
-                    val navigator = LocalNavigator.current
-                    val viewModel: MessageViewModel = koinViewModel()
-                    MessageCenterScreen(
-                        viewModel = viewModel,
-                        onMessageClick = { postId -> navigator.navigate(PostDetail(postId)) },
-                        modifier = Modifier.fillMaxSize()
-                    )
                 }
 
                 is Billing -> NavEntry(key) {
                     val viewModel: BillingViewModel = koinViewModel()
                     LaunchedEffect(Unit) { viewModel.loadBilling() }
                     BillingScreen(viewModel = viewModel)
-                }
-
-                is PaymentCenterAdvanced -> NavEntry(key) {
-                    val viewModel: PaymentViewModel = koinViewModel()
-                    viewModel.setPaymentInfo(type = PaymentType.POST_REWARD, locked = false)
-                    PaymentCenterScreen(
-                        viewModel = viewModel,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                is PaymentForApp -> NavEntry(key) {
-                    val viewModel: PaymentViewModel = koinViewModel()
-                    viewModel.setPaymentInfo(
-                        type = PaymentType.APP_PURCHASE,
-                        appId = key.appId,
-                        appName = key.appName,
-                        versionId = key.versionId,
-                        price = key.price,
-                        iconUrl = key.iconUrl,
-                        previewContent = key.previewContent,
-                        locked = true
-                    )
-                    PaymentCenterScreen(
-                        viewModel = viewModel,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                is PaymentForPost -> NavEntry(key) {
-                    val viewModel: PaymentViewModel = koinViewModel()
-                    viewModel.setPaymentInfo(
-                        type = PaymentType.POST_REWARD,
-                        postId = key.postId,
-                        postTitle = key.postTitle,
-                        previewContent = key.previewContent,
-                        authorName = key.authorName,
-                        authorAvatar = key.authorAvatar,
-                        postTime = key.postTime,
-                        locked = false
-                    )
-                    PaymentCenterScreen(
-                        viewModel = viewModel,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+                }                
 
                 is UpdateSettings -> NavEntry(key) {
                     UpdateSettingsScreen(snackbarHostState = snackbarHostState)
@@ -468,10 +416,6 @@ fun BBQNavDisplay(
 
                 is FollowingPosts -> NavEntry(key) {
                     FollowingPostsScreen(snackbarHostState = snackbarHostState)
-                }
-
-                is RankingList -> NavEntry(key) {
-                    RankingListScreen()
                 }
 
                 is Player -> NavEntry(key) {
