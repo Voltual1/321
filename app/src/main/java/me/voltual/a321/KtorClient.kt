@@ -133,6 +133,8 @@ private suspend inline fun <reified T> safeApiCall(block: suspend () -> HttpResp
     }
 
     interface ApiService {
+    
+    suspend fun getLatestRelease(): Result<UpdateInfo>
         
     }
 
@@ -142,6 +144,7 @@ private suspend inline fun <reified T> safeApiCall(block: suspend () -> HttpResp
           override suspend fun getLatestRelease(): Result<UpdateInfo> {
     return safeApiCall {
         httpClient.get(GET_LATEST_RELEASE_URL).body()
+    }
     }        
         
     
