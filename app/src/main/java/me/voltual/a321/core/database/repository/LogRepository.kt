@@ -12,6 +12,7 @@ package me.voltual.a321.core.database.repository
 
 import me.voltual.a321.BBQApplication
 import me.voltual.a321.core.database.dao.LogDao
+import me.voltual.a321.core.database.entity.LogEntry
 import org.koin.core.annotation.Single
 
 /**

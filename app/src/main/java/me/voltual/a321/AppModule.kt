@@ -13,8 +13,12 @@ import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import me.voltual.a321.data.UserAgreementDataStore
+import me.voltual.a321.core.database.*
+import me.voltual.a321.core.database.dao.*
 
 val appModule = module {
     
-    single { UserAgreementDataStore(androidContext()) }        
+    single { UserAgreementDataStore(androidContext()) }  
+    single { BBQApplication.instance.database }
+    single { get<AppDatabase>().logDao() }      
 }
