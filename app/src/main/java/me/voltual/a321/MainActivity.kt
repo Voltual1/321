@@ -286,7 +286,7 @@ fun MainScreenContent(
                 val currentBackStack = navigationState.backStacks[currentTopLevelRoute] 
                     ?: navigationState.backStacks[navigationState.startRoute]!!
                 
-                Box(modifier = Modifier.padding(innerPadding)) {
+                Box(modifier = Modifier.padding(innerPadding).roundScreenPadding()) {
                     BBQNavDisplay(
                         backStack = currentBackStack,
                         onBack = { navigator.goBack() },
