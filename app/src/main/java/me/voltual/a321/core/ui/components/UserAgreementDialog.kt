@@ -49,11 +49,7 @@ fun UserAgreementDialog(
     // 协议列表，已加入灵应用商店协议
     val agreements = remember {
         listOf(
-            AgreementItem("《浊燃 用户协议》", R.raw.useragreement),
-            AgreementItem("《小趣空间用户协议》", R.raw.xiaoquuseragreement),
-            AgreementItem("《弦-应用商店用户协议》", R.raw.sineuseragreement),
-            AgreementItem("《弦-应用商店隐私政策》", R.raw.sineprivacypolicy),
-            AgreementItem("《灵应用商店用户协议》", R.raw.linguseragreement) // 新增
+            AgreementItem("《 用户协议》", R.raw.useragreement)
         )
     }
 
@@ -192,9 +188,5 @@ private fun loadRawResourceText(context: android.content.Context, resId: Int): S
 private suspend fun saveAgreement(ds: UserAgreementDataStore, index: Int) {
     when (index) {
         0 -> ds.acceptUserAgreement()
-        1 -> ds.acceptXiaoquAgreement()
-        2 -> ds.acceptSineAgreement()
-        3 -> ds.acceptSinePrivacy()
-        4 -> ds.acceptLingAgreement() // 新增索引 6 的保存逻辑
     }
 }
