@@ -1,3 +1,11 @@
+//Copyright (C) 2025 Voltual
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+//（或任意更新的版本）的条款重新分发和/或修改它。
+//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.a321.ui
 
 import androidx.navigation3.runtime.NavKey
@@ -13,12 +21,6 @@ class Navigator(
     private val hostView: View? = null // 传入原生 View 引用
 ) {
     private fun forceCleanup() {
-        // 尝试常规隐藏
-//        textToolbar?.hide()
-        
-        // 暴力终结原生的 ActionMode (FloatingToolbar)
-        // 在 View 层级上，这会强制销毁当前的上下文菜单，不再触发坐标计算
-//        hostView?.cancelPendingInputEvents()
         
         // 剥夺焦点：防止某些组件因持有焦点而在销毁瞬间尝试重绘菜单
         hostView?.clearFocus()
@@ -29,7 +31,7 @@ class Navigator(
     }        
 
     fun navigate(route: NavKey) {
-        forceCleanup() // 执行全套暴力清理
+        forceCleanup() // 执行暴力清理
         
         if (route in state.backStacks.keys) {
             state.topLevelRoute = route

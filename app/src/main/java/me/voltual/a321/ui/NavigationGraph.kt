@@ -23,6 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.*
 import androidx.navigation3.scene.DialogSceneStrategy
 import me.voltual.a321.core.ui.components.IDMTransferDialog
+import me.voltual.pyrolysis.ui.settings.update.UpdateSettingsScreen
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.*
 import androidx.navigation3.ui.NavDisplay
@@ -47,7 +48,7 @@ fun BBQNavDisplay(
     
     val decorators = listOf(
         rememberSaveableStateHolderNavEntryDecorator<NavKey>(), // 保持 UI 状态（如滚动位置）
-        rememberViewModelStoreNavEntryDecorator<NavKey>()      // 核心：为每个 Entry 提供独立的 ViewModel 存储
+        rememberViewModelStoreNavEntryDecorator<NavKey>()      // 为每个 Entry 提供独立的 ViewModel 存储
     )
 
     NavDisplay(
@@ -80,6 +81,10 @@ fun BBQNavDisplay(
                 
                 is ThemeCustomize -> NavEntry(key) {
                     ThemeCustomizeScreen(modifier = Modifier.fillMaxSize())
+                }
+                
+                is UpdateSettings -> NavEntry(key) {
+                    UpdateSettingsScreen(snackbarHostState = snackbarHostState)
                 }
 
                 // 保底逻辑

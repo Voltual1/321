@@ -1,4 +1,11 @@
-// Copyright (C) 2025 Voltual
+//Copyright (C) 2025 Voltual
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+//（或任意更新的版本）的条款重新分发和/或修改它。
+//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.a321.ui
 
 import androidx.compose.runtime.Composable
@@ -65,27 +72,19 @@ class NavigationState(
         }
 
     fun resetToStart() {
-    // 1. 先切换路由标识，让 Compose 在下一次计算时知道我们要看 startRoute
     topLevelRoute = startRoute
     
-    // 2. 遍历堆栈进行清理
+    // 遍历堆栈进行清理
     backStacks.forEach { (key, stack) ->
         if (key == startRoute) {
-            // 针对首页堆栈：保留第一个（根）页面，移除之上的所有页面
             while (stack.size > 1) {
                 stack.removeLastOrNull()
             }
         } else {
-            // 针对非首页堆栈：
-            // 不要直接 clear()！如果某些侧滑动画或过渡还在引用它，clear 会导致闪崩。
-            // 建议：如果它已经是空的就跳过，如果有内容，也保留至少一个，或者等它不可见后再清。
-            // 但为了简单且安全，我们可以让它至少保留一个。
             if (stack.isNotEmpty()) {
                 while (stack.size > 1) {
                     stack.removeLastOrNull()
                 }
-                // 注意：这里如果为了彻底释放内存，可以在确保 topLevelRoute 改变后，
-                // 延迟清空非活跃栈，或者接受保留一个根节点的开销。
             }
         }
     }
@@ -94,10 +93,6 @@ class NavigationState(
 
 /**
  * Convert NavigationState into NavEntries.
- */
-/**
- * 完全参考官方 Recipe 实现的 Entry 转换逻辑
- * 核心在于返回 SnapshotStateList 以保证 NavDisplay 的响应式更新
  */
 @Composable
 fun NavigationState.toEntries(
@@ -115,8 +110,6 @@ fun NavigationState.toEntries(
         )
     }
 
-    // 重点：使用 getTopLevelRoutesInUse() 动态计算活跃堆栈
-    // 并通过 toMutableStateList() 返回 SnapshotStateList
     return remember(topLevelRoute, startRoute, decoratedEntries) {
         val routesInUse = if (topLevelRoute == startRoute) {
             listOf(startRoute)

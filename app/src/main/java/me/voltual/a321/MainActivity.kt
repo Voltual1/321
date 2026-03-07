@@ -50,7 +50,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.voltual.a321.data.UpdateInfo
 import me.voltual.a321.data.UpdateSettingsDataStore
-//import me.voltual.a321.core.database.LogEntry
+import me.voltual.a321.core.database.entity.LogEntry
 import me.voltual.a321.data.UserAgreementDataStore
 import me.voltual.a321.ui.*
 import me.voltual.a321.core.ui.components.UpdateDialog
@@ -121,7 +121,7 @@ class MainActivity : ComponentActivity() {
 
     }
 
-/*    init {
+    init {
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             val crashReport = getCrashReport(throwable)
             CoroutineScope(Dispatchers.IO).launch {
@@ -139,7 +139,7 @@ class MainActivity : ComponentActivity() {
         }
     }*/
 
-/*    private fun getCrashReport(throwable: Throwable): String {
+    private fun getCrashReport(throwable: Throwable): String {
         val stackTrace = throwable.stackTraceToString()
         val deviceInfo = """
             设备型号: ${android.os.Build.MODEL}
@@ -155,7 +155,7 @@ class MainActivity : ComponentActivity() {
             堆栈跟踪:
             $stackTrace
         """.trimIndent()
-    }*/
+    }
 
     @Suppress("DEPRECATION")
     private fun applyDpiAndFontScale(context: Context) {
@@ -304,7 +304,7 @@ fun CheckForUpdates(snackbarHostState: SnackbarHostState) {
     val coroutineScope = rememberCoroutineScope()
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var showDialog by remember { mutableStateOf(false) }
-/*
+
     LaunchedEffect(Unit) {
         val autoCheckUpdates = UpdateSettingsDataStore.autoCheckUpdates.first()
         if (autoCheckUpdates) {
@@ -327,7 +327,7 @@ fun CheckForUpdates(snackbarHostState: SnackbarHostState) {
                 }
             }
         }
-    }*/
+    }
 
     updateInfo?.let { info ->
         if (showDialog) {

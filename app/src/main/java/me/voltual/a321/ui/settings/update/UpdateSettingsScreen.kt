@@ -25,10 +25,11 @@ import me.voltual.a321.core.utils.UpdateCheckResult
 import me.voltual.a321.R
 import androidx.compose.ui.res.stringResource
 import me.voltual.a321.core.utils.UpdateChecker
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun UpdateSettingsScreen(
-    viewModel: UpdateSettingsViewModel = viewModel(),
+    viewModel: UpdateSettingsViewModel = koinViewModel()
     snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
