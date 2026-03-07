@@ -126,15 +126,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        lifecycleScope.launch {
-            delay(10000)
-            val context = this@MainActivity
-            val userCredentials = AuthManager.getCredentials(context).first()
-            // 检查 Token 是否存在（如果没登录过，token 默认是空字符串 ""）
-if (userCredentials.token.isNotEmpty()) {
-    startHeartbeatService(this@MainActivity, userCredentials.token)
-}
-        }
     }
 
 /*    init {
@@ -415,13 +406,6 @@ fun restartMainActivity(context: Context) {
             android.R.anim.fade_out
         )
         context.startActivity(it, options.toBundle())
-    }
-}
-
-fun startHeartbeatService(context: Context, token: String) {
-    Intent(context, HeartbeatService::class.java).apply {
-        putExtra("TOKEN", token)
-        context.startService(this)
     }
 }
 

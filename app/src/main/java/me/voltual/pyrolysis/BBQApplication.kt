@@ -30,8 +30,7 @@ class BBQApplication : Application()/*, KoinStartup*/ {
 
     override fun onCreate() {
         super.onCreate()
-        instance = this
-        // 其他初始化
+        // 初始化
         AuthManager.initialize(this)
         ThemeManager.initialize(this)
         ThemeManager.customColorSet = ThemeColorStore.loadColors(this)
