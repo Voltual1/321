@@ -21,7 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import me.voltual.pyrolysis.core.ui.icons.phosphor.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -82,20 +81,7 @@ fun NavigationDrawerItems(
 val allDrawerItems = remember {
     mutableListOf(
         DrawerItem("home", "首页", IconSource.Resource(R.drawable.ic_menu_home), Home),
-        DrawerItem("resources", "资源广场", IconSource.Resource(R.drawable.ic_menu_apps), ResourcePlaza(isMyResource = false)),
-        DrawerItem("explore", "仓库探索", IconSource.Vector(Phosphor.Compass), Explore),
-        DrawerItem("repos_search", "仓库搜索", IconSource.Vector(Phosphor.MagnifyingGlass), SearchPage),
-        DrawerItem("prefsrepos", "仓库管理", IconSource.Vector(Phosphor.Graph), PrefsReposPage),
-        DrawerItem("community", "交流社区", IconSource.Resource(R.drawable.ic_menu_community), Community),
-        DrawerItem("messages", "消息中心", IconSource.Resource(R.drawable.ic_menu_message), MessageCenter),
-        DrawerItem("ranking_list", "天梯竞赛", IconSource.Resource(R.drawable.ic_menu_ranking), RankingList),
-        DrawerItem("release_app", "发布应用", IconSource.Resource(R.drawable.bg), CreateAppRelease),
-        DrawerItem("bot_logs", "日志", IconSource.Resource(R.drawable.work_log), LogViewer),
-        DrawerItem("store_manager", "存储管理", IconSource.Resource(R.drawable.appbackuprestore), StoreManager),
-        DrawerItem("download", "下载管理", IconSource.Resource(R.drawable.dsdownload), Download),
-        DrawerItem("update_settings", "更新设置", IconSource.Resource(R.drawable.asusupdate), UpdateSettings),
         DrawerItem("settings", "主题设置", IconSource.Resource(R.drawable.ic_menu_settings), ThemeCustomize),
-        DrawerItem("signin_settings", "签到设置", IconSource.Resource(R.drawable.sign_in), SignInSettings),
         DrawerItem("login", "登录账号", IconSource.Resource(R.drawable.ic_menu_login), Login),
         DrawerItem("logout", "退出登录", IconSource.Resource(R.drawable.ic_menu_logout), Home)
     )

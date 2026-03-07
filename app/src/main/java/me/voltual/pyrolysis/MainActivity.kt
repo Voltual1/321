@@ -408,6 +408,7 @@ fun restartMainActivity(context: Context) {
         context.startActivity(it, options.toBundle())
     }
 }
+}
 
 @Composable
 fun getTitleForDestination(route: NavKey?): String {

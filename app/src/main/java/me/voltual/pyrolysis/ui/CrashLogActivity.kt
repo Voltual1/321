@@ -30,8 +30,8 @@ import me.voltual.pyrolysis.core.ui.theme.ThemeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import me.voltual.pyrolysis.BBQApplication
-import me.voltual.pyrolysis.core.database.LogEntry
+//import me.voltual.pyrolysis.BBQApplication
+//import me.voltual.pyrolysis.core.database.LogEntry
 import kotlinx.coroutines.flow.first
 import android.content.ClipboardManager
 import android.content.ClipData
@@ -54,12 +54,12 @@ class CrashLogActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 if (initialCrashReport == null) { // 如果没有传递参数，才从数据库加载
-                    CoroutineScope(Dispatchers.IO).launch {
+/*                    CoroutineScope(Dispatchers.IO).launch {
                         val logEntry = BBQApplication.instance.database.logDao().getAllLogs().first()
                             .firstOrNull { it.type == "CRASH" }
                         val crashReport = logEntry?.responseBody ?: "No crash report available."
                         crashReportState.value = crashReport
-                    }
+                    }*/
                 }
             }
 
