@@ -111,7 +111,6 @@ class MainActivity : ComponentActivity() {
                     MainScreenContent(
                         navigationState = navigationState,
                         navigator = navigator,
-//                        entryProvider = entryProvider,
                         snackbarHostState = snackbarHostState,
                         showAgreementDialog = showAgreementDialog,
                         onAgreementDismiss = { finish() }
@@ -185,7 +184,6 @@ val topLevelRoutes: Set<NavKey> = setOf(
 fun MainScreenContent(
     navigationState: NavigationState,
     navigator: Navigator,
-//    entryProvider: (NavKey) -> NavEntry<NavKey>,
     snackbarHostState: SnackbarHostState,
     showAgreementDialog: Boolean,
     onAgreementDismiss: () -> Unit
@@ -360,6 +358,7 @@ fun getTitleForDestination(route: NavKey?): String {
     return when (route) {
         Home -> "首页"
         Login -> "登录"
+        ThemeCustomize -> "主题定制"
         else -> "在~ $route ~里~哦"
     }
 }

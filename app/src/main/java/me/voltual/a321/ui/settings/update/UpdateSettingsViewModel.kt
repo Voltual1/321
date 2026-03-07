@@ -34,7 +34,7 @@ import org.koin.android.annotation.KoinViewModel
 @KoinViewModel
 class UpdateSettingsViewModel : ViewModel() {
 
-//    val autoCheckUpdates: Flow<Boolean> = UpdateSettingsDataStore.autoCheckUpdates
+    val autoCheckUpdates: Flow<Boolean> = UpdateSettingsDataStore.autoCheckUpdates
 
     suspend fun setAutoCheckUpdates(value: Boolean) {
         UpdateSettingsDataStore.setAutoCheckUpdates(value)

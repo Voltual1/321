@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import me.voltual.a321.core.ui.theme.ThemeColorStore
 import me.voltual.a321.core.ui.theme.ThemeManager
+import me.voltual.a321.core.database.AppDatabase
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.androix.startup.KoinStartup
@@ -30,8 +31,11 @@ class BBQApplication : Application(), KoinStartup {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
+        
         // 初始化
         AuthManager.initialize(this)
+        database = AppDatabase.getDatabase(this)
         ThemeManager.initialize(this)
         ThemeManager.customColorSet = ThemeColorStore.loadColors(this)
     }
