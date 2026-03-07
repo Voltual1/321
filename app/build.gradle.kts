@@ -18,15 +18,15 @@ android {
         keystoreProperties.load(keystorePropertiesFile.inputStream())
     }
 
-    namespace = "me.voltual.pyrolysis"
+    namespace = "me.voltual.321"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "me.voltual.pyrolysis"
+        applicationId = "me.voltual.321"
         minSdk = 24
         targetSdk = 36
-        versionCode = 505
-        versionName = "20.5"
+        versionCode = 1
+        versionName = "1.0"
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         resourceConfigurations += listOf("zh")

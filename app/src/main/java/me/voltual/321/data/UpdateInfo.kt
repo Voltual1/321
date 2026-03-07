@@ -6,20 +6,19 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-syntax = "proto3";
+package me.voltual.321.data
 
-package me.voltual.321.core.proto;
+import kotlinx.serialization.Serializable
 
-option java_package = "me.voltual.321.core.proto";
-option java_multiple_files = true;
-
-message UserCredentials {
-  string username = 1;
-  string password = 2;
-  string token = 3; //小趣空间Token
-  int64 userId = 4; //小趣空间用户id
-  string deviceId = 5; //小趣空间设备id
-  string sine_market_token = 6; //弦应用商店Token
-  string sine_open_market_token = 7; //弦开放平台Token
-  string ling_market_token = 8; //新增的灵应用商店Token
+@Serializable
+data class UpdateInfo(
+    val tag_name: String,
+    val body: String,
+    val assets: List<Asset>
+) {
+    @Serializable
+    data class Asset(
+        val browser_download_url: String,
+        val name: String
+    )
 }
