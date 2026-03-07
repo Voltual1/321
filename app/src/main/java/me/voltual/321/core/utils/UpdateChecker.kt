@@ -4,15 +4,15 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-package me.voltual.321.core.utils
+package me.voltual.a321.core.utils
 
 import android.content.Context
-import me.voltual.321.BuildConfig
-import me.voltual.321.KtorClient
-import me.voltual.321.data.UpdateInfo
+import me.voltual.a321.BuildConfig
+import me.voltual.a321.KtorClient
+import me.voltual.a321.data.UpdateInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import me.voltual.321.R
+import me.voltual.a321.R
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 

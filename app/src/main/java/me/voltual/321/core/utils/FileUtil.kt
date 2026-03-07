@@ -8,7 +8,7 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 
 
-package me.voltual.321.core.utils
+package me.voltual.a321.core.utils
 
 import android.content.Context
 import android.net.Uri

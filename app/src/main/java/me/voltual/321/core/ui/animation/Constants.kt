@@ -1,4 +1,4 @@
-package me.voltual.321.core.ui.animation
+package me.voltual.a321.core.ui.animation
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp

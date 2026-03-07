@@ -6,7 +6,7 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>。
-package me.voltual.321.core.ui.components
+package me.voltual.a321.core.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,12 +23,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import me.voltual.321.KtorClient
-import me.voltual.321.core.ui.theme.messageCommentBg
-import me.voltual.321.core.ui.theme.messageLikeBg
-import me.voltual.321.core.ui.theme.messageDefaultBg
-import me.voltual.321.core.ui.theme.billingIncome
-import me.voltual.321.core.ui.theme.billingExpense
+import me.voltual.a321.KtorClient
+import me.voltual.a321.core.ui.theme.messageCommentBg
+import me.voltual.a321.core.ui.theme.messageLikeBg
+import me.voltual.a321.core.ui.theme.messageDefaultBg
+import me.voltual.a321.core.ui.theme.billingIncome
+import me.voltual.a321.core.ui.theme.billingExpense
 
 @Composable
 fun ListItem(

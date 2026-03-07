@@ -1,13 +1,13 @@
 // file: me/voltual/pyrolysis/ui/CompositionLocal.kt
-package me.voltual.321.ui
+package me.voltual.a321.ui
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.navigation3.runtime.NavKey
 
 // 必须显式导入 Navigator 和 NavigationState
-import me.voltual.321.ui.Navigator
-import me.voltual.321.ui.NavigationState
+import me.voltual.a321.ui.Navigator
+import me.voltual.a321.ui.NavigationState
 
 /**
  * 当前 Navigator 实例，供任何 Composable 发起类型安全导航。

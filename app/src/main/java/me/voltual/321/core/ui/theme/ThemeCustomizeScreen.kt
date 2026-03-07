@@ -6,7 +6,7 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-package me.voltual.321.core.ui.theme
+package me.voltual.a321.core.ui.theme
 
 import android.app.Activity
 import android.content.Context
@@ -44,9 +44,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
-import me.voltual.321.core.ui.theme.CustomColorSet
-import me.voltual.321.core.ui.theme.ThemeManager
-import me.voltual.321.restartMainActivity 
+import me.voltual.a321.core.ui.theme.CustomColorSet
+import me.voltual.a321.core.ui.theme.ThemeManager
+import me.voltual.a321.restartMainActivity 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

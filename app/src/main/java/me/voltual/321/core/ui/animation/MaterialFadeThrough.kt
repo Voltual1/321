@@ -1,4 +1,4 @@
-package me.voltual.321.core.ui.animation
+package me.voltual.a321.core.ui.animation
 // 动画效果来源自 https://github.com/10miaomiao/bilimiao
 
 import androidx.compose.animation.ContentTransform

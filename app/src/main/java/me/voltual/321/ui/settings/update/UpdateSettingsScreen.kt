@@ -6,7 +6,7 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-package me.voltual.321.ui.settings.update
+package me.voltual.a321.ui.settings.update
 
 import android.content.Context
 import androidx.compose.foundation.layout.*
@@ -17,14 +17,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import me.voltual.321.core.ui.theme.SwitchWithText 
+import me.voltual.a321.core.ui.theme.SwitchWithText 
 import kotlinx.coroutines.launch
-import me.voltual.321.data.UpdateInfo
-import me.voltual.321.core.ui.components.UpdateDialog
-import me.voltual.321.core.utils.UpdateCheckResult
-import me.voltual.321.R
+import me.voltual.a321.data.UpdateInfo
+import me.voltual.a321.core.ui.components.UpdateDialog
+import me.voltual.a321.core.utils.UpdateCheckResult
+import me.voltual.a321.R
 import androidx.compose.ui.res.stringResource
-import me.voltual.321.core.utils.UpdateChecker
+import me.voltual.a321.core.utils.UpdateChecker
 
 @Composable
 fun UpdateSettingsScreen(

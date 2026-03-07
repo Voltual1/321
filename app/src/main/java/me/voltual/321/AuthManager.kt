@@ -1,7 +1,7 @@
 //Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
 //（或任意更新的版本）的条款重新分发和/或修改它。
-package me.voltual.321
+package me.voltual.a321
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -13,8 +13,8 @@ import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import me.voltual.321.core.proto.UserCredentials
-import me.voltual.321.core.proto.UserCredentialsSerializer
+import me.voltual.a321.core.proto.UserCredentials
+import me.voltual.a321.core.proto.UserCredentialsSerializer
 
 // 定义 DataStore 扩展属性
 private val Context.credentialsStore: DataStore<UserCredentials> by dataStore(

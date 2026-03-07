@@ -1,6 +1,6 @@
 @file:OptIn(org.koin.core.annotation.KoinExperimentalAPI::class)
 
-package me.voltual.321
+package me.voltual.a321
 
 import android.app.Activity
 import android.app.Application
@@ -10,8 +10,8 @@ import androidx.appcompat.app.AppCompatActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import me.voltual.321.core.ui.theme.ThemeColorStore
-import me.voltual.321.core.ui.theme.ThemeManager
+import me.voltual.a321.core.ui.theme.ThemeColorStore
+import me.voltual.a321.core.ui.theme.ThemeManager
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.androix.startup.KoinStartup

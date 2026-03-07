@@ -18,11 +18,11 @@ android {
         keystoreProperties.load(keystorePropertiesFile.inputStream())
     }
 
-    namespace = "me.voltual.321"
+    namespace = "me.voltual.aaa321"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "me.voltual.321"
+        applicationId = "me.voltual.aaa321"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

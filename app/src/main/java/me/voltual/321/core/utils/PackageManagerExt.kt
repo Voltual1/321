@@ -5,14 +5,14 @@
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //此段代码的原始版本来源自https://github.com/Droid-ify/client
 
-package me.voltual.321.core.utils
+package me.voltual.a321.core.utils
 
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.Signature
-import me.voltual.321.core.utils.SdkCheck // 确保导入 SdkCheck
+import me.voltual.a321.core.utils.SdkCheck // 确保导入 SdkCheck
 import java.security.MessageDigest
 
 object SdkCheck {

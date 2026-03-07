@@ -1,5 +1,5 @@
 //此文件代码修改自https://www.apps2sd.info/idmp/Util1DM.kt
-package me.voltual.321.core.utils
+package me.voltual.a321.core.utils
 
 import android.app.Activity
 import android.content.ActivityNotFoundException

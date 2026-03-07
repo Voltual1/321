@@ -1,4 +1,4 @@
-package me.voltual.321.ui
+package me.voltual.a321.ui
 
 import androidx.navigation3.runtime.NavKey
 import androidx.compose.ui.platform.TextToolbar

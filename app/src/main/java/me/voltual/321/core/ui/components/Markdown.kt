@@ -10,7 +10,7 @@
 //该组件Markdown.kt的初始版本来源自https://github.com/rikkahub/rikkahub
 //本版本仅作简化修改适应项目实际用途
 @file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-package me.voltual.321.core.ui.components
+package me.voltual.a321.core.ui.components
 
 import android.content.Intent
 import android.net.Uri

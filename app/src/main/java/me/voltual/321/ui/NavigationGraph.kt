@@ -1,5 +1,5 @@
 // Copyright (C) 2025 Voltual
-package me.voltual.321.ui
+package me.voltual.a321.ui
 
 import android.app.Activity
 import android.content.Intent
@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.*
 import androidx.navigation3.scene.DialogSceneStrategy
-import me.voltual.321.core.ui.components.IDMTransferDialog
+import me.voltual.a321.core.ui.components.IDMTransferDialog
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.*
 import androidx.navigation3.ui.NavDisplay
@@ -25,7 +25,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.compose.material3.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.*
-import me.voltual.321.core.ui.animation.*
+import me.voltual.a321.core.ui.animation.*
 
 @Composable
 fun BBQNavDisplay(

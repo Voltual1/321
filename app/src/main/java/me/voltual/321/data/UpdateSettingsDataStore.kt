@@ -6,7 +6,7 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-package me.voltual.321.data
+package me.voltual.a321.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import me.voltual.321.BBQApplication
+import me.voltual.a321.BBQApplication
 
 private val Context.updateSettingsDataStore by preferencesDataStore(name = "update_settings")
 

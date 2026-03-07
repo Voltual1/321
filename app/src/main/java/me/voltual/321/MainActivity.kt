@@ -5,7 +5,7 @@
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-package me.voltual.321
+package me.voltual.a321
 
 import android.app.ActivityOptions
 import android.content.Context
@@ -48,16 +48,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.voltual.321.data.UpdateInfo
-import me.voltual.321.data.UpdateSettingsDataStore
-//import me.voltual.321.core.database.LogEntry
-import me.voltual.321.data.UserAgreementDataStore
-import me.voltual.321.ui.*
-import me.voltual.321.core.ui.components.UpdateDialog
-import me.voltual.321.core.ui.components.UserAgreementDialog
-import me.voltual.321.core.ui.theme.*
-import me.voltual.321.core.utils.UpdateCheckResult
-import me.voltual.321.core.utils.UpdateChecker
+import me.voltual.a321.data.UpdateInfo
+import me.voltual.a321.data.UpdateSettingsDataStore
+//import me.voltual.a321.core.database.LogEntry
+import me.voltual.a321.data.UserAgreementDataStore
+import me.voltual.a321.ui.*
+import me.voltual.a321.core.ui.components.UpdateDialog
+import me.voltual.a321.core.ui.components.UserAgreementDialog
+import me.voltual.a321.core.ui.theme.*
+import me.voltual.a321.core.utils.UpdateCheckResult
+import me.voltual.a321.core.utils.UpdateChecker
 import org.koin.android.ext.android.inject
 import java.io.IOException
 

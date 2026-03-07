@@ -1,5 +1,5 @@
 // Copyright (C) 2025 Voltual
-package me.voltual.321.ui
+package me.voltual.a321.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState

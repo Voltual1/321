@@ -7,7 +7,7 @@
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>。
 
-package me.voltual.321.data.update
+package me.voltual.a321.data.update
 
 import kotlinx.serialization.Serializable
 

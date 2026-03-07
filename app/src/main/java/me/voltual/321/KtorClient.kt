@@ -8,7 +8,7 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 @file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 
-package me.voltual.321
+package me.voltual.a321
 
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -22,7 +22,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
-import me.voltual.321.data.UpdateInfo
+import me.voltual.a321.data.UpdateInfo
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import java.io.ByteArrayInputStream

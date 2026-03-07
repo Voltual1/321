@@ -1,4 +1,4 @@
-package me.voltual.321.core.ui.utils
+package me.voltual.a321.core.ui.utils
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope

@@ -6,7 +6,7 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-package me.voltual.321.ui
+package me.voltual.a321.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -32,11 +32,11 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import me.voltual.321.AuthManager
-import me.voltual.321.R
-import me.voltual.321.ui.Navigator
-import me.voltual.321.ui.NavigationState
-import me.voltual.321.data.DrawerMenuDataStore
+import me.voltual.a321.AuthManager
+import me.voltual.a321.R
+import me.voltual.a321.ui.Navigator
+import me.voltual.a321.ui.NavigationState
+import me.voltual.a321.data.DrawerMenuDataStore
 
 sealed class IconSource {
     data class Resource(val resId: Int) : IconSource()

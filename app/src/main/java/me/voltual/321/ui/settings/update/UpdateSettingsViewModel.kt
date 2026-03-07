@@ -6,7 +6,7 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-package me.voltual.321.ui.settings.update
+package me.voltual.a321.ui.settings.update
 
 import android.content.Context
 import androidx.compose.runtime.Composable
@@ -17,18 +17,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import me.voltual.321.data.UpdateSettingsDataStore
-import me.voltual.321.KtorClient
+import me.voltual.a321.data.UpdateSettingsDataStore
+import me.voltual.a321.KtorClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalContext
-import me.voltual.321.BuildConfig
-import me.voltual.321.data.UpdateInfo
+import me.voltual.a321.BuildConfig
+import me.voltual.a321.data.UpdateInfo
 import kotlinx.serialization.json.Json
 import io.ktor.client.call.body
-import me.voltual.321.core.ui.components.UpdateDialog
+import me.voltual.a321.core.ui.components.UpdateDialog
 import kotlinx.serialization.decodeFromString
-import me.voltual.321.core.utils.UpdateChecker
+import me.voltual.a321.core.utils.UpdateChecker
 import org.koin.android.annotation.KoinViewModel
 
 @KoinViewModel
@@ -40,7 +40,7 @@ class UpdateSettingsViewModel : ViewModel() {
         UpdateSettingsDataStore.setAutoCheckUpdates(value)
     }
 
-    fun checkForUpdates(context: Context, onUpdateResult: (me.voltual.321.core.utils.UpdateCheckResult) -> Unit) {
+    fun checkForUpdates(context: Context, onUpdateResult: (me.voltual.a321.core.utils.UpdateCheckResult) -> Unit) {
         UpdateChecker.checkForUpdates(context, onUpdateResult)
     }
     

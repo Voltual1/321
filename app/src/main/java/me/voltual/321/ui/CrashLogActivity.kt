@@ -7,11 +7,11 @@
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 
-package me.voltual.321.ui
+package me.voltual.a321.ui
 
 import android.content.Context
 import android.content.Intent
-import me.voltual.321.core.ui.theme.BBQSnackbarHost
+import me.voltual.a321.core.ui.theme.BBQSnackbarHost
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,19 +24,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import me.voltual.321.core.ui.theme.BBQTheme
-import me.voltual.321.core.ui.theme.BBQCard
-import me.voltual.321.core.ui.theme.ThemeManager
+import me.voltual.a321.core.ui.theme.BBQTheme
+import me.voltual.a321.core.ui.theme.BBQCard
+import me.voltual.a321.core.ui.theme.ThemeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-//import me.voltual.321.BBQApplication
-//import me.voltual.321.core.database.LogEntry
+//import me.voltual.a321.BBQApplication
+//import me.voltual.a321.core.database.LogEntry
 import kotlinx.coroutines.flow.first
 import android.content.ClipboardManager
 import android.content.ClipData
 import androidx.compose.ui.res.stringResource
-import me.voltual.321.R
+import me.voltual.a321.R
 
 class CrashLogActivity : ComponentActivity() {
 
