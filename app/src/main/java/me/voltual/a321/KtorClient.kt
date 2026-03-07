@@ -81,33 +81,7 @@ val httpClient = HttpClient(OkHttp) {
         connectTimeoutMillis = CONNECT_TIMEOUT
         socketTimeoutMillis = SOCKET_TIMEOUT
     }
-}
-
-    // ===== 模型类定义 =====
-
-    
-    
-    //  Helper object to handle JSON conversion
-    object JsonConverter {
-        private val json = Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-            explicitNulls = false
-        }
-
-        fun toJson(appDetail: AppDetail): String {
-            return json.encodeToString(AppDetail.serializer(), appDetail)
-        }
-
-        fun fromJson(jsonString: String): AppDetail? {
-            return try {
-                json.decodeFromString(AppDetail.serializer(), jsonString)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            }
-        }
-    }
+}    
 
 /**
  * 安全地执行 Ktor 请求，并处理异常和重试
@@ -163,7 +137,12 @@ private suspend inline fun <reified T> safeApiCall(block: suspend () -> HttpResp
     }
 
     object ApiServiceImpl : ApiService {
-        private const val URL = ""        
+        private const val GET_LATEST_RELEASE_URL = "https://gitee.com/api/v5/repos/Voltula/bbq/releases/latest"
+        
+          override suspend fun getLatestRelease(): Result<UpdateInfo> {
+    return safeApiCall {
+        httpClient.get(GET_LATEST_RELEASE_URL).body()
+    }        
         
     
         
