@@ -38,7 +38,7 @@ class BBQApplication : Application(), KoinStartup {
 
     override fun onKoinStartup() = koinConfiguration {
         androidContext(this@BBQApplication)
-        modules(emptyList())//暂时这样
+        modules(appModule)
     }
 
 }

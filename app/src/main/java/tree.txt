@@ -1,0 +1,803 @@
+.
+├──DanmakuFlameMaster
+（烈焰弹幕使文件树省略）
+├──app
+│  ├──build.gradle.kts
+│  ├──proguard-rules.pro
+│  └──src
+│  └──main
+│  ├──AndroidManifest.xml
+│  ├──java
+│  │  ├──me
+│  │  │  └──voltual
+│  │  │  └──pyrolysis
+│  │  │  ├──AppModule.kt
+│  │  │  ├──AppStoreType.kt
+│  │  │  ├──AuthManager.kt
+│  │  │  ├──BBQApplication.kt
+│  │  │  ├──BuildConfig.kt
+│  │  │  ├──Common.kt
+│  │  │  ├──HeartbeatService.kt
+│  │  │  ├──KtorClient.kt
+│  │  │  ├──LingMarketClient.kt
+│  │  │  ├──MainActivity.kt
+│  │  │  ├──OpenMarketSineWorldClient.kt
+│  │  │  ├──SineShopApiEnums.kt
+│  │  │  ├──SineShopClient.kt
+│  │  │  ├──api
+│  │  │  │  └──BiliApiService.kt
+│  │  │  ├──core
+│  │  │  │  ├──database
+│  │  │  │  │  ├──AppDatabase.kt
+│  │  │  │  │  ├──BrowseHistoryDao.kt
+│  │  │  │  │  ├──BrowseHistoryRepository.kt
+│  │  │  │  │  ├──Converters.kt
+│  │  │  │  │  ├──FdroidDatabase.kt
+│  │  │  │  │  ├──LogDao.kt
+│  │  │  │  │  ├──LogEntry.kt
+│  │  │  │  │  ├──LogRepository.kt
+│  │  │  │  │  ├──NetworkCacheDao.kt
+│  │  │  │  │  ├──NetworkCacheEntry.kt
+│  │  │  │  │  ├──PostDraft.kt
+│  │  │  │  │  ├──PostDraftDao.kt
+│  │  │  │  │  ├──PostDraftRepository.kt
+│  │  │  │  │  ├──QueryBuilder.kt
+│  │  │  │  │  ├──dao
+│  │  │  │  │  │  ├──AntiFeatureDao.kt
+│  │  │  │  │  │  ├──BaseDao.kt
+│  │  │  │  │  │  ├──CategoryDao.kt
+│  │  │  │  │  │  ├──DownloadStatsDao.kt
+│  │  │  │  │  │  ├──DownloadStatsFileDao.kt
+│  │  │  │  │  │  ├──DownloadedDao.kt
+│  │  │  │  │  │  ├──ExodusInfoDao.kt
+│  │  │  │  │  │  ├──ExtrasDao.kt
+│  │  │  │  │  │  ├──InstallTaskDao.kt
+│  │  │  │  │  │  ├──InstalledDao.kt
+│  │  │  │  │  │  ├──ProductDao.kt
+│  │  │  │  │  │  ├──RBLogDao.kt
+│  │  │  │  │  │  ├──ReleaseDao.kt
+│  │  │  │  │  │  ├──RepoCategoryDao.kt
+│  │  │  │  │  │  ├──RepositoryDao.kt
+│  │  │  │  │  │  └──TrackerDao.kt
+│  │  │  │  │  └──entity
+│  │  │  │  │  ├──AntiFeature.kt
+│  │  │  │  │  ├──Category.kt
+│  │  │  │  │  ├──DownloadStats.kt
+│  │  │  │  │  ├──DownloadStatsMetaData.kt
+│  │  │  │  │  ├──Downloaded.kt
+│  │  │  │  │  ├──ExodusInfo.kt
+│  │  │  │  │  ├──Extras.kt
+│  │  │  │  │  ├──IndexProduct.kt
+│  │  │  │  │  ├──InstallTask.kt
+│  │  │  │  │  ├──Installed.kt
+│  │  │  │  │  ├──Product.kt
+│  │  │  │  │  ├──RBLog.kt
+│  │  │  │  │  ├──Release.kt
+│  │  │  │  │  ├──RepoCategory.kt
+│  │  │  │  │  ├──Repository.kt
+│  │  │  │  │  └──Tracker.kt
+│  │  │  │  ├──proto
+│  │  │  │  │  └──UserCredentialsSerializer.kt
+│  │  │  │  ├──ui
+│  │  │  │  │  ├──animation
+│  │  │  │  │  │  ├──Constants.kt
+│  │  │  │  │  │  ├──MaterialFade.kt
+│  │  │  │  │  │  ├──MaterialFadeThrough.kt
+│  │  │  │  │  │  └──MaterialSharedAxis.kt
+│  │  │  │  │  ├──components
+│  │  │  │  │  │  ├──BaseListScreen.kt
+│  │  │  │  │  │  ├──IDMTransferDialog.kt
+│  │  │  │  │  │  ├──LinkifyText.kt
+│  │  │  │  │  │  ├──ListItem.kt
+│  │  │  │  │  │  ├──Markdown.kt
+│  │  │  │  │  │  ├──PaginationControls.kt
+│  │  │  │  │  │  ├──SharedListItems.kt
+│  │  │  │  │  │  ├──StarRating.kt
+│  │  │  │  │  │  ├──UpdateDialog.kt
+│  │  │  │  │  │  └──UserAgreementDialog.kt
+│  │  │  │  │  ├──icons
+│  │  │  │  │  │  ├──__Icon.kt
+│  │  │  │  │  │  ├──__Phosphor.kt
+│  │  │  │  │  │  ├──icon
+│  │  │  │  │  │  │  ├──IcDonateFlattr.kt
+│  │  │  │  │  │  │  ├──IcDonateLiberapay.kt
+│  │  │  │  │  │  │  ├──IcDonateLitecoin.kt
+│  │  │  │  │  │  │  ├──IcDonateOpencollective.kt
+│  │  │  │  │  │  │  ├──IcVirustotal.kt
+│  │  │  │  │  │  │  └──Opensource.kt
+│  │  │  │  │  │  └──phosphor
+│  │  │  │  │  │  ├──AddressBook.kt
+│  │  │  │  │  │  ├──ApplePodcastsLogo.kt
+│  │  │  │  │  │  ├──ArrowCircleLeft.kt
+│  │  │  │  │  │  ├──ArrowCircleRight.kt
+│  │  │  │  │  │  ├──ArrowSquareOut.kt
+│  │  │  │  │  │  ├──ArrowUUpLeft.kt
+│  │  │  │  │  │  ├──ArrowsClockwise.kt
+│  │  │  │  │  │  ├──Asterisk.kt
+│  │  │  │  │  │  ├──At.kt
+│  │  │  │  │  │  ├──Barbell.kt
+│  │  │  │  │  │  ├──BookBookmark.kt
+│  │  │  │  │  │  ├──Books.kt
+│  │  │  │  │  │  ├──BracketsSquare.kt
+│  │  │  │  │  │  ├──Brain.kt
+│  │  │  │  │  │  ├──Broadcast.kt
+│  │  │  │  │  │  ├──Browser.kt
+│  │  │  │  │  │  ├──Bug.kt
+│  │  │  │  │  │  ├──Calendar.kt
+│  │  │  │  │  │  ├──CalendarPlus.kt
+│  │  │  │  │  │  ├──CalendarX.kt
+│  │  │  │  │  │  ├──Camera.kt
+│  │  │  │  │  │  ├──Cardholder.kt
+│  │  │  │  │  │  ├──CaretDown.kt
+│  │  │  │  │  │  ├──CaretDownUp.kt
+│  │  │  │  │  │  ├──CaretUp.kt
+│  │  │  │  │  │  ├──CaretUpDown.kt
+│  │  │  │  │  │  ├──ChartLine.kt
+│  │  │  │  │  │  ├──Chat.kt
+│  │  │  │  │  │  ├──Chats.kt
+│  │  │  │  │  │  ├──Check.kt
+│  │  │  │  │  │  ├──CheckCircle.kt
+│  │  │  │  │  │  ├──CheckSquare.kt
+│  │  │  │  │  │  ├──ChefHat.kt
+│  │  │  │  │  │  ├──Circle.kt
+│  │  │  │  │  │  ├──CircleWavyQuestion.kt
+│  │  │  │  │  │  ├──CircleWavyWarning.kt
+│  │  │  │  │  │  ├──CirclesFour.kt
+│  │  │  │  │  │  ├──CirclesThreePlus.kt
+│  │  │  │  │  │  ├──Clock.kt
+│  │  │  │  │  │  ├──CloudArrowDown.kt
+│  │  │  │  │  │  ├──CloudSun.kt
+│  │  │  │  │  │  ├──Code.kt
+│  │  │  │  │  │  ├──Command.kt
+│  │  │  │  │  │  ├──Compass.kt
+│  │  │  │  │  │  ├──Copyleft.kt
+│  │  │  │  │  │  ├──Copyright.kt
+│  │  │  │  │  │  ├──CrosshairSimple.kt
+│  │  │  │  │  │  ├──CurrencyBTC.kt
+│  │  │  │  │  │  ├──CurrencyCircleDollar.kt
+│  │  │  │  │  │  ├──CurrencyDollarSimple.kt
+│  │  │  │  │  │  ├──DeviceMobile.kt
+│  │  │  │  │  │  ├──DotsThreeOutline.kt
+│  │  │  │  │  │  ├──Download.kt
+│  │  │  │  │  │  ├──Envelope.kt
+│  │  │  │  │  │  ├──Eraser.kt
+│  │  │  │  │  │  ├──EyeSlash.kt
+│  │  │  │  │  │  ├──FolderNotch.kt
+│  │  │  │  │  │  ├──FunnelSimple.kt
+│  │  │  │  │  │  ├──GameController.kt
+│  │  │  │  │  │  ├──GearSix.kt
+│  │  │  │  │  │  ├──Ghost.kt
+│  │  │  │  │  │  ├──GitPullRequest.kt
+│  │  │  │  │  │  ├──GithubLogo.kt
+│  │  │  │  │  │  ├──Globe.kt
+│  │  │  │  │  │  ├──GlobeSimple.kt
+│  │  │  │  │  │  ├──Graph.kt
+│  │  │  │  │  │  ├──HeartStraight.kt
+│  │  │  │  │  │  ├──HeartStraightFill.kt
+│  │  │  │  │  │  ├──House.kt
+│  │  │  │  │  │  ├──Image.kt
+│  │  │  │  │  │  ├──Images.kt
+│  │  │  │  │  │  ├──Info.kt
+│  │  │  │  │  │  ├──Key.kt
+│  │  │  │  │  │  ├──Keyboard.kt
+│  │  │  │  │  │  ├──Leaf.kt
+│  │  │  │  │  │  ├──ListBullets.kt
+│  │  │  │  │  │  ├──MagnifyingGlass.kt
+│  │  │  │  │  │  ├──MapPin.kt
+│  │  │  │  │  │  ├──MathOperations.kt
+│  │  │  │  │  │  ├──Megaphone.kt
+│  │  │  │  │  │  ├──Metronome.kt
+│  │  │  │  │  │  ├──Microphone.kt
+│  │  │  │  │  │  ├──Newspaper.kt
+│  │  │  │  │  │  ├──NotePencil.kt
+│  │  │  │  │  │  ├──Nut.kt
+│  │  │  │  │  │  ├──PaintBrush.kt
+│  │  │  │  │  │  ├──Password.kt
+│  │  │  │  │  │  ├──PenNib.kt
+│  │  │  │  │  │  ├──Phone.kt
+│  │  │  │  │  │  ├──Pizza.kt
+│  │  │  │  │  │  ├──PlayCircle.kt
+│  │  │  │  │  │  ├──Plus.kt
+│  │  │  │  │  │  ├──PlusCircle.kt
+│  │  │  │  │  │  ├──QrCode.kt
+│  │  │  │  │  │  ├──Robot.kt
+│  │  │  │  │  │  ├──RssSimple.kt
+│  │  │  │  │  │  ├──Scales.kt
+│  │  │  │  │  │  ├──ScribbleLoop.kt
+│  │  │  │  │  │  ├──ShareNetwork.kt
+│  │  │  │  │  │  ├──ShieldCheck.kt
+│  │  │  │  │  │  ├──ShieldSlash.kt
+│  │  │  │  │  │  ├──ShieldStar.kt
+│  │  │  │  │  │  ├──ShieldWarning.kt
+│  │  │  │  │  │  ├──ShoppingCart.kt
+│  │  │  │  │  │  ├──SlidersHorizontal.kt
+│  │  │  │  │  │  ├──SortAscending.kt
+│  │  │  │  │  │  ├──SortDescending.kt
+│  │  │  │  │  │  ├──Storefront.kt
+│  │  │  │  │  │  ├──Swatches.kt
+│  │  │  │  │  │  ├──TagSimple.kt
+│  │  │  │  │  │  ├──TelegramLogo.kt
+│  │  │  │  │  │  ├──TelevisionSimple.kt
+│  │  │  │  │  │  ├──TrainSimple.kt
+│  │  │  │  │  │  ├──Translate.kt
+│  │  │  │  │  │  ├──TrashSimple.kt
+│  │  │  │  │  │  ├──User.kt
+│  │  │  │  │  │  ├──UserFocus.kt
+│  │  │  │  │  │  ├──UserGear.kt
+│  │  │  │  │  │  ├──VideoConference.kt
+│  │  │  │  │  │  ├──Wallet.kt
+│  │  │  │  │  │  ├──WifiHigh.kt
+│  │  │  │  │  │  ├──Wrench.kt
+│  │  │  │  │  │  └──X.kt
+│  │  │  │  │  ├──theme
+│  │  │  │  │  │  ├──Color.kt
+│  │  │  │  │  │  ├──ColorUtils.kt
+│  │  │  │  │  │  ├──Components.kt
+│  │  │  │  │  │  ├──RoundScreenPadding.kt
+│  │  │  │  │  │  ├──Shape.kt
+│  │  │  │  │  │  ├──Theme.kt
+│  │  │  │  │  │  ├──ThemeColorStore.kt
+│  │  │  │  │  │  ├──ThemeCustomizeScreen.kt
+│  │  │  │  │  │  └──ThemeManager.kt
+│  │  │  │  │  └──utils
+│  │  │  │  │  ├──Animations.kt
+│  │  │  │  │  └──Modifier.kt
+│  │  │  │  └──utils
+│  │  │  │  ├──ApkParser.kt
+│  │  │  │  ├──DateUtil.kt
+│  │  │  │  ├──DownloadManager.kt
+│  │  │  │  ├──FileActionUtil.kt
+│  │  │  │  ├──FileUtil.kt
+│  │  │  │  ├──NotificationUtils.kt
+│  │  │  │  ├──PackageItemResolver.kt
+│  │  │  │  ├──PackageManagerExt.kt
+│  │  │  │  ├──PrivacyProcessor.kt
+│  │  │  │  ├──ProgressInputStream.kt
+│  │  │  │  ├──Storage.kt
+│  │  │  │  ├──StringExt.kt
+│  │  │  │  ├──UpdateChecker.kt
+│  │  │  │  ├──Util1DM.kt
+│  │  │  │  ├──Utils.kt
+│  │  │  │  └──extension
+│  │  │  │  ├──Android.kt
+│  │  │  │  ├──Collection.kt
+│  │  │  │  ├──Flow.kt
+│  │  │  │  ├──Koin.kt
+│  │  │  │  ├──PackageInfo.kt
+│  │  │  │  ├──PackageManager.kt
+│  │  │  │  ├──Resources.kt
+│  │  │  │  ├──Text.kt
+│  │  │  │  └──Tuples.kt
+│  │  │  ├──data
+│  │  │  │  ├──DeviceNameDataStore.kt
+│  │  │  │  ├──DrawerMenuDataStore.kt
+│  │  │  │  ├──PlayerDataStore.kt
+│  │  │  │  ├──PostDraftDataStore.kt
+│  │  │  │  ├──SearchHistoryDataStore.kt
+│  │  │  │  ├──SignInSettingsDataStore.kt
+│  │  │  │  ├──StorageSettingsDataStore.kt
+│  │  │  │  ├──UpdateInfo.kt
+│  │  │  │  ├──UpdateSettingsDataStore.kt
+│  │  │  │  ├──UserAgreementDataStore.kt
+│  │  │  │  ├──UserFilterDataStore.kt
+│  │  │  │  ├──content
+│  │  │  │  │  ├──Cache.kt
+│  │  │  │  │  ├──Preferences.kt
+│  │  │  │  │  └──PrefsMetaData.kt
+│  │  │  │  ├──entity
+│  │  │  │  │  ├──Download.kt
+│  │  │  │  │  ├──Enums.kt
+│  │  │  │  │  ├──Install.kt
+│  │  │  │  │  ├──Privacy.kt
+│  │  │  │  │  ├──ProductItem.kt
+│  │  │  │  │  ├──State.kt
+│  │  │  │  │  ├──SubEntities.kt
+│  │  │  │  │  └──Sync.kt
+│  │  │  │  ├──unified
+│  │  │  │  │  ├──Mappers.kt
+│  │  │  │  │  └──UnifiedModels.kt
+│  │  │  │  └──update
+│  │  │  │  ├──LocalAppInfo.kt
+│  │  │  │  └──UpdateAppInfo.kt
+│  │  │  ├──feature
+│  │  │  │  └──store
+│  │  │  │  ├──index
+│  │  │  │  │  ├──IndexContentMerger.kt
+│  │  │  │  │  ├──IndexType.kt
+│  │  │  │  │  ├──RepositoryUpdater.kt
+│  │  │  │  │  ├──v0
+│  │  │  │  │  │  └──IndexV0Parser.kt
+│  │  │  │  │  ├──v1
+│  │  │  │  │  │  ├──Converter.kt
+│  │  │  │  │  │  ├──IndexV1.kt
+│  │  │  │  │  │  └──IndexV1Parser.kt
+│  │  │  │  │  └──v2
+│  │  │  │  │  ├──Converter.kt
+│  │  │  │  │  ├──IndexV2.kt
+│  │  │  │  │  ├──IndexV2Merger.kt
+│  │  │  │  │  └──IndexV2Parser.kt
+│  │  │  │  ├──repository
+│  │  │  │  │  ├──DownloadedRepository.kt
+│  │  │  │  │  ├──ExtrasRepository.kt
+│  │  │  │  │  ├──IAppStoreRepository.kt
+│  │  │  │  │  ├──InstalledRepository.kt
+│  │  │  │  │  ├──InstallsRepository.kt
+│  │  │  │  │  ├──LingMarketRepository.kt
+│  │  │  │  │  ├──PrivacyRepository.kt
+│  │  │  │  │  ├──ProductsRepository.kt
+│  │  │  │  │  ├──RepositoriesRepository.kt
+│  │  │  │  │  ├──SineOpenMarketRepository.kt
+│  │  │  │  │  ├──SineShopRepository.kt
+│  │  │  │  │  └──XiaoQuRepository.kt
+│  │  │  │  └──worker
+│  │  │  │  ├──BatchSyncWorker.kt
+│  │  │  │  ├──DownloadStatsWorker.kt
+│  │  │  │  ├──DownloadWorker.kt
+│  │  │  │  ├──ExodusWorker.kt
+│  │  │  │  ├──InstallWorker.kt
+│  │  │  │  ├──RBWorker.kt
+│  │  │  │  ├──SyncWorker.kt
+│  │  │  │  ├──UpdatesNotificationManager.kt
+│  │  │  │  └──WorkerManager.kt
+│  │  │  ├──manager
+│  │  │  │  ├──installer
+│  │  │  │  │  ├──AppInstaller.kt
+│  │  │  │  │  ├──InstallQueue.kt
+│  │  │  │  │  ├──InstallationError.kt
+│  │  │  │  │  ├──InstallationEvents.kt
+│  │  │  │  │  └──type
+│  │  │  │  │  ├──AppManagerInstaller.kt
+│  │  │  │  │  ├──BaseInstaller.kt
+│  │  │  │  │  ├──LegacyInstaller.kt
+│  │  │  │  │  ├──RootInstaller.kt
+│  │  │  │  │  ├──SessionInstaller.kt
+│  │  │  │  │  ├──ShizukuInstaller.kt
+│  │  │  │  │  └──SystemInstaller.kt
+│  │  │  │  ├──network
+│  │  │  │  │  ├──CoilDownloader.kt
+│  │  │  │  │  └──Downloader.kt
+│  │  │  │  └──service
+│  │  │  │  ├──ActionReceiver.kt
+│  │  │  │  └──InstallerReceiver.kt
+│  │  │  └──ui
+│  │  │  ├──CompositionLocal.kt
+│  │  │  ├──CrashLogActivity.kt
+│  │  │  ├──Drawer.kt
+│  │  │  ├──Navigation.kt
+│  │  │  ├──NavigationGraph.kt
+│  │  │  ├──NavigationState.kt
+│  │  │  ├──Navigator.kt
+│  │  │  ├──auth
+│  │  │  │  ├──LoginScreen.kt
+│  │  │  │  └──LoginViewModel.kt
+│  │  │  ├──billing
+│  │  │  │  ├──BillingScreen.kt
+│  │  │  │  └──BillingViewModel.kt
+│  │  │  ├──community
+│  │  │  │  ├──BrowseHistory.kt
+│  │  │  │  ├──BrowseHistoryScreen.kt
+│  │  │  │  ├──BrowseHistoryViewModel.kt
+│  │  │  │  ├──CommunityScreen.kt
+│  │  │  │  ├──CommunityViewModel.kt
+│  │  │  │  ├──FollowingPostsScreen.kt
+│  │  │  │  ├──FollowingPostsViewModel.kt
+│  │  │  │  ├──HotPostsScreen.kt
+│  │  │  │  ├──HotPostsViewModel.kt
+│  │  │  │  ├──ImagePreviewScreen.kt
+│  │  │  │  ├──MyLikesScreen.kt
+│  │  │  │  ├──MyLikesViewModel.kt
+│  │  │  │  ├──Navigation.kt
+│  │  │  │  ├──PostCreateScreen.kt
+│  │  │  │  ├──PostCreateViewModel.kt
+│  │  │  │  ├──PostDetailViewModel.kt
+│  │  │  │  └──compose
+│  │  │  │  ├──BaseComposeListScreen.kt
+│  │  │  │  ├──PostDetailScreen.kt
+│  │  │  │  └──PostListComposable.kt
+│  │  │  ├──components
+│  │  │  │  ├──ActionButton.kt
+│  │  │  │  ├──ActionChip.kt
+│  │  │  │  ├──Card.kt
+│  │  │  │  ├──CategoriesList.kt
+│  │  │  │  ├──Controller.kt
+│  │  │  │  ├──DialogButton.kt
+│  │  │  │  ├──DownloadsListItem.kt
+│  │  │  │  ├──ExpandableBlock.kt
+│  │  │  │  ├──FilterChip.kt
+│  │  │  │  ├──Image.kt
+│  │  │  │  ├──MultiLineChart.kt
+│  │  │  │  ├──Popups.kt
+│  │  │  │  ├──ProductCard.kt
+│  │  │  │  ├──ProductsListItem.kt
+│  │  │  │  ├──QrCodeView.kt
+│  │  │  │  ├──RespositoryItem.kt
+│  │  │  │  ├──RoundButton.kt
+│  │  │  │  ├──ScreenshotList.kt
+│  │  │  │  ├──SelectionItem.kt
+│  │  │  │  ├──SortFilterButton.kt
+│  │  │  │  ├──TabButton.kt
+│  │  │  │  ├──Texts.kt
+│  │  │  │  ├──TopBar.kt
+│  │  │  │  ├──Visibility.kt
+│  │  │  │  ├──appsheet
+│  │  │  │  │  ├──ChipGrid.kt
+│  │  │  │  │  ├──Header.kt
+│  │  │  │  │  ├──LinkItem.kt
+│  │  │  │  │  ├──PrivacyPanel.kt
+│  │  │  │  │  ├──ReleaseItem.kt
+│  │  │  │  │  └──TextBlock.kt
+│  │  │  │  ├──common
+│  │  │  │  │  └──BottomSheet.kt
+│  │  │  │  ├──prefs
+│  │  │  │  │  ├──BasicPrefs.kt
+│  │  │  │  │  ├──Link.kt
+│  │  │  │  │  ├──PrefsBuilder.kt
+│  │  │  │  │  └──PrefsGroup.kt
+│  │  │  │  └──privacy
+│  │  │  │  ├──MeterIcons.kt
+│  │  │  │  └──PrivacyPanel.kt
+│  │  │  ├──compose
+│  │  │  │  └──ItemRecyclers.kt
+│  │  │  ├──dialog
+│  │  │  │  ├──ActionsDialogUI.kt
+│  │  │  │  ├──BaseDialog.kt
+│  │  │  │  ├──InputDialogUI.kt
+│  │  │  │  ├──LaunchDialog.kt
+│  │  │  │  ├──ListDialogUI.kt
+│  │  │  │  └──SelectionDialogUI.kt
+│  │  │  ├──home
+│  │  │  │  ├──AboutScreen.kt
+│  │  │  │  ├──HomeDestination.kt
+│  │  │  │  ├──HomeScreen.kt
+│  │  │  │  ├──HomeViewModel.kt
+│  │  │  │  ├──LingMarketProfileScreen.kt
+│  │  │  │  └──SineShopProfileScreen.kt
+│  │  │  ├──log
+│  │  │  │  ├──LogScreen.kt
+│  │  │  │  └──LogViewModel.kt
+│  │  │  ├──message
+│  │  │  │  ├──MessageCenterScreen.kt
+│  │  │  │  └──MessageViewModel.kt
+│  │  │  ├──payment
+│  │  │  │  ├──PaymentCenterScreen.kt
+│  │  │  │  ├──PaymentTypes.kt
+│  │  │  │  └──PaymentViewModel.kt
+│  │  │  ├──player
+│  │  │  │  ├──PlayerScreen.kt
+│  │  │  │  └──PlayerViewModel.kt
+│  │  │  ├──plaza
+│  │  │  │  ├──AppDetailComponents.kt
+│  │  │  │  ├──AppDetailComposeViewModel.kt
+│  │  │  │  ├──AppDetailScreen.kt
+│  │  │  │  ├──AppPage.kt
+│  │  │  │  ├──AppPageVM.kt
+│  │  │  │  ├──AppReleaseScreen.kt
+│  │  │  │  ├──AppReleaseViewModel.kt
+│  │  │  │  ├──ExplorePage.kt
+│  │  │  │  ├──ExploreVM.kt
+│  │  │  │  ├──PlazaViewModel.kt
+│  │  │  │  ├──ResourcePlazaScreen.kt
+│  │  │  │  ├──ScreenshotsPage.kt
+│  │  │  │  ├──SearchPage.kt
+│  │  │  │  ├──SearchVM.kt
+│  │  │  │  ├──SortFilterSheet.kt
+│  │  │  │  ├──VersionListScreen.kt
+│  │  │  │  └──VersionListViewModel.kt
+│  │  │  ├──rank
+│  │  │  │  ├──RankingListItem.kt
+│  │  │  │  ├──RankingListScreen.kt
+│  │  │  │  └──RankingListViewModel.kt
+│  │  │  ├──search
+│  │  │  │  ├──SearchScreen.kt
+│  │  │  │  └──SearchViewModel.kt
+│  │  │  ├──settings
+│  │  │  │  ├──PrefsVM.kt
+│  │  │  │  ├──repos
+│  │  │  │  │  ├──PrefsReposPage.kt
+│  │  │  │  │  ├──RepoPage.kt
+│  │  │  │  │  └──RepoPageVM.kt
+│  │  │  │  ├──signin
+│  │  │  │  │  ├──SignInSettingsScreen.kt
+│  │  │  │  │  └──SignInSettingsViewModel.kt
+│  │  │  │  ├──storage
+│  │  │  │  │  ├──StoreManagerScreen.kt
+│  │  │  │  │  └──StoreManagerViewModel.kt
+│  │  │  │  └──update
+│  │  │  │  ├──UpdateSettingsScreen.kt
+│  │  │  │  └──UpdateSettingsViewModel.kt
+│  │  │  ├──update
+│  │  │  │  ├──UpdateScreen.kt
+│  │  │  │  └──UpdateViewModel.kt
+│  │  │  └──user
+│  │  │  ├──AccountProfileScreen.kt
+│  │  │  ├──MyCommentsScreen.kt
+│  │  │  ├──MyCommentsViewModel.kt
+│  │  │  ├──MyPostsScreen.kt
+│  │  │  ├──MyPostsViewModel.kt
+│  │  │  ├──MyReviewsScreen.kt
+│  │  │  ├──MyReviewsViewModel.kt
+│  │  │  ├──UserDetailScreen.kt
+│  │  │  ├──UserDetailViewModel.kt
+│  │  │  ├──UserListViewModel.kt
+│  │  │  ├──UserProfileViewModel.kt
+│  │  │  └──compose
+│  │  │  └──UserListScreen.kt
+│  │  └──tree.txt
+│  ├──proto
+│  │  └──user_credentials.proto
+│  └──res
+│  ├──drawable
+│  │  ├──appbackuprestore.png
+│  │  ├──asusupdate.png
+│  │  ├──banking_4a.png
+│  │  ├──bg.png
+│  │  ├──dsdownload.png
+│  │  ├──fire.xml
+│  │  ├──google_cloud_search.png
+│  │  ├──heart_favorites_open.png
+│  │  ├──ic_arrow_down.xml
+│  │  ├──ic_arrow_right.xml
+│  │  ├──ic_cancel.xml
+│  │  ├──ic_info_outline.xml
+│  │  ├──ic_launcher_foreground.xml
+│  │  ├──ic_menu_apps.xml
+│  │  ├──ic_menu_community.png
+│  │  ├──ic_menu_home.xml
+│  │  ├──ic_menu_login.xml
+│  │  ├──ic_menu_logout.xml
+│  │  ├──ic_menu_message.png
+│  │  ├──ic_menu_profile.xml
+│  │  ├──ic_menu_ranking.png
+│  │  ├──ic_menu_settings.png
+│  │  ├──ic_new_releases.xml
+│  │  ├──ic_photo_camera.xml
+│  │  ├──ic_placeholder.xml
+│  │  ├──ic_screenshot_placeholder.xml
+│  │  ├──ic_sync.xml
+│  │  ├──ic_visibility.xml
+│  │  ├──kakao_page.png
+│  │  ├──mobills.png
+│  │  ├──nearme_cloud.png
+│  │  ├──sign_in.png
+│  │  ├──splash_fire.xml
+│  │  ├──work_log.png
+│  │  └──xiaoqu.webp
+│  ├──mipmap
+│  │  └──ic_launcher.xml
+│  ├──mipmap-anydpi-v26
+│  │  └──ic_launcher.xml
+│  ├──raw
+│  │  ├──linguseragreement.txt
+│  │  ├──proxy_pin_root
+│  │  ├──sineprivacypolicy.txt
+│  │  ├──sineuseragreement.txt
+│  │  ├──useragreement.txt
+│  │  └──xiaoquuseragreement.txt
+│  ├──values
+│  │  ├──colors.xml
+│  │  ├──strings.xml
+│  │  └──themes.xml
+│  ├──values-night
+│  │  ├──colors.xml
+│  │  └──themes.xml
+│  └──xml
+│  ├──backup_rules.xml
+│  ├──data_extraction_rules.xml
+│  ├──file_paths.xml
+│  └──network_security_config.xml
+├──build.gradle.kts
+├──gradle
+│  ├──libs.versions.toml
+│  └──wrapper
+│  ├──gradle-wrapper.jar
+│  └──gradle-wrapper.properties
+├──gradle.properties
+├──gradlew
+├──gradlew.bat
+├──ijkplayer-main
+│  ├──LICENSE
+│  ├──README.md
+│  └──com
+│  └──sdtv
+│  └──haikan
+│  └──ijkplayer
+│  ├──0.0.1
+│  │  ├──ijkplayer-0.0.1.aar
+│  │  ├──ijkplayer-0.0.1.aar.md5
+│  │  ├──ijkplayer-0.0.1.aar.sha1
+│  │  ├──ijkplayer-0.0.1.pom
+│  │  ├──ijkplayer-0.0.1.pom.md5
+│  │  └──ijkplayer-0.0.1.pom.sha1
+│  ├──0.0.2
+│  │  ├──ijkplayer-0.0.2.aar
+│  │  ├──ijkplayer-0.0.2.aar.md5
+│  │  ├──ijkplayer-0.0.2.aar.sha1
+│  │  ├──ijkplayer-0.0.2.pom
+│  │  ├──ijkplayer-0.0.2.pom.md5
+│  │  └──ijkplayer-0.0.2.pom.sha1
+│  ├──maven-metadata.xml
+│  ├──maven-metadata.xml.md5
+│  └──maven-metadata.xml.sha1
+└──settings.gradle.kts
+
+112directories,603files
+以上是我之前一个项目。
+我用半天改成高级脚手架了。
+.
+├──DanmakuFlameMaster
+（烈焰弹幕使文件树省略）
+├──app
+│  ├──build.gradle.kts
+│  ├──proguard-rules.pro
+│  └──src
+│  └──main
+│  ├──AndroidManifest.xml
+│  ├──java
+│  │  ├──me
+│  │  │  └──voltual
+│  │  │  └──a321
+│  │  │  ├──AuthManager.kt
+│  │  │  ├──BBQApplication.kt
+│  │  │  ├──KtorClient.kt
+│  │  │  ├──MainActivity.kt
+│  │  │  ├──core
+│  │  │  │  ├──proto
+│  │  │  │  │  └──UserCredentialsSerializer.kt
+│  │  │  │  ├──ui
+│  │  │  │  │  ├──animation
+│  │  │  │  │  │  ├──Constants.kt
+│  │  │  │  │  │  ├──MaterialFade.kt
+│  │  │  │  │  │  ├──MaterialFadeThrough.kt
+│  │  │  │  │  │  └──MaterialSharedAxis.kt
+│  │  │  │  │  ├──components
+│  │  │  │  │  │  ├──BaseListScreen.kt
+│  │  │  │  │  │  ├──IDMTransferDialog.kt
+│  │  │  │  │  │  ├──ListItem.kt
+│  │  │  │  │  │  ├──Markdown.kt
+│  │  │  │  │  │  ├──PaginationControls.kt
+│  │  │  │  │  │  ├──UpdateDialog.kt
+│  │  │  │  │  │  └──UserAgreementDialog.kt
+│  │  │  │  │  ├──theme
+│  │  │  │  │  │  ├──Color.kt
+│  │  │  │  │  │  ├──ColorUtils.kt
+│  │  │  │  │  │  ├──Components.kt
+│  │  │  │  │  │  ├──RoundScreenPadding.kt
+│  │  │  │  │  │  ├──Shape.kt
+│  │  │  │  │  │  ├──Theme.kt
+│  │  │  │  │  │  ├──ThemeColorStore.kt
+│  │  │  │  │  │  ├──ThemeCustomizeScreen.kt
+│  │  │  │  │  │  └──ThemeManager.kt
+│  │  │  │  │  └──utils
+│  │  │  │  │  └──Animations.kt
+│  │  │  │  └──utils
+│  │  │  │  ├──ApkParser.kt
+│  │  │  │  ├──DateUtil.kt
+│  │  │  │  ├──DownloadManager.kt
+│  │  │  │  ├──FileActionUtil.kt
+│  │  │  │  ├──FileUtil.kt
+│  │  │  │  ├──PackageManagerExt.kt
+│  │  │  │  ├──ProgressInputStream.kt
+│  │  │  │  ├──UpdateChecker.kt
+│  │  │  │  └──Util1DM.kt
+│  │  │  ├──data
+│  │  │  │  ├──DrawerMenuDataStore.kt
+│  │  │  │  ├──UpdateInfo.kt
+│  │  │  │  ├──UpdateSettingsDataStore.kt
+│  │  │  │  ├──UserAgreementDataStore.kt
+│  │  │  │  └──update
+│  │  │  │  ├──LocalAppInfo.kt
+│  │  │  │  └──UpdateAppInfo.kt
+│  │  │  ├──feature
+│  │  │  └──ui
+│  │  │  ├──CompositionLocal.kt
+│  │  │  ├──CrashLogActivity.kt
+│  │  │  ├──Drawer.kt
+│  │  │  ├──Navigation.kt
+│  │  │  ├──NavigationGraph.kt
+│  │  │  ├──NavigationState.kt
+│  │  │  ├──Navigator.kt
+│  │  │  └──settings
+│  │  │  └──update
+│  │  │  ├──UpdateSettingsScreen.kt
+│  │  │  └──UpdateSettingsViewModel.kt
+│  │  └──tree.txt
+│  ├──proto
+│  │  └──user_credentials.proto
+│  └──res
+│  ├──color
+│  │  └──icon_foreground_tint.xml
+│  ├──drawable
+│  │  ├──appbackuprestore.png
+│  │  ├──asusupdate.png
+│  │  ├──banking_4a.png
+│  │  ├──bg.png
+│  │  ├──cloud.xml
+│  │  ├──dsdownload.png
+│  │  ├──google_cloud_search.png
+│  │  ├──heart_favorites_open.png
+│  │  ├──ic_arrow_down.xml
+│  │  ├──ic_arrow_right.xml
+│  │  ├──ic_cancel.xml
+│  │  ├──ic_info_outline.xml
+│  │  ├──ic_launcher_foreground.xml
+│  │  ├──ic_menu_apps.xml
+│  │  ├──ic_menu_community.png
+│  │  ├──ic_menu_home.xml
+│  │  ├──ic_menu_login.xml
+│  │  ├──ic_menu_logout.xml
+│  │  ├──ic_menu_message.png
+│  │  ├──ic_menu_profile.xml
+│  │  ├──ic_menu_ranking.png
+│  │  ├──ic_menu_settings.png
+│  │  ├──ic_new_releases.xml
+│  │  ├──ic_photo_camera.xml
+│  │  ├──ic_placeholder.xml
+│  │  ├──ic_screenshot_placeholder.xml
+│  │  ├──ic_sync.xml
+│  │  ├──ic_visibility.xml
+│  │  ├──kakao_page.png
+│  │  ├──mobills.png
+│  │  ├──nearme_cloud.png
+│  │  ├──sign_in.png
+│  │  ├──splash_cloud.xml
+│  │  ├──work_log.png
+│  │  └──xiaoqu.webp
+│  ├──mipmap
+│  │  └──ic_launcher.xml
+│  ├──mipmap-anydpi-v26
+│  │  └──ic_launcher.xml
+│  ├──raw
+│  │  ├──linguseragreement.txt
+│  │  ├──proxy_pin_root
+│  │  ├──sineprivacypolicy.txt
+│  │  ├──sineuseragreement.txt
+│  │  ├──useragreement.txt
+│  │  └──xiaoquuseragreement.txt
+│  ├──values
+│  │  ├──colors.xml
+│  │  ├──strings.xml
+│  │  └──themes.xml
+│  ├──values-night
+│  │  ├──colors.xml
+│  │  └──themes.xml
+│  └──xml
+│  ├──backup_rules.xml
+│  ├──data_extraction_rules.xml
+│  ├──file_paths.xml
+│  └──network_security_config.xml
+├──build.gradle.kts
+├──gradle
+│  ├──libs.versions.toml
+│  └──wrapper
+│  ├──gradle-wrapper.jar
+│  └──gradle-wrapper.properties
+├──gradle.properties
+├──gradlew
+├──gradlew.bat
+├──ijkplayer-main
+│  ├──LICENSE
+│  ├──README.md
+│  └──com
+│  └──sdtv
+│  └──haikan
+│  └──ijkplayer
+│  ├──0.0.1
+│  │  ├──ijkplayer-0.0.1.aar
+│  │  ├──ijkplayer-0.0.1.aar.md5
+│  │  ├──ijkplayer-0.0.1.aar.sha1
+│  │  ├──ijkplayer-0.0.1.pom
+│  │  ├──ijkplayer-0.0.1.pom.md5
+│  │  └──ijkplayer-0.0.1.pom.sha1
+│  ├──0.0.2
+│  │  ├──ijkplayer-0.0.2.aar
+│  │  ├──ijkplayer-0.0.2.aar.md5
+│  │  ├──ijkplayer-0.0.2.aar.sha1
+│  │  ├──ijkplayer-0.0.2.pom
+│  │  ├──ijkplayer-0.0.2.pom.md5
+│  │  └──ijkplayer-0.0.2.pom.sha1
+│  ├──maven-metadata.xml
+│  ├──maven-metadata.xml.md5
+│  └──maven-metadata.xml.sha1
+└──settings.gradle.kts
+
+65directories,205files

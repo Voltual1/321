@@ -18,6 +18,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Pyrolysis"
+rootProject.name = "A321"
 include(":app")
 include(":DanmakuFlameMaster")
