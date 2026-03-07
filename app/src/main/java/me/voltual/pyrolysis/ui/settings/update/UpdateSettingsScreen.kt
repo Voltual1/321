@@ -33,7 +33,7 @@ fun UpdateSettingsScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val autoCheckUpdates by viewModel.autoCheckUpdates.collectAsState(initial = false)
+//    val autoCheckUpdates by viewModel.autoCheckUpdates.collectAsState(initial = false)
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var showDialog by remember { mutableStateOf(false) }
 
@@ -44,7 +44,7 @@ fun UpdateSettingsScreen(
     ) {
         SwitchWithText(
             text = "自动检查更新",
-            checked = autoCheckUpdates,
+            checked = false,
             onCheckedChange = { checked ->
                 scope.launch {
                     viewModel.setAutoCheckUpdates(checked)

@@ -55,8 +55,6 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 
-import me.voltual.pyrolysis.core.ui.components.LinkifyText
-
 // 基础按钮组件
 @Composable
 fun BBQButton(

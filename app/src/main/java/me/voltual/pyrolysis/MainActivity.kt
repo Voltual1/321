@@ -216,7 +216,7 @@ fun MainScreenContent(
     LaunchedEffect(Unit) {
         val credentials = AuthManager.getCredentials(context).first()
         // 逻辑：如果 userId 不等于 0，则认为已登录
-isLoggedIn.value = credentials.userId != 0L
+        isLoggedIn.value = credentials.userId != 0L
         if (isLoggedIn.value) {
 //            tryAutoLogin(credentials.username, credentials.password, context, navigator, snackbarHostState)
         }
@@ -251,65 +251,64 @@ isLoggedIn.value = credentials.userId != 0L
     ) {
         Scaffold(
             topBar = {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                text = getTitleForDestination(currentRoute),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        },
-                        navigationIcon = {
-                            if (showBackButton) {
-                                IconButton(onClick = { navigator.goBack() }) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = stringResource(R.string.back),
-                                        tint = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            } else {
-                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Menu,
-                                        contentDescription = stringResource(R.string.open_drawer),
-                                        tint = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                        },
-                        actions = {
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            titleContentColor = MaterialTheme.colorScheme.onSurface
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = getTitleForDestination(currentRoute),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                    )                
+                    },
+                    navigationIcon = {
+                        if (showBackButton) {
+                            IconButton(onClick = { navigator.goBack() }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(R.string.back),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        } else {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(
+                                    imageVector = Icons.Default.Menu,
+                                    contentDescription = stringResource(R.string.open_drawer),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    },
+                    actions = {
+                        // 可以在这里添加操作按钮
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                )
             },
             snackbarHost = { BBQSnackbarHost(hostState = snackbarHostState) },
             content = { innerPadding ->
-                val contentPadding = innerPadding
-                }
-
-// 如果找不到当前堆栈，则回退到 startRoute 的堆栈
-val currentBackStack = navigationState.backStacks[currentTopLevelRoute] 
-    ?: navigationState.backStacks[navigationState.startRoute]!! 
-    // 注意：startRoute 理论上必须存在，所以这里的 !! 是相对安全的
-
-BBQNavDisplay(
-    backStack = currentBackStack, // 注意这里参数名是 backStack，类型是 List<NavKey>
-    onBack = { navigator.goBack() },
-    snackbarHostState = snackbarHostState,
-    modifier = Modifier.padding(contentPadding)
-)
-
-                if (showAgreementDialog) {
-                    UserAgreementDialog(
-                        onAgreed = { /* 已在 Dialog 内部处理 */ },
-                        onDismissRequest = onAgreementDismiss
+                // 获取当前堆栈 - 修复点：移到 Box 内部
+                val currentBackStack = navigationState.backStacks[currentTopLevelRoute] 
+                    ?: navigationState.backStacks[navigationState.startRoute]!!
+                
+                Box(modifier = Modifier.padding(innerPadding)) {
+                    BBQNavDisplay(
+                        backStack = currentBackStack,
+                        onBack = { navigator.goBack() },
+                        snackbarHostState = snackbarHostState,
+                        modifier = Modifier.fillMaxSize()
                     )
-                }
 
-                CheckForUpdates(snackbarHostState)
+                    if (showAgreementDialog) {
+                        UserAgreementDialog(
+                            onAgreed = { /* 已在 Dialog 内部处理 */ },
+                            onDismissRequest = onAgreementDismiss
+                        )
+                    }
+
+                    CheckForUpdates(snackbarHostState)
+                }
             }
         )
     }
@@ -354,7 +353,6 @@ fun CheckForUpdates(snackbarHostState: SnackbarHostState) {
             }
         }
     }
-}
 }
 
 fun restartMainActivity(context: Context) {
