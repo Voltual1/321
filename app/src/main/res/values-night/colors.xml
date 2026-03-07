@@ -1,4 +1,5 @@
 <resources>
     <color name="icon_background_pink">#FFFFB1C8</color>
     <color name="icon_background_blue">#B0C6FF</color>
+    <color name="onPrimaryContainer">#001C4A</color>
 </resources>
