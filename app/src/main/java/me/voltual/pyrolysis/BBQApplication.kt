@@ -25,7 +25,7 @@ import java.lang.ref.WeakReference
  * GNU General Public License v3.0 or later.
  */
 @KoinApplication
-class BBQApplication : Application(), KoinStartup {
+class BBQApplication : Application()/*, KoinStartup*/ {
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate() {
