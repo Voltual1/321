@@ -28,14 +28,6 @@ import me.voltual.pyrolysis.ui.*
 import java.util.regex.Pattern
 import androidx.compose.runtime.DisposableEffect
 
-private val INTERNAL_POST_LINK_PATTERN: Pattern = Pattern.compile(
-    "http://apk\\.xiaoqu\\.online/post/(\\d+)\\.html"
-)
-
-private val BILI_VIDEO_LINK_PATTERN: Pattern = Pattern.compile(
-    "【视频：([a-zA-Z0-9]+)】"
-)
-
 private val GENERAL_URL_PATTERN: Pattern = Pattern.compile(
     "(?:(?:https?|ftp)://|www\\.)[\\w\\-_]+(?:\\.[\\w\\-_]+)+(?:[\\w\\-.,@?^=%&:/~+#]*[\\w\\-@?^=%&;/~+#])?"
 )
@@ -48,8 +40,6 @@ private data class LinkMatch(
 )
 
 private enum class LinkType {
-    POST,
-    BILIVIDEO,
     URL
 }
 
@@ -95,20 +85,6 @@ fun LinkifyText(
                 }
             }
 
-            val biliVideoMatcher = BILI_VIDEO_LINK_PATTERN.matcher(processedText)
-            while (biliVideoMatcher.find()) {
-                biliVideoMatcher.group(1)?.let { bvid ->
-                    matches.add(
-                        LinkMatch(
-                            start = biliVideoMatcher.start(),
-                            end = biliVideoMatcher.end(),
-                            text = bvid,
-                            type = LinkType.BILIVIDEO
-                        )
-                    )
-                }
-            }
-
             val urlMatcher = GENERAL_URL_PATTERN.matcher(processedText)
             while (urlMatcher.find()) {
                 val isAlreadyMatched = matches.any { it.start == urlMatcher.start() && it.end == urlMatcher.end() }
@@ -148,22 +124,6 @@ fun LinkifyText(
             text = annotatedString,
             style = textStyle,
             onClick = { offset ->
-                // 处理内部帖子链接
-                annotatedString.getStringAnnotations(tag = LinkType.POST.name, start = offset, end = offset)
-                    .firstOrNull()?.let { annotation ->
-                        annotation.item.toLongOrNull()?.let { postId ->
-                            navigator.navigate(PostDetail(postId))   // 类型安全导航
-                        }
-                        return@ClickableText
-                    }
-
-                // 处理B站视频链接
-                annotatedString.getStringAnnotations(tag = LinkType.BILIVIDEO.name, start = offset, end = offset)
-                    .firstOrNull()?.let { annotation ->
-                        val bvid = annotation.item
-                        navigator.navigate(Player(bvid))            // 类型安全导航
-                        return@ClickableText
-                    }
 
                 // 处理普通URL
                 annotatedString.getStringAnnotations(tag = LinkType.URL.name, start = offset, end = offset)

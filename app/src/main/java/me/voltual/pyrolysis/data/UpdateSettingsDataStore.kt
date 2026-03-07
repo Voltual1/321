@@ -26,9 +26,9 @@ object UpdateSettingsDataStore {
     private val AUTO_CHECK_UPDATES = booleanPreferencesKey("auto_check_updates")
 
     val autoCheckUpdates: Flow<Boolean>
-        get() = BBQApplication.instance.applicationContext.updateSettingsDataStore.data.map { preferences ->
+/*        get() = BBQApplication.instance.applicationContext.updateSettingsDataStore.data.map { preferences ->
             preferences[AUTO_CHECK_UPDATES] ?: true
-        }
+        }*/
 
 suspend fun setAutoCheckUpdates(value: Boolean) {
 /*    BBQApplication.instance.applicationContext.updateSettingsDataStore.edit { 

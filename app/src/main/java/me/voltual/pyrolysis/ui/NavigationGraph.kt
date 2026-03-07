@@ -15,13 +15,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.*
 import androidx.navigation3.scene.DialogSceneStrategy
+import me.voltual.pyrolysis.core.ui.components.IDMTransferDialog
 import kotlinx.coroutines.launch
-//import me.voltual.pyrolysis.ui.message.MessageCenterScreen
-//import me.voltual.pyrolysis.ui.message.MessageViewModel
-//import me.voltual.pyrolysis.ui.payment.PaymentCenterScreen
-//import me.voltual.pyrolysis.ui.payment.PaymentType
-//import me.voltual.pyrolysis.ui.payment.PaymentViewModel
-//import me.voltual.pyrolysis.ui.rank.RankingListScreen
 import androidx.compose.foundation.*
 import androidx.navigation3.ui.NavDisplay
 import org.koin.androidx.compose.koinViewModel

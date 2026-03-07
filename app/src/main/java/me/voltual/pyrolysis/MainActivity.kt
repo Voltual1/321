@@ -207,18 +207,6 @@ fun MainScreenContent(
         currentRoute != Home && currentRoute != Login
     }
 
-    val isCommunityScreen = remember(currentRoute) {
-        currentRoute == Community ||
-        currentRoute == MyLikes ||
-        currentRoute == HotPosts ||
-        currentRoute == FollowingPosts ||
-        currentRoute is MyPosts
-    }
-
-    val isPlayerScreen = remember(currentRoute) {
-        currentRoute is Player
-    }
-
     val useDarkTheme = ThemeManager.isAppDarkTheme
     val lightBgUri by ThemeColorStore.getDrawerHeaderLightBackgroundUriFlow(context).collectAsState(initial = null)
     val darkBgUri by ThemeColorStore.getDrawerHeaderDarkBackgroundUriFlow(context).collectAsState(initial = null)
@@ -263,7 +251,6 @@ isLoggedIn.value = credentials.userId != 0L
     ) {
         Scaffold(
             topBar = {
-                if (!isPlayerScreen && !isCommunityScreen) {
                     TopAppBar(
                         title = {
                             Text(
@@ -296,14 +283,11 @@ isLoggedIn.value = credentials.userId != 0L
                             containerColor = MaterialTheme.colorScheme.surface,
                             titleContentColor = MaterialTheme.colorScheme.onSurface
                         )
-                    )
-                }
+                    )                
             },
             snackbarHost = { BBQSnackbarHost(hostState = snackbarHostState) },
             content = { innerPadding ->
-                val contentPadding = when {
-                    isPlayerScreen || isCommunityScreen -> PaddingValues(0.dp)
-                    else -> innerPadding
+                val contentPadding = innerPadding
                 }
 
 // 如果找不到当前堆栈，则回退到 startRoute 的堆栈
