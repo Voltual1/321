@@ -354,6 +354,7 @@ fun CheckForUpdates(snackbarHostState: SnackbarHostState) {
         }
     }
 }
+}
 
 fun restartMainActivity(context: Context) {
     val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
@@ -375,5 +376,4 @@ fun getTitleForDestination(route: NavKey?): String {
         Login -> "登录"
         else -> "在~ $route ~里~哦"
     }
-}
 }
