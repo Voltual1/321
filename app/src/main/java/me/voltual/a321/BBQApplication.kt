@@ -36,16 +36,9 @@ class BBQApplication : Application()/*, KoinStartup*/ {
         ThemeManager.customColorSet = ThemeColorStore.loadColors(this)
     }
 
-/*    override fun onKoinStartup() = koinConfiguration {
+    override fun onKoinStartup() = koinConfiguration {
         androidContext(this@BBQApplication)
-        modules(
-            downloadClientModule,
-            workmanagerModule,
-            databaseModule,
-            privacyModule,
-            installerModule,
-            appModule,
-        )
-    }*/
+        modules(emptyList())//暂时这样
+    }
 
 }
