@@ -12,7 +12,7 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
-import me.voltual.pyrolysis.data.UserAgreementDataStore
+import me.voltual.a321.data.UserAgreementDataStore
 
 val appModule = module {
     
