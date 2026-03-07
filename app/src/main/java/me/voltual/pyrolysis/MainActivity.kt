@@ -50,7 +50,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.voltual.pyrolysis.data.UpdateInfo
 import me.voltual.pyrolysis.data.UpdateSettingsDataStore
-import me.voltual.pyrolysis.core.database.LogEntry
+//import me.voltual.pyrolysis.core.database.LogEntry
 import me.voltual.pyrolysis.data.UserAgreementDataStore
 import me.voltual.pyrolysis.ui.*
 import me.voltual.pyrolysis.core.ui.components.UpdateDialog
@@ -64,15 +64,6 @@ import java.io.IOException
 class MainActivity : AppCompatActivity() {
     private val agreementDataStore: UserAgreementDataStore by inject()
     
-        companion object {
-        private const val TAG = "NeoActivity"
-        const val ACTION_UPDATES = "${BuildConfig.APPLICATION_ID}.intent.action.UPDATES"
-        const val ACTION_INSTALL = "${BuildConfig.APPLICATION_ID}.intent.action.INSTALL"
-        const val EXTRA_UPDATES = "${BuildConfig.APPLICATION_ID}.intent.extra.UPDATES"
-        const val EXTRA_CACHE_FILE_NAME =
-            "${BuildConfig.APPLICATION_ID}.intent.extra.CACHE_FILE_NAME"
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_BBQ_Main)
         super.onCreate(savedInstanceState)
@@ -146,7 +137,7 @@ if (userCredentials.token.isNotEmpty()) {
         }
     }
 
-    init {
+/*    init {
         Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             val crashReport = getCrashReport(throwable)
             CoroutineScope(Dispatchers.IO).launch {
@@ -162,9 +153,9 @@ if (userCredentials.token.isNotEmpty()) {
                 android.os.Process.killProcess(android.os.Process.myPid())
             }
         }
-    }
+    }*/
 
-    private fun getCrashReport(throwable: Throwable): String {
+/*    private fun getCrashReport(throwable: Throwable): String {
         val stackTrace = throwable.stackTraceToString()
         val deviceInfo = """
             设备型号: ${android.os.Build.MODEL}
@@ -180,7 +171,7 @@ if (userCredentials.token.isNotEmpty()) {
             堆栈跟踪:
             $stackTrace
         """.trimIndent()
-    }
+    }*/
 
     @Suppress("DEPRECATION")
     private fun applyDpiAndFontScale(context: Context) {
@@ -198,23 +189,6 @@ if (userCredentials.token.isNotEmpty()) {
         resources.updateConfiguration(configuration, metrics)
     }
     
-fun launchLockPrompt(action: () -> Unit) {
-    // TODO: 待重新实现生物识别逻辑
-}
-
-/*    private fun createBiometricPrompt(action: () -> Unit): BiometricPrompt {
-        return BiometricPrompt(
-            this,
-            ContextCompat.getMainExecutor(this),
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    super.onAuthenticationSucceeded(result)
-                    action()
-                }
-            })
-    }*/
-}
-
 /** 定义所有顶层路由（对应抽屉中独立返回堆栈的页面）*/
 val topLevelRoutes: Set<NavKey> = setOf(
     Home,
@@ -275,7 +249,7 @@ fun MainScreenContent(
         // 逻辑：如果 userId 不等于 0，则认为已登录
 isLoggedIn.value = credentials.userId != 0L
         if (isLoggedIn.value) {
-            tryAutoLogin(credentials.username, credentials.password, context, navigator, snackbarHostState)
+//            tryAutoLogin(credentials.username, credentials.password, context, navigator, snackbarHostState)
         }
     }
 
@@ -448,77 +422,6 @@ fun startHeartbeatService(context: Context, token: String) {
     Intent(context, HeartbeatService::class.java).apply {
         putExtra("TOKEN", token)
         context.startService(this)
-    }
-}
-
-private fun tryAutoLogin(
-    username: String,
-    password: String,
-    context: Context,
-    navigator: Navigator,
-    snackbarHostState: SnackbarHostState
-) {
-    CoroutineScope(Dispatchers.IO).launch {
-        try {
-            val deviceId = AuthManager.getDeviceId(context).first()
-            val result = KtorClient.ApiServiceImpl.login(
-                username = username,
-                password = password,
-                device = deviceId
-            )
-
-            withContext(Dispatchers.Main) {
-                when {
-                    result.isSuccess -> {
-                        val loginResponse = result.getOrNull()
-                        if (loginResponse != null && loginResponse.code == 1) {
-                            val loginData = loginResponse.data
-                            if (loginData != null) {
-                                AuthManager.saveCredentials(
-                                    context,
-                                    username,
-                                    password,
-                                    loginData.usertoken,
-                                    loginData.id
-                                )
-                                // 登录成功，无需导航
-                            } else {
-                                AuthManager.clearCredentials(context)
-                                snackbarHostState.showSnackbar("登录数据为空")
-                                navigator.navigate(Login)
-                            }
-                        } else {
-                            AuthManager.clearCredentials(context)
-                            val errorMsg = loginResponse?.msg ?: "登录失败"
-                            snackbarHostState.showSnackbar(errorMsg)
-                            navigator.navigate(Login)
-                        }
-                    }
-                    else -> {
-                        AuthManager.clearCredentials(context)
-                        val exception = result.exceptionOrNull()
-                        val errorMsg = when (exception) {
-                            is IOException -> {
-                                when {
-                                    exception.message?.contains("429") == true -> "请求太频繁"
-                                    exception.message?.contains("500") == true -> "服务器错误"
-                                    else -> "网络错误: ${exception.message}"
-                                }
-                            }
-                            else -> "登录异常: ${exception?.message ?: "未知错误"}"
-                        }
-                        snackbarHostState.showSnackbar(errorMsg)
-                        navigator.navigate(Login)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                AuthManager.clearCredentials(context)
-                snackbarHostState.showSnackbar("登录异常: ${e.message}")
-                navigator.navigate(Login)
-            }
-        }
     }
 }
 
