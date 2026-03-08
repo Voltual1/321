@@ -28,9 +28,7 @@ android {
         versionName = "1.0"
         
         multiDexEnabled = true
-        buildConfigField("String", "LICENSE", "\"GPLv3\"")
-        
-        // 修复 Error 1: 替换废弃的 resourceConfigurations
+        buildConfigField("String", "LICENSE", "\"GPLv3\"")        
         androidResources {
             localeFilters += "zh"
         }
@@ -43,26 +41,8 @@ android {
             keyAlias = System.getenv("KEY_ALIAS") ?: keystoreProperties.getProperty("keyAlias")
             keyPassword = System.getenv("KEY_PASSWORD") ?: keystoreProperties.getProperty("keyPassword")
         }
-    }
+    }    
 
-    // 修复 Error 2: 修正 AGP 8.13+ 的 APK 重命名逻辑
-    @Suppress("UnstableApiUsage")
-    androidComponents {
-        onVariants { variant ->
-            variant.outputs.forEach { output ->
-                val abi = output.filters.find { 
-                    it.filterType == com.android.build.api.variant.FilterConfiguration.FilterType.ABI 
-                }?.identifier ?: "universal"
-                
-                // 在新版本中，不再直接操作 outputFileName，而是通过底层任务进行映射
-                // 或者通过这种兼容写法（确保 artifactName 正确）
-                output.versionName.set(variant.outputs.first().versionName)
-            }
-        }
-    }
-
-    // 注意：如果上面的 androidComponents 逻辑在你的特定环境中仍有 Property 冲突，
-    // 在 AGP 8.x 中最稳妥的重命名方式是使用下面的传统写法（虽然它被标注为过时，但它能绕过 Property 限制）
     applicationVariants.all {
         val variant = this
         outputs.all {
@@ -115,15 +95,11 @@ android {
 }
 
 dependencies {
-    coreLibraryDesugaring(libs.android.desugar)
-
-    // 修复 Error 3, 4, 5: 必须严格对应上一次梳理后的 libs.versions.toml 命名
-    // 之前梳理的版本将 datetime 改为了 kotlinx.datetime，datastore 改为了 androidx.datastore
-    
+    coreLibraryDesugaring(libs.android.desugar)    
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.collections.immutable)
-    implementation(libs.kotlinx.datetime) // 修正引用
+    implementation(libs.kotlinx.datetime)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.androidx.ui)
@@ -151,8 +127,8 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     
-    implementation(libs.androidx.datastore.preferences) // 修正引用
-    implementation(libs.androidx.datastore.core)        // 修正引用
+    implementation(libs.androidx.datastore.preferences) 
+    implementation(libs.androidx.datastore.core)        
 
     implementation(libs.koin.core)
     implementation(libs.koin.android.compose)
@@ -198,6 +174,7 @@ protobuf {
                 create("java")
                 create("kotlin")
             }
+            //不建议用lite，别问为什么，等R8混淆后，发现lite是反射你就知道了。
         }
     }
 }
