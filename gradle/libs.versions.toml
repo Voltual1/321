@@ -15,9 +15,9 @@ ijkplayer = "0.0.2"
 palette = "1.0.0"
 datetime = "0.7.1"
 fragment = "1.8.5"
-pyrolysis-room = "2.7.2"
+room = "2.7.2"
 datastore = "1.1.7"
-viewmodel-navigation3="2.10.0"
+viewmodel-navigation3_ver= "2.10.0"
 biometric = "1.2.0-alpha05"
 koin = "4.1.1"
 koin-annotations = "2.3.1"
@@ -77,7 +77,7 @@ shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref
 shizuku-hidden = { module = "dev.rikka.hidden:stub", version.ref = "shizuku-hidden" }
 shizuku-refine = { module = "dev.rikka.tools.refine:runtime", version.ref = "shizuku-refine" }
 
-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3, version.ref = "viewmodel-navigation3" }
+viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3, version.ref = "viewmodel-navigation3_ver" }
 
 
 simple-storage = { module = "com.anggrayudi:storage", version.ref = "simple-storage" }
@@ -91,9 +91,9 @@ markdown = { module = "org.jetbrains:markdown", version.ref = "markdown" }
 fragment = { module = "androidx.fragment:fragment-ktx", version.ref = "fragment" }
 
 # 存储
-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "pyrolysis-room" }
-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "pyrolysis-room" }
-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "pyrolysis-room" }
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 datastore-core = { module = "androidx.datastore:datastore", version.ref = "datastore" }
 
