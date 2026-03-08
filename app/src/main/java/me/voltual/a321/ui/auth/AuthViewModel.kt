@@ -21,7 +21,7 @@ class AuthViewModel(
     private val loginUrl = "https://login.123pan.com/centerlogin?redirect_url=https%3A%2F%2Fwww.123pan.com%2F%3Fnotoken%3D1&source_page=website"
     
     // 强制提取 Cookie 的目标 URL
-    private val targetCookieUrl = "https://www.123pan.com/"
+    private val targetCookieUrl = "https://login.123pan.com/"
 
     fun getInitialUrl() = loginUrl
 
