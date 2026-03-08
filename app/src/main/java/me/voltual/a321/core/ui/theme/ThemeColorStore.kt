@@ -387,7 +387,7 @@ object ThemeColorStore {
         }
     }
 
-    // 重置函数（新增到 reset 逻辑中）
+    // 重置函数
     suspend fun resetRoundScreenPaddings(context: Context) {
         context.themeSettingsDataStore.edit { prefs ->
             prefs.remove(ROUND_SCREEN_ENABLED_KEY)

@@ -12,7 +12,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.Signature
-import me.voltual.a321.core.utils.SdkCheck // 确保导入 SdkCheck
+import me.voltual.a321.core.utils.SdkCheck 
 import java.security.MessageDigest
 
 object SdkCheck {

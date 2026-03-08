@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
+//呃，我建议你不要用这套配置到主题上，Material 3默认的形状已经很不错了。
+
 val AppShapes = Shapes(
     small = RoundedCornerShape(4.dp),    // 按钮/标签
     medium = RoundedCornerShape(12.dp),  // 卡片/对话框

@@ -22,7 +22,7 @@ import androidx.compose.ui.window.Dialog
 @Composable
 fun IDMTransferDialog(onDismiss: () -> Unit) {
 val noticeContent = """
-        嘿孩子们，从 **Pyrolysis19.0** 版本开始，本项目的下载服务已经整体移交给 **1DM** 家族了。
+        本项目的下载服务整体移交给 **1DM** 家族了。
 
 所以你需要安装 1DM 系列的应用哦。
 
@@ -42,7 +42,7 @@ val noticeContent = """
 
 ### **关于获取途径：**
 
-为了避嫌，你 V 哥在此处不提供安装包。如果你觉得免费版 1DM 广告多，我推荐你上 Plus 版本，也就是 **1DM+**。
+为了避嫌，在此处不提供安装包。如果你觉得免费版 1DM 广告多，我推荐你上 Plus 版本，也就是 **1DM+**。
 
 至于 1DM+ 要付费？这个嘛……你可以去咨询 [Bing 大小姐](https://www.bing.com/search?q=1DM%2B)
 

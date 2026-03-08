@@ -48,7 +48,7 @@ sealed class IconSource {
 data class DrawerItem(
     val id: String, 
     val label: String,
-    val icon: IconSource, //
+    val icon: IconSource, 
     val route: AppDestination
 )
 
@@ -83,7 +83,7 @@ val allDrawerItems = remember {
         DrawerItem("settings", "主题设置", IconSource.Resource(R.drawable.ic_menu_settings), ThemeCustomize),
         DrawerItem("update_settings", "更新设置", IconSource.Resource(R.drawable.asusupdate), UpdateSettings),
         DrawerItem("login", "登录账号", IconSource.Resource(R.drawable.ic_menu_login), Login),
-        DrawerItem("logout", "退出登录", IconSource.Resource(R.drawable.ic_menu_logout), Home)
+        DrawerItem("logout", "退出登录", IconSource.Resource(R.drawable.ic_menu_logout), Login)
     )
 }
     val allItemsMap = remember { allDrawerItems.associateBy { it.id } }

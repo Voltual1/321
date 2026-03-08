@@ -10,8 +10,10 @@ package me.voltual.a321.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Orange = Color(0xFFFF9138)
-val LightGreen = Color(0xFFAEC300)
+/*
+你可以去
+https://material-foundation.github.io/material-theme-builder/
+来生成一套Compose代码然后复制替换这里的颜色（除自定义的特殊颜色不应该替换）*/
 
 val primaryLight = Color(0xFF0056C6)
 val onPrimaryLight = Color(0xFFFFFFFF)

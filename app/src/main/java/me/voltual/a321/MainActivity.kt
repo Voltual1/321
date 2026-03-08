@@ -272,7 +272,6 @@ fun MainScreenContent(
             },
             snackbarHost = { BBQSnackbarHost(hostState = snackbarHostState) },
             content = { innerPadding ->
-                // 获取当前堆栈 - 修复点：移到 Box 内部
                 val currentBackStack = navigationState.backStacks[currentTopLevelRoute] 
                     ?: navigationState.backStacks[navigationState.startRoute]!!
                 
@@ -359,6 +358,7 @@ fun getTitleForDestination(route: NavKey?): String {
         Home -> "首页"
         Login -> "登录"
         ThemeCustomize -> "主题定制"
+        UpdateSettings -> "更新设置"
         else -> "在~ $route ~里~哦"
     }
 }

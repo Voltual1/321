@@ -46,7 +46,7 @@ fun UserAgreementDialog(
     val agreementContents = remember { mutableStateMapOf<Int, String>() }
     var animationForward by remember { mutableStateOf(true) }
 
-    // 协议列表，已加入灵应用商店协议
+    // 协议列表
     val agreements = remember {
         listOf(
             AgreementItem("《 用户协议》", R.raw.useragreement)

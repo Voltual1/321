@@ -888,7 +888,7 @@ fun String.isValidHex(): Boolean =
 
 fun Float.to255(): Int = (this * 255).roundToInt()
 
-// 新增：颜色名称翻译
+// 颜色名称翻译
 val colorNameTranslations = mapOf(
     "primary" to "主要颜色",
     "onPrimary" to "主要文字颜色",

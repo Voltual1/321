@@ -51,7 +51,7 @@ class LogRepository {
         logDao.insert(logEntry)
     }
     
-    // 新增：提供一个公共方法来访问 DAO 的删除功能
+    // 提供一个公共方法来访问 DAO 的删除功能
     suspend fun deleteLogsByIds(logIds: List<Int>) {
         logDao.deleteLogsByIds(logIds)
     }

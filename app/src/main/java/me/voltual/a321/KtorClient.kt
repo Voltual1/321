@@ -139,7 +139,8 @@ private suspend inline fun <reified T> safeApiCall(block: suspend () -> HttpResp
     }
 
     object ApiServiceImpl : ApiService {
-        private const val GET_LATEST_RELEASE_URL = "https://gitee.com/api/v5/repos/Voltula/bbq/releases/latest"
+   //     private const val GET_LATEST_RELEASE_URL = "https://gitee.com/api/v5/repos/Voltula/bbq/releases/latest"
+   private const val GET_LATEST_RELEASE_URL = "https://example.com"
         
           override suspend fun getLatestRelease(): Result<UpdateInfo> {
     return safeApiCall {

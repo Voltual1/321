@@ -64,7 +64,7 @@ fun PaginationControls(
     onPageClick: () -> Unit,
     isPrevEnabled: Boolean,
     isNextEnabled: Boolean,
-    showTotalPages: Boolean = true, // 新增参数，默认显示总页数
+    showTotalPages: Boolean = true,
     extraControls: @Composable RowScope.() -> Unit = {}
 ) {
     Row(

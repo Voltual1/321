@@ -22,7 +22,7 @@ class Navigator(
 ) {
     private fun forceCleanup() {
         
-        // 剥夺焦点：防止某些组件因持有焦点而在销毁瞬间尝试重绘菜单
+        // 剥夺焦点：防止某些view组件因持有焦点而在销毁瞬间尝试重绘菜单
         hostView?.clearFocus()
     }
     
