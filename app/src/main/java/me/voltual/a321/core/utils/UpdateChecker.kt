@@ -37,7 +37,7 @@ object UpdateChecker {
     fun checkForUpdates(context: Context, onUpdateResult: (UpdateCheckResult) -> Unit) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val result = KtorClient.ApiServiceImpl.getLatestRelease()
+                val result = KtorClient.ApiServiceImpl.getLatestRelease("https://example.com/api/update")
                 
                 if (result.isSuccess) {
                     val update = result.getOrNull()

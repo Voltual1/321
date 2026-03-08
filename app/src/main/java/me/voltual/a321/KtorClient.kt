@@ -37,53 +37,95 @@ import io.ktor.utils.io.*
 import io.ktor.http.content.*
 
 object KtorClient {
-    private const val BASE_URL = "https://example.com/"
-    private const val MAX_RETRIES = 3
-    private const val RETRY_DELAY = 1000L
-    private const val REQUEST_TIMEOUT = 30000L
-    private const val CONNECT_TIMEOUT = 30000L
-    private const val SOCKET_TIMEOUT = 30000L
+    private const val BASE_URL = "https://www.123pan.com/"
 
-    // Ktor HttpClient 实例
-val httpClient = HttpClient(OkHttp) {
-    initConfig(this)
-    defaultRequest {
-        header(HttpHeaders.Accept, ContentType.Application.Json.toString())
+    val httpClient = HttpClient(OkHttp) {
+        install(ContentNegotiation) {
+            json(Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+                explicitNulls = false
+            })
+        }
+        
+        defaultRequest {
+            url(BASE_URL)
+            // 抓包中的固定 Header
+            header("user-agent", "123pan/v3.1.3(Android_9;vivo)")
+            header("platform", "android")
+            header(HttpHeaders.Accept, ContentType.Application.Json.toString())
+        }
+
+        install(HttpTimeout) {
+            requestTimeoutMillis = 30000
+        }
+        
+        install(Logging) {
+            level = LogLevel.INFO
+        }
     }
-}
+    
+    @Serializable
+data class PanResponse<T>(
+    val code: Int,
+    val message: String,
+    val data: T
+)
 
-    private fun initConfig(client: HttpClientConfig<OkHttpConfig>) {
-    // 默认请求配置
-    client.defaultRequest {
-        url(BASE_URL)
-        header(HttpHeaders.ContentType, ContentType.Application.FormUrlEncoded.toString())
-        header(HttpHeaders.Accept, ContentType.Application.Json.toString()) // 显式设置 Accept 头部
+@Serializable
+data class FileListData(
+    val Next: String,
+    val Len: Int,
+    val IsFirst: Boolean,
+    val Total: Int,
+    val InfoList: List<FileInfo>
+)
+
+@Serializable
+data class FileInfo(
+    val FileId: Long,
+    val FileName: String,
+    val Type: Int, // 1 是文件夹, 0 是文件
+    val Size: Long,
+    val UpdateAt: String,
+    val DownloadUrl: String? = null,
+    val Category: Int
+)
+
+    // 将 ApiService 提取出来，方便 Repository 调用
+    interface ApiService {
+        suspend fun getLatestRelease(url: String): Result<UpdateInfo>
+        suspend fun getFileList(token: String, page: Int): Result<PanResponse<FileListData>>
     }
 
-    // JSON 序列化配置
-    client.install(ContentNegotiation) {
-        json(Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-            explicitNulls = false
-        })
-    }
+    object ApiServiceImpl : ApiService {
+        private const val FILE_LIST_PATH = "api/file/list/new"
 
-    // 日志配置
-    client.install(Logging) {
-        logger = Logger.DEFAULT
-        level = LogLevel.HEADERS
-    }
+        override suspend fun getLatestRelease(url: String): Result<UpdateInfo> {
+            return safeApiCall { httpClient.get(url) }
+        }
 
-    // 超时配置
-    client.install(HttpTimeout) {
-        requestTimeoutMillis = REQUEST_TIMEOUT
-        connectTimeoutMillis = CONNECT_TIMEOUT
-        socketTimeoutMillis = SOCKET_TIMEOUT
+        override suspend fun getFileList(token: String, page: Int): Result<PanResponse<FileListData>> {
+            return safeApiCall {
+                httpClient.get(FILE_LIST_PATH) {
+                    header(HttpHeaders.Authorization, "Bearer $token")
+                    url {
+                        parameters.append("driveId", "0")
+                        parameters.append("limit", "100")
+                        parameters.append("page", page.toString())
+                        parameters.append("orderBy", "update_at")
+                        parameters.append("orderDirection", "desc")
+                        parameters.append("parentFileId", "0")
+                        parameters.append("trashed", "false")
+                        parameters.append("SearchData", "")
+                        parameters.append("OnlyLookAbnormalFile", "0")
+                    }
+                }
+            }
+        }
     }
-}    
-
-/**
+    
+    /**
  * 安全地执行 Ktor 请求，并处理异常和重试
  */
  @Suppress("RedundantSuspendModifier")
@@ -130,33 +172,5 @@ private suspend inline fun <reified T> safeApiCall(block: suspend () -> HttpResp
                 this.setBody(FormDataContent(parameters))
             }
         }
-    }
-
-    interface ApiService {
-    
-    suspend fun getLatestRelease(): Result<UpdateInfo>
-        
-    }
-
-    object ApiServiceImpl : ApiService {
-   //     private const val GET_LATEST_RELEASE_URL = "https://gitee.com/api/v5/repos/Voltula/bbq/releases/latest"
-   private const val GET_LATEST_RELEASE_URL = "https://example.com"
-        
-          override suspend fun getLatestRelease(): Result<UpdateInfo> {
-    return safeApiCall {
-        httpClient.get(GET_LATEST_RELEASE_URL).body()
-    }
-    }        
-        
-    
-        
-
-    }
-
-    /**
-     * 关闭 HttpClient（在应用退出时调用）
-     */
-    fun close() {
-        httpClient.close()
     }
 }
