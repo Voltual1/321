@@ -19,7 +19,6 @@ import me.voltual.a321.AuthManager
 
 class AuthViewModel(
     application: Application,
-    // 如果后续需要通过 Repository 验证 Token，可以在这里注入
 ) : AndroidViewModel(application) {
 
     private val _isLoginSuccess = MutableStateFlow(false)
@@ -33,7 +32,7 @@ class AuthViewModel(
      * 核心逻辑：检查 URL 并提取 Cookie
      */
     fun checkAndExtractToken(url: String) {
-        if (url.contains("www.123pan.com")) {
+        if (url.contains("https://www.123pan.com/?notoken=1")) {
             val cookieManager = CookieManager.getInstance()
             val cookies = cookieManager.getCookie(url) ?: return
             
