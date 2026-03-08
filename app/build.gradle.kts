@@ -123,14 +123,14 @@ dependencies {
     implementation(libs.androidx.icons.extended)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-//    implementation(libs.androidx.navigation.compose)Nav2再见！
     implementation(libs.compose.navigation3)
-    implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0") // 请根据版本调整
-        implementation(libs.zxing.core)
+    implementation(libs.viewmodel.navigation3)
+    implementation(libs.zxing.core)
     implementation(libs.compose.navigation3.ui)
     implementation(libs.compose.adaptive)
     implementation(libs.compose.adaptive.layout)
     implementation(libs.compose.adaptive.navigation)
+    implementation(libs.datetime)
 
 
     // 图片与异步
@@ -180,16 +180,12 @@ dependencies {
     implementation(libs.ktor.io)
     implementation(libs.ktor.client.logging)
     implementation(libs.kotlinx.serialization.json)
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1") // 建议使用最新版本
+    implementation(libs.datetime)
 
     // 安全与数据
     implementation(libs.tink.android)
     implementation(libs.protobuf.kotlin)
-
-    // --- Neo Store 移植依赖 ---
-    implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.collections.immutable)
-    implementation(libs.compose.html.converter)
 }
 
 protobuf {
