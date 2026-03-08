@@ -22,7 +22,7 @@ import me.voltual.a321.ui.settings.update.*
 val appModule = module {
 
     viewModel { UpdateSettingsViewModel() }        
-    viewModel { AuthViewModel(androidApplication(), get()) } 
+    viewModel { AuthViewModel(androidApplication()) } 
     single { UserAgreementDataStore(androidContext()) }  
     single { BBQApplication.instance.database }
     single { PanRepository(androidContext()) }
