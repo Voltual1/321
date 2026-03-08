@@ -34,6 +34,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.compose.material3.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.*
+import me.voltual.a321.ui.auth.AuthScreen
 import me.voltual.a321.core.ui.animation.*
 
 @Composable
@@ -86,6 +87,15 @@ fun BBQNavDisplay(
                 is UpdateSettings -> NavEntry(key) {
                     UpdateSettingsScreen(snackbarHostState = snackbarHostState)
                 }
+                is Login -> NavEntry(key) {
+                AuthScreen(
+                onLoginSuccess = { 
+                    onBack() 
+                }
+                )
+                }
+
+                
 
                 // 保底逻辑
                 else -> NavEntry(key) {

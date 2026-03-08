@@ -13,6 +13,7 @@ import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import me.voltual.a321.data.UserAgreementDataStore
+import me.voltual.a321.ui.auth.AuthViewModel
 import me.voltual.a321.core.database.*
 import me.voltual.a321.data.repository.PanRepository
 import me.voltual.a321.core.database.dao.*
@@ -21,6 +22,7 @@ import me.voltual.a321.ui.settings.update.*
 val appModule = module {
 
     viewModel { UpdateSettingsViewModel() }        
+    viewModel { AuthViewModel(androidApplication(), get()) } 
     single { UserAgreementDataStore(androidContext()) }  
     single { BBQApplication.instance.database }
     single { PanRepository(androidContext()) }
