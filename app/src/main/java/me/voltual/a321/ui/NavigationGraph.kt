@@ -89,9 +89,13 @@ fun BBQNavDisplay(
                 }
                 is Login -> NavEntry(key) {
                 AuthScreen(
+                snackbarHostState = snackbarHostState,
                 onLoginSuccess = { 
-                    onBack() 
-                }
+            scope.launch {
+                snackbarHostState.showSnackbar("登录成功")
+            }
+            onBack() 
+        }
                 )
                 }
 
