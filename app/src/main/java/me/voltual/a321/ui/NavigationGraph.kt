@@ -51,6 +51,8 @@ fun BBQNavDisplay(
         rememberSaveableStateHolderNavEntryDecorator<NavKey>(), // 保持 UI 状态（如滚动位置）
         rememberViewModelStoreNavEntryDecorator<NavKey>()      // 为每个 Entry 提供独立的 ViewModel 存储
     )
+    
+    val scope = rememberCoroutineScope()
 
     NavDisplay(
         backStack = backStack,
