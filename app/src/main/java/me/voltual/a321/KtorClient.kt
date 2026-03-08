@@ -38,6 +38,9 @@ import io.ktor.http.content.*
 
 object KtorClient {
     private const val BASE_URL = "https://www.123pan.com/"
+    private const val MAX_RETRIES = 3
+    private const val RETRY_DELAY = 1000L
+
 
     val httpClient = HttpClient(OkHttp) {
         install(ContentNegotiation) {
