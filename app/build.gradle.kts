@@ -1,4 +1,5 @@
 import java.util.Properties
+import com.android.build.api.variant.FilterConfiguration
 
 plugins {
     alias(libs.plugins.android.application)
@@ -11,13 +12,13 @@ plugins {
     id("kotlin-parcelize")
 }
 
-android {
-    val keystorePropertiesFile = rootProject.file("keystore.properties")
-    val keystoreProperties = Properties()
-    if (keystorePropertiesFile.exists()) {
-        keystoreProperties.load(keystorePropertiesFile.inputStream())
-    }
+// 读取 Keystore 配置
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
 
+android {
     namespace = "me.voltual.a321"
     compileSdk = 36
 
@@ -27,6 +28,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         resourceConfigurations += listOf("zh")
@@ -41,32 +43,6 @@ android {
         }
     }
 
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("armeabi-v7a", "arm64-v8a")
-            isUniversalApk = false
-        }
-    }
-
-    // 注意：在 AGP 8.0+ 中建议使用更现代的方式处理输出文件名
-    // 但保留你的逻辑并修正类型转换
-    applicationVariants.all {
-        val variant = this
-        variant.outputs.all {
-            val output = this as com.android.build.gradle.internal.api.ApkVariantOutputImpl
-            val abi = output.getFilter(com.android.build.OutputFile.ABI) ?: "universal"
-            output.outputFileName = "A321-${variant.versionName}-$abi-${variant.buildType.name}.apk"
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-        isCoreLibraryDesugaringEnabled = true
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -76,9 +52,37 @@ android {
         }
         debug {
             isDebuggable = true
-            isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("release")
         }
+    }
+
+    @Suppress("UnstableApiUsage")
+    androidComponents {
+        onVariants { variant ->
+            variant.outputs.forEach { output ->
+                val abi = output.filters.find { it.filterType == FilterConfiguration.FilterType.ABI }?.identifier ?: "universal"
+                output.outputFileName.set("A321-${variant.outputs.first().versionName.get()}-$abi-${variant.name}.apk")
+            }
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            isUniversalApk = false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
+    }
+
+    kotlin {
+        jvmToolchain(17)
     }
 
     buildFeatures {
@@ -88,34 +92,33 @@ android {
 
     packaging {
         resources {
-            excludes.add("/META-INF/{AL2.0,LGPL2.1}")
-            excludes.add("/META-INF/INDEX.LIST")
-            excludes.add("/META-INF/DEPENDENCIES")
-            excludes.add("/google/protobuf/**")
-            excludes.add("/src/google/protobuf/**")
-            excludes.add("/java/core/java_features_proto-descriptor-set.proto.bin")
-            excludes.add("/META-INF/LICENSE*")
-            excludes.add("/META-INF/*.txt")
-            excludes.add("/DebugProbesKt.bin")
-            merges.add("/META-INF/services/**")
+            excludes += listOf(
+                "/META-INF/{AL2.0,LGPL2.1}",
+                "/META-INF/INDEX.LIST",
+                "/META-INF/DEPENDENCIES",
+                "/META-INF/LICENSE*",
+                "/META-INF/*.txt",
+                "/google/protobuf/**",
+                "/src/google/protobuf/**",
+                "/java/core/java_features_proto-descriptor-set.proto.bin",
+                "DebugProbesKt.bin"
+            )
+            merges += "/META-INF/services/**"
         }
-    }
-
-    kotlin {
-        jvmToolchain(17)
     }
 }
 
 dependencies {
-    // 基础
+    // JDK Desugaring
     coreLibraryDesugaring(libs.android.desugar)
-    implementation(libs.google.material)
-    implementation(libs.okhttp)
-    implementation(libs.photoview)
-    implementation(libs.fragment)
-    implementation(libs.biometric)
-    implementation(libs.simple.storage)
-    // Compose
+
+    // Kotlin 基础
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.collections.immutable)
+    implementation(libs.datetime)
+
+    // Compose 核心
     implementation(platform(libs.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.material3)
@@ -123,69 +126,63 @@ dependencies {
     implementation(libs.androidx.icons.extended)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // Navigation3 与 自适应
     implementation(libs.compose.navigation3)
-    implementation(libs.viewmodel.navigation3)
-    implementation(libs.zxing.core)
     implementation(libs.compose.navigation3.ui)
+    implementation(libs.viewmodel.navigation3)
     implementation(libs.compose.adaptive)
     implementation(libs.compose.adaptive.layout)
     implementation(libs.compose.adaptive.navigation)
-    implementation(libs.datetime)
 
-
-    // 图片与异步
-    implementation(libs.coil.compose)
-    implementation(libs.coil.network.ktor)
-    implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.imagepicker)
-
-    // 播放器与 UI
-    implementation(libs.ijkplayer)
-    implementation(project(":DanmakuFlameMaster"))
-    implementation(libs.androidx.palette)
-    implementation(libs.markdown)
-
-    // 存储
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
-    implementation(libs.datastore.preferences)
-    implementation(libs.vico.compose)
-    implementation(libs.vico.compose.m3)
-    implementation(libs.datastore.core)
-    
-    //Shizuku
-    implementation(libs.shizuku.api)
-    implementation(libs.shizuku.provider)
-    implementation(libs.shizuku.refine)
-    compileOnly(libs.shizuku.hidden)
-    
-    //Libsu
-    implementation(libs.libsu.core)
-
-    // Koin 注入
-    implementation(libs.koin.android.compose)
-    implementation(libs.koin.core)
-    implementation(libs.koin.annotations)
-    implementation(libs.koin.workmanager)
-    implementation(libs.koin.startup)
-    ksp(libs.koin.ksp.compiler)
-
-    // Ktor 与 序列化
+    // 网络与存储
+    implementation(libs.okhttp)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.json)
-    implementation(libs.work.runtime)
-    implementation(libs.ktor.io)
     implementation(libs.ktor.client.logging)
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.datetime)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+    implementation(libs.datastore.preferences)
+    implementation(libs.datastore.core)
 
-    // 安全与数据
+    // 依赖注入
+    implementation(libs.koin.core)
+    implementation(libs.koin.android.compose)
+    implementation(libs.koin.workmanager)
+    implementation(libs.koin.startup)
+    implementation(libs.koin.annotations)
+    ksp(libs.koin.ksp.compiler)
+
+    // UI 组件与多媒体
+    implementation(libs.google.material)
+    implementation(libs.androidx.fragment)
+    implementation(libs.androidx.palette)
+    implementation(libs.androidx.biometric)
+    implementation(libs.vico.compose)
+    implementation(libs.vico.compose.m3)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.ktor)
+    implementation(libs.photoview)
+    implementation(libs.imagepicker)
+    implementation(libs.markdown)
+    implementation(libs.zxing.core)
+    implementation(libs.compose.html.converter)
+    implementation(libs.ijkplayer)
+    implementation(project(":DanmakuFlameMaster"))
+
+    // 系统工具与安全
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
+    implementation(libs.shizuku.refine.runtime)
+    compileOnly(libs.shizuku.hidden)
+    implementation(libs.libsu.core)
+    implementation(libs.simple.storage)
     implementation(libs.tink.android)
     implementation(libs.protobuf.kotlin)
-    implementation(libs.kotlinx.collections.immutable)
+    implementation(libs.androidx.work.runtime)
 }
 
 protobuf {
@@ -197,7 +194,6 @@ protobuf {
             task.builtins {
                 create("java")
                 create("kotlin")
-                //孩子们，不要说我没有警告你，本项目owner实战经验发现用lite版本会被r8混淆导致发行版ggԾ‸ Ծ 
             }
         }
     }
@@ -206,8 +202,7 @@ protobuf {
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        
-        // 开启显式备用字段特性
+        // 显式备用字段
         freeCompilerArgs.add("-XXLanguage:+ExplicitBackingFields")
     }
 }
