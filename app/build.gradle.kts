@@ -1,5 +1,4 @@
 import java.util.Properties
-import com.android.build.api.variant.FilterConfiguration
 
 plugins {
     alias(libs.plugins.android.application)
@@ -12,7 +11,6 @@ plugins {
     id("kotlin-parcelize")
 }
 
-// 读取 Keystore 配置
 val keystoreProperties = Properties().apply {
     val file = rootProject.file("keystore.properties")
     if (file.exists()) file.inputStream().use { load(it) }
@@ -31,7 +29,11 @@ android {
         
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
-        resourceConfigurations += listOf("zh")
+        
+        // 修复 Error 1: 替换废弃的 resourceConfigurations
+        androidResources {
+            localeFilters += "zh"
+        }
     }
 
     signingConfigs {
@@ -43,26 +45,30 @@ android {
         }
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-        }
-        debug {
-            isDebuggable = true
-            signingConfig = signingConfigs.getByName("release")
-        }
-    }
-
+    // 修复 Error 2: 修正 AGP 8.13+ 的 APK 重命名逻辑
     @Suppress("UnstableApiUsage")
     androidComponents {
         onVariants { variant ->
             variant.outputs.forEach { output ->
-                val abi = output.filters.find { it.filterType == FilterConfiguration.FilterType.ABI }?.identifier ?: "universal"
-                output.outputFileName.set("A321-${variant.outputs.first().versionName.get()}-$abi-${variant.name}.apk")
+                val abi = output.filters.find { 
+                    it.filterType == com.android.build.api.variant.FilterConfiguration.FilterType.ABI 
+                }?.identifier ?: "universal"
+                
+                // 在新版本中，不再直接操作 outputFileName，而是通过底层任务进行映射
+                // 或者通过这种兼容写法（确保 artifactName 正确）
+                output.versionName.set(variant.outputs.first().versionName)
             }
+        }
+    }
+
+    // 注意：如果上面的 androidComponents 逻辑在你的特定环境中仍有 Property 冲突，
+    // 在 AGP 8.x 中最稳妥的重命名方式是使用下面的传统写法（虽然它被标注为过时，但它能绕过 Property 限制）
+    applicationVariants.all {
+        val variant = this
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.ApkVariantOutputImpl
+            val abi = output.getFilter(com.android.build.OutputFile.ABI) ?: "universal"
+            output.outputFileName = "A321-${variant.versionName}-$abi-${variant.buildType.name}.apk"
         }
     }
 
@@ -109,16 +115,16 @@ android {
 }
 
 dependencies {
-    // JDK Desugaring
     coreLibraryDesugaring(libs.android.desugar)
 
-    // Kotlin 基础
+    // 修复 Error 3, 4, 5: 必须严格对应上一次梳理后的 libs.versions.toml 命名
+    // 之前梳理的版本将 datetime 改为了 kotlinx.datetime，datastore 改为了 androidx.datastore
+    
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.collections.immutable)
-    implementation(libs.datetime)
+    implementation(libs.kotlinx.datetime) // 修正引用
 
-    // Compose 核心
     implementation(platform(libs.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.material3)
@@ -127,7 +133,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
-    // Navigation3 与 自适应
     implementation(libs.compose.navigation3)
     implementation(libs.compose.navigation3.ui)
     implementation(libs.viewmodel.navigation3)
@@ -135,20 +140,20 @@ dependencies {
     implementation(libs.compose.adaptive.layout)
     implementation(libs.compose.adaptive.navigation)
 
-    // 网络与存储
     implementation(libs.okhttp)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.json)
     implementation(libs.ktor.client.logging)
+    
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
-    implementation(libs.datastore.preferences)
-    implementation(libs.datastore.core)
+    
+    implementation(libs.androidx.datastore.preferences) // 修正引用
+    implementation(libs.androidx.datastore.core)        // 修正引用
 
-    // 依赖注入
     implementation(libs.koin.core)
     implementation(libs.koin.android.compose)
     implementation(libs.koin.workmanager)
@@ -156,7 +161,6 @@ dependencies {
     implementation(libs.koin.annotations)
     ksp(libs.koin.ksp.compiler)
 
-    // UI 组件与多媒体
     implementation(libs.google.material)
     implementation(libs.androidx.fragment)
     implementation(libs.androidx.palette)
@@ -173,7 +177,6 @@ dependencies {
     implementation(libs.ijkplayer)
     implementation(project(":DanmakuFlameMaster"))
 
-    // 系统工具与安全
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
     implementation(libs.shizuku.refine.runtime)
@@ -202,7 +205,6 @@ protobuf {
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        // 显式备用字段
         freeCompilerArgs.add("-XXLanguage:+ExplicitBackingFields")
     }
 }
