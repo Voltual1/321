@@ -91,7 +91,7 @@ data class UploadRequestData(
     val StorageNode: String? = null
 )
 
-@Serializable
+    @Serializable
 data class S3PartUrlsData(
     val presignedUrls: Map<String, String> // PartNumber -> URL
 )
