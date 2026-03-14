@@ -15,23 +15,84 @@ import me.voltual.a321.KtorClient
 import me.voltual.a321.data.UpdateInfo
 
 class PanRepository(private val context: Context) {
-
     private val apiService = KtorClient.ApiServiceImpl
+    private val CHUNK_SIZE = 5 * 1024 * 1024L // 5MB 分块
 
     /**
-     * 获取文件列表：自动从 DataStore 获取最新的 Token
+     * 完整上传流程
+     * @param file 本地文件
+     * @param parentId 目标目录 ID
+     * @param onProgress 进度回调 (0.0 ~ 1.0)
      */
-    suspend fun getFiles(page: Int = 1) = runCatching {
-        // 从 DataStore 获取加密保存的凭证
-        val credentials = AuthManager.getCredentials(context).first()
-        val token = credentials.token
-        
+    suspend fun uploadFile(
+        file: File,
+        parentId: Long,
+        onProgress: (Float) -> Unit
+    ): Result<String> = runCatching {
+        val token = AuthManager.getCredentials(context).first().token
         if (token.isEmpty()) throw Exception("Login required")
-        
-        val result = apiService.getFileList(token, page)
-        result.getOrThrow()
-    }
 
+        val fileName = file.name
+        val fileSize = file.length()
+        val md5 = PanUtils.calcFileMd5(file)
+
+        // 1. 申请上传
+        val reqRes = apiService.requestUpload(token, parentId, fileName, fileSize, md5).getOrThrow()
+        val uploadInfo = reqRes.data ?: throw Exception("Upload request failed")
+
+        // 秒传判断
+        if (uploadInfo.Reuse) {
+            onProgress(1.0f)
+            return@runCatching "秒传成功"
+        }
+
+        // 2. 开始分块上传
+        val bucket = uploadInfo.Bucket!!
+        val key = uploadInfo.Key!!
+        val uploadId = uploadInfo.UploadId!!
+        val storageNode = uploadInfo.StorageNode!!
+        val fileId = uploadInfo.FileId!!
+
+        val totalParts = ((fileSize + CHUNK_SIZE - 1) / CHUNK_SIZE).toInt()
+        
+        file.inputStream().use { fis ->
+            val buffer = ByteArray(CHUNK_SIZE.toInt())
+            for (partNumber in 1..totalParts) {
+                val bytesRead = fis.read(buffer)
+                if (bytesRead == -1) break
+                
+                // 获取当前块的上传 URL
+                val urlRes = apiService.getS3PartUrls(token, bucket, key, uploadId, storageNode, partNumber).getOrThrow()
+                val uploadUrl = urlRes.data?.presignedUrls?.get(partNumber.toString()) 
+                    ?: throw Exception("Failed to get S3 URL for part $partNumber")
+
+                // 直接 PUT 字节数组到 S3 (注意：这里使用原生的 httpClient，不带默认网盘 Header)
+                val putResponse = KtorClient.httpClient.put(uploadUrl) {
+                    setBody(buffer.copyOfRange(0, bytesRead))
+                    // S3 上传通常不需要 Authorization Header，URL 已经签名
+                }
+                
+                if (!putResponse.status.isSuccess()) {
+                    throw Exception("S3 Part upload failed: ${putResponse.status}")
+                }
+
+                // 更新进度
+                onProgress(partNumber.toFloat() / totalParts * 0.9f) // 留 10% 给合并步骤
+            }
+        }
+
+        // 3. 合并分块
+        apiService.completeS3Upload(token, bucket, key, uploadId, storageNode).getOrThrow()
+        
+        // 参考 Python 原型，合并后稍作延迟
+        delay(1000)
+
+        // 4. 最终确认
+        apiService.confirmUpload(token, fileId).getOrThrow()
+        
+        onProgress(1.0f)
+        "上传成功"
+    }
     /**
      * 兼容原有的更新检查逻辑
      */

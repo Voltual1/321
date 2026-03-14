@@ -80,6 +80,21 @@ object KtorClient {
         val Total: Int,
         val InfoList: List<FileInfo>
     )
+    
+    @Serializable
+data class UploadRequestData(
+    val Reuse: Boolean, // 是否秒传成功
+    val FileId: String? = null,
+    val UploadId: String? = null,
+    val Bucket: String? = null,
+    val Key: String? = null,
+    val StorageNode: String? = null
+)
+
+@Serializable
+data class S3PartUrlsData(
+    val presignedUrls: Map<String, String> // PartNumber -> URL
+)
 
     @Serializable
     data class FileInfo(
@@ -119,6 +134,17 @@ object KtorClient {
         suspend fun getDownloadUrl(token: String, file: FileInfo): Result<String>
         suspend fun createFolder(token: String, name: String, parentId: Long): Result<PanResponse<Unit>>
         suspend fun deleteFiles(token: String, fileIds: List<Long>): Result<PanResponse<Unit>>
+        // 1. 请求上传（含秒传校验）
+    suspend fun requestUpload(token: String, parentId: Long, fileName: String, size: Long, md5: String): Result<PanResponse<UploadRequestData>>
+
+    // 2. 获取分块上传的预签名 URL
+    suspend fun getS3PartUrls(token: String, bucket: String, key: String, uploadId: String, storageNode: String, partNumber: Int): Result<PanResponse<S3PartUrlsData>>
+
+    // 3. 合并 S3 分块
+    suspend fun completeS3Upload(token: String, bucket: String, key: String, uploadId: String, storageNode: String): Result<PanResponse<Unit>>
+
+    // 4. 最终确认上传完成
+    suspend fun confirmUpload(token: String, fileId: String): Result<PanResponse<Unit>>
     }
 
     object ApiServiceImpl : ApiService {
@@ -139,6 +165,58 @@ object KtorClient {
                 }
             }
         }
+        
+        override suspend fun requestUpload(token: String, parentId: Long, fileName: String, size: Long, md5: String) = safeApiCall<PanResponse<UploadRequestData>> {
+        httpClient.post("/b/api/file/upload_request") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody(mapOf(
+                "driveId" to 0,
+                "parentFileId" to parentId,
+                "fileName" to fileName,
+                "size" to size,
+                "etag" to md5,
+                "type" to 0,
+                "duplicate" to 2 // 2: 保留两者, 1: 覆盖, 0: 冲突报错
+            ))
+        }
+    }
+
+    override suspend fun getS3PartUrls(token: String, bucket: String, key: String, uploadId: String, storageNode: String, partNumber: Int) = safeApiCall<PanResponse<S3PartUrlsData>> {
+        httpClient.post("/b/api/file/s3_repare_upload_parts_batch") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody(mapOf(
+                "bucket" to bucket,
+                "key" to key,
+                "uploadId" to uploadId,
+                "partNumberStart" to partNumber,
+                "partNumberEnd" to partNumber,
+                "StorageNode" to storageNode
+            ))
+        }
+    }
+
+    override suspend fun completeS3Upload(token: String, bucket: String, key: String, uploadId: String, storageNode: String) = safeApiCall<PanResponse<Unit>> {
+        httpClient.post("/b/api/file/s3_complete_multipart_upload") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody(mapOf(
+                "bucket" to bucket,
+                "key" to key,
+                "uploadId" to uploadId,
+                "StorageNode" to storageNode
+            ))
+        }
+    }
+
+    override suspend fun confirmUpload(token: String, fileId: String) = safeApiCall<PanResponse<Unit>> {
+        httpClient.post("/b/api/file/upload_complete") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("fileId" to fileId))
+        }
+    }
 
         override suspend fun getFileList(token: String, page: Int, parentId: Long): Result<PanResponse<FileListData>> {
             return safeApiCall {
