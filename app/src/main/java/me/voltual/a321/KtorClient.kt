@@ -352,8 +352,8 @@ data class FileInfo(
             ))
         }
     }
-        }
     }
+}
 
     /**
      * 安全地执行 Ktor 请求
