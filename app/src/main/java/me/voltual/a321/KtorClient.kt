@@ -96,19 +96,22 @@ data class S3PartUrlsData(
     val presignedUrls: Map<String, String> // PartNumber -> URL
 )
 
-    @Serializable
-    data class FileInfo(
-        val FileId: Long,
-        val FileName: String,
-        val Type: Int, // 1: 文件夹, 0: 文件
-        val Size: Long,
-        val Etag: String? = null,
-        val S3KeyFlag: String? = null,
-        val Category: Int = 0,
-        val Status: Int = 0
-    ) {
-        val isDirectory: Boolean get() = Type == 1
-    }
+@Serializable
+data class FileInfo(
+    val FileId: Long,
+    val FileName: String,
+    val Type: Int, // 1: 文件夹, 0: 文件
+    val Size: Long,
+    val Etag: String? = null,
+    val S3KeyFlag: String? = null,
+    val Category: Int = 0,
+    val Status: Int = 0,
+    val UpdateAt: String = "" // 补全此字段
+) {
+    val isDirectory: Boolean get() = Type == 1
+    // 补全此逻辑：123网盘 Status > 100 通常表示文件异常（被封禁或审核不通过）
+    val isAbnormal: Boolean get() = Status > 100 
+}
 
     @Serializable
     data class DownloadData(
