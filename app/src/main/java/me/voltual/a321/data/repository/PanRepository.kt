@@ -18,6 +18,8 @@ import me.voltual.a321.AuthManager
 import me.voltual.a321.KtorClient
 import me.voltual.a321.data.UpdateInfo
 import me.voltual.a321.utils.PanUtils
+import me.voltual.a321.data.unified.PanFile
+import me.voltual.a321.data.unified.toUnifiedList
 import java.io.File
 import java.io.IOException
 
@@ -26,17 +28,17 @@ class PanRepository(private val context: Context) {
     private val CHUNK_SIZE = 5 * 1024 * 1024L // 5MB 分块
 
     /**
-     * 获取文件列表：自动从 DataStore 获取最新的 Token
+     * 获取文件列表并转换为统一模型
      */
-    suspend fun getFiles(page: Int = 1) = runCatching {
-        // 从 DataStore 获取加密保存的凭证
+    suspend fun getFiles(parentId: Long = 0, page: Int = 1): Result<List<PanFile>> = runCatching {
         val credentials = AuthManager.getCredentials(context).first()
         val token = credentials.token
         
         if (token.isEmpty()) throw Exception("Login required")
         
-        val result = apiService.getFileList(token, page)
-        result.getOrThrow()
+        val response = apiService.getFileList(token, page, parentId).getOrThrow()
+        // 使用 Mapper 转换
+        response.data?.InfoList?.toUnifiedList() ?: emptyList()
     }
 
     /**
