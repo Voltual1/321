@@ -58,24 +58,29 @@
             │   ├── UpdateInfo.kt
             │   ├── UpdateSettingsDataStore.kt
             │   ├── UserAgreementDataStore.kt
-            │   └── repository
-            │       └── PanRepository.kt
+            │   ├── repository
+            │   │   └── PanRepository.kt
+            │   └── unified
+            │       ├── Mappers.kt
+            │       └── UnifiedModels.kt
             ├── feature
             ├── tree.txt
-            └── ui
-                ├── CompositionLocal.kt
-                ├── CrashLogActivity.kt
-                ├── Drawer.kt
-                ├── Navigation.kt
-                ├── NavigationGraph.kt
-                ├── NavigationState.kt
-                ├── Navigator.kt
-                ├── auth
-                │   ├── AuthScreen.kt
-                │   └── AuthViewModel.kt
-                └── settings
-                    └── update
-                        ├── UpdateSettingsScreen.kt
-                        └── UpdateSettingsViewModel.kt
+            ├── ui
+            │   ├── CompositionLocal.kt
+            │   ├── CrashLogActivity.kt
+            │   ├── Drawer.kt
+            │   ├── Navigation.kt
+            │   ├── NavigationGraph.kt
+            │   ├── NavigationState.kt
+            │   ├── Navigator.kt
+            │   ├── auth
+            │   │   ├── AuthScreen.kt
+            │   │   └── AuthViewModel.kt
+            │   └── settings
+            │       └── update
+            │           ├── UpdateSettingsScreen.kt
+            │           └── UpdateSettingsViewModel.kt
+            └── utils
+                └── PanUtils.kt
 
-23 directories, 56 files
+25 directories, 59 files

@@ -18,9 +18,11 @@ import me.voltual.a321.core.database.*
 import me.voltual.a321.data.repository.PanRepository
 import me.voltual.a321.core.database.dao.*
 import me.voltual.a321.ui.settings.update.*
+import me.voltual.a321.ui.explorer.ExplorerViewModel
 
 val appModule = module {
 
+    viewModel { ExplorerViewModel(get()) } // 注入 PanRepository
     viewModel { UpdateSettingsViewModel() }        
     viewModel { AuthViewModel(androidApplication()) } 
     single { UserAgreementDataStore(androidContext()) }  

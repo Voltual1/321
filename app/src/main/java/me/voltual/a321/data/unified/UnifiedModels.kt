@@ -15,3 +15,8 @@ data class PanFile(
     // 也可以在这里添加 UI 专用的辅助属性
     val extension: String = name.substringAfterLast(".", "")
 )
+
+data class PanPath(
+    val id: Long,
+    val name: String
+)
