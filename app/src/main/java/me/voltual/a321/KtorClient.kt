@@ -65,6 +65,69 @@ object KtorClient {
     }
 
     // ===== 数据模型 =====
+    
+    // ===== 请求模型定义 (用于 POST Body) =====
+
+@Serializable
+data class LoginRequest(
+    val type: Int = 1,
+    val passport: String,
+    val password: String
+)
+
+@Serializable
+data class UploadRequest(
+    val driveId: Int = 0,
+    val parentFileId: Long,
+    val fileName: String,
+    val size: Long,
+    val etag: String,
+    val type: Int = 0,
+    val duplicate: Int = 2
+)
+
+@Serializable
+data class S3PartUrlsRequest(
+    val bucket: String,
+    val key: String,
+    val partNumberStart: Int,
+    val partNumberEnd: Int,
+    val uploadId: String,
+    val StorageNode: String
+)
+
+@Serializable
+data class CompleteS3UploadRequest(
+    val bucket: String,
+    val key: String,
+    val uploadId: String,
+    val StorageNode: String
+)
+
+@Serializable
+data class ConfirmUploadRequest(
+    val fileId: String
+)
+
+@Serializable
+data class TrashRequest(
+    val driveId: Int = 0,
+    val fileTrashInfoList: List<TrashItem>,
+    val operation: Boolean
+)
+
+@Serializable
+data class TrashItem(
+    val FileId: Long
+)
+
+@Serializable
+data class CreateFolderRequest(
+    val fileName: String,
+    val parentFileId: Long,
+    val type: Int = 1,
+    val duplicate: Int = 1
+)
 
     @Serializable
     data class PanResponse<T>(
@@ -156,31 +219,22 @@ data class FileInfo(
             return safeApiCall { httpClient.get(url) }
         }
 
-        override suspend fun login(passport: String, password: String): Result<PanResponse<LoginData>> {
-            return safeApiCall {
-                httpClient.post("/b/api/user/sign_in") {
-                    contentType(ContentType.Application.Json)
-                    setBody(mapOf(
-                        "type" to 1,
-                        "passport" to passport,
-                        "password" to password
-                    ))
-                }
-            }
+            override suspend fun login(passport: String, password: String) = safeApiCall<PanResponse<LoginData>> {
+        httpClient.post("/b/api/user/sign_in") {
+            contentType(ContentType.Application.Json)
+            setBody(LoginRequest(passport = passport, password = password))
         }
-        
-        override suspend fun requestUpload(token: String, parentId: Long, fileName: String, size: Long, md5: String) = safeApiCall<PanResponse<UploadRequestData>> {
+    }
+
+    override suspend fun requestUpload(token: String, parentId: Long, fileName: String, size: Long, md5: String) = safeApiCall<PanResponse<UploadRequestData>> {
         httpClient.post("/b/api/file/upload_request") {
             bearerAuth(token)
             contentType(ContentType.Application.Json)
-            setBody(mapOf(
-                "driveId" to 0,
-                "parentFileId" to parentId,
-                "fileName" to fileName,
-                "size" to size,
-                "etag" to md5,
-                "type" to 0,
-                "duplicate" to 2 // 2: 保留两者, 1: 覆盖, 0: 冲突报错
+            setBody(UploadRequest(
+                parentFileId = parentId,
+                fileName = fileName,
+                size = size,
+                etag = md5
             ))
         }
     }
@@ -189,13 +243,13 @@ data class FileInfo(
         httpClient.post("/b/api/file/s3_repare_upload_parts_batch") {
             bearerAuth(token)
             contentType(ContentType.Application.Json)
-            setBody(mapOf(
-                "bucket" to bucket,
-                "key" to key,
-                "uploadId" to uploadId,
-                "partNumberStart" to partNumber,
-                "partNumberEnd" to partNumber,
-                "StorageNode" to storageNode
+            setBody(S3PartUrlsRequest(
+                bucket = bucket,
+                key = key,
+                partNumberStart = partNumber,
+                partNumberEnd = partNumber,
+                uploadId = uploadId,
+                StorageNode = storageNode
             ))
         }
     }
@@ -204,11 +258,11 @@ data class FileInfo(
         httpClient.post("/b/api/file/s3_complete_multipart_upload") {
             bearerAuth(token)
             contentType(ContentType.Application.Json)
-            setBody(mapOf(
-                "bucket" to bucket,
-                "key" to key,
-                "uploadId" to uploadId,
-                "StorageNode" to storageNode
+            setBody(CompleteS3UploadRequest(
+                bucket = bucket,
+                key = key,
+                uploadId = uploadId,
+                StorageNode = storageNode
             ))
         }
     }
@@ -217,7 +271,7 @@ data class FileInfo(
         httpClient.post("/b/api/file/upload_complete") {
             bearerAuth(token)
             contentType(ContentType.Application.Json)
-            setBody(mapOf("fileId" to fileId))
+            setBody(ConfirmUploadRequest(fileId = fileId))
         }
     }
 
@@ -280,33 +334,24 @@ data class FileInfo(
             }
         }
 
-        override suspend fun createFolder(token: String, name: String, parentId: Long): Result<PanResponse<Unit>> {
-            return safeApiCall {
-                httpClient.post("/b/api/file/upload_request") {
-                    bearerAuth(token)
-                    contentType(ContentType.Application.Json)
-                    setBody(mapOf(
-                        "fileName" to name,
-                        "parentFileId" to parentId,
-                        "type" to 1,
-                        "duplicate" to 1
-                    ))
-                }
-            }
+        override suspend fun createFolder(token: String, name: String, parentId: Long) = safeApiCall<PanResponse<Unit>> {
+        httpClient.post("/b/api/file/upload_request") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody(CreateFolderRequest(fileName = name, parentFileId = parentId))
         }
+    }
 
-        override suspend fun deleteFiles(token: String, fileIds: List<Long>): Result<PanResponse<Unit>> {
-            return safeApiCall {
-                httpClient.post("/a/api/file/trash") {
-                    bearerAuth(token)
-                    contentType(ContentType.Application.Json)
-                    setBody(mapOf(
-                        "driveId" to 0,
-                        "fileTrashInfoList" to fileIds.map { mapOf("FileId" to it) },
-                        "operation" to true
-                    ))
-                }
-            }
+    override suspend fun deleteFiles(token: String, fileIds: List<Long>) = safeApiCall<PanResponse<Unit>> {
+        httpClient.post("/a/api/file/trash") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody(TrashRequest(
+                fileTrashInfoList = fileIds.map { TrashItem(it) },
+                operation = true
+            ))
+        }
+    }
         }
     }
 
