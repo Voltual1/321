@@ -33,6 +33,7 @@ import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDe
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.compose.material3.*
 import androidx.lifecycle.viewmodel.compose.viewModel
+import me.voltual.a321.ui.explorer.ExplorerScreen
 import androidx.compose.foundation.layout.*
 import me.voltual.a321.ui.auth.AuthScreen
 import me.voltual.a321.core.ui.animation.*
@@ -80,6 +81,7 @@ fun BBQNavDisplay(
         entryProvider = { key ->
             when (key) {
                 is Home -> NavEntry(key) {
+                    ExplorerScreen()
                 }
                 
                 is ThemeCustomize -> NavEntry(key) {
