@@ -1,33 +1,26 @@
 package me.voltual.a321.utils
 
-import java.io.File
-import java.io.FileInputStream
-import java.security.MessageDigest
+import android.content.Context
+import android.net.Uri
+import okio.HashingSource
+import okio.blackholeSink
+import okio.buffer
+import okio.source
 import java.util.UUID
 
 object PanUtils {
     /**
-     * 计算文件的 MD5 值 (用于秒传)
+     * 使用 Okio 高效计算 Uri 的 MD5
      */
-    fun calcFileMd5(file: File): String {
-        val digest = MessageDigest.getInstance("MD5")
-        val buffer = ByteArray(65536)
-        FileInputStream(file).use { fis ->
-            var bytesRead: Int
-            while (fis.read(buffer).also { bytesRead = it } != -1) {
-                digest.update(buffer, 0, bytesRead)
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
+    fun calcMd5(context: Context, uri: Uri): String {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return ""
+        val hashingSource = HashingSource.md5(inputStream.source())
+        hashingSource.buffer().use { it.readAll(blackholeSink()) }
+        return hashingSource.hash.hex()
     }
 
-    /**
-     * 生成随机 LoginUuid
-     */
     fun generateLoginUuid(): String = UUID.randomUUID().toString().replace("-", "")
 
-    // Android 设备型号池
     private val DEVICE_TYPES = listOf("24075RP89G", "M2012K11AG", "22021211RG", "21121210G")
-    
     fun getRandomDeviceType(): String = DEVICE_TYPES.random()
 }
