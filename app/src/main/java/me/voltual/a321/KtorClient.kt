@@ -42,6 +42,7 @@ object KtorClient {
                 ignoreUnknownKeys = true
                 isLenient = true
                 explicitNulls = false
+                encodeDefaults = true // 关键修复：强制序列化默认值
             })
         }
 
@@ -192,6 +193,29 @@ data class FileInfo(
     data class LoginData(
         val token: String
     )
+    
+    // ===== 下载相关的请求模型 =====
+
+@Serializable
+data class DownloadInfoRequest(
+    val driveId: Int = 0,
+    val fileId: Long,
+    val etag: String?,
+    val fileName: String,
+    val size: Long,
+    val s3keyFlag: String?,
+    val type: Int = 0
+)
+
+@Serializable
+data class BatchDownloadRequest(
+    val fileIdList: List<BatchDownloadItem>
+)
+
+@Serializable
+data class BatchDownloadItem(
+    val fileId: Long
+)
 
     // ===== API 接口定义 =====
 
@@ -304,42 +328,40 @@ data class FileInfo(
          * 参考 Python 原型：如果是文件夹走 batch_download_info，文件走 download_info
          */
         override suspend fun getDownloadUrl(token: String, file: FileInfo): Result<String> {
-            val endpoint = if (file.isDirectory) "/a/api/file/batch_download_info" else "/a/api/file/download_info"
-            
-            val payload = if (file.isDirectory) {
-                mapOf("fileIdList" to listOf(mapOf("fileId" to file.FileId)))
-            } else {
-                mapOf(
-                    "fileId" to file.FileId,
-                    "etag" to file.Etag,
-                    "size" to file.Size,
-                    "fileName" to file.FileName,
-                    "s3keyFlag" to file.S3KeyFlag,
-                    "type" to 0,
-                    "driveId" to 0
-                )
-            }
+    val endpoint = if (file.isDirectory) "/a/api/file/batch_download_info" else "/a/api/file/download_info"
+    
+    // 使用具体的 Serializable 对象替代 mapOf
+    val requestBody: Any = if (file.isDirectory) {
+        BatchDownloadRequest(listOf(BatchDownloadItem(file.FileId)))
+    } else {
+        DownloadInfoRequest(
+            fileId = file.FileId,
+            etag = file.Etag,
+            fileName = file.FileName,
+            size = file.Size,
+            s3keyFlag = file.S3KeyFlag
+        )
+    }
 
-            val responseResult: Result<PanResponse<DownloadData>> = safeApiCall {
-                httpClient.post(endpoint) {
-                    bearerAuth(token)
-                    contentType(ContentType.Application.Json)
-                    setBody(payload)
-                }
-            }
-
-            return responseResult.mapCatching { response ->
-                val rawUrl = response.data?.DownloadUrl ?: throw IOException("未获取到下载链接")
-                
-                // 处理 302 重定向以获取真实直链 (Python 原型中的核心逻辑)
-                val headResponse = httpClient.get(rawUrl)
-                if (headResponse.status == HttpStatusCode.Found) {
-                    headResponse.headers[HttpHeaders.Location] ?: rawUrl
-                } else {
-                    rawUrl
-                }
-            }
+    val responseResult: Result<PanResponse<DownloadData>> = safeApiCall {
+        httpClient.post(endpoint) {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
         }
+    }
+
+    return responseResult.mapCatching { response ->
+        val rawUrl = response.data?.DownloadUrl ?: throw IOException("未获取到下载链接")
+        
+        val headResponse = httpClient.get(rawUrl)
+        if (headResponse.status == HttpStatusCode.Found) {
+            headResponse.headers[HttpHeaders.Location] ?: rawUrl
+        } else {
+            rawUrl
+        }
+    }
+}
 
         override suspend fun createFolder(token: String, name: String, parentId: Long) = safeApiCall<PanResponse<Unit>> {
         httpClient.post("/b/api/file/upload_request") {
