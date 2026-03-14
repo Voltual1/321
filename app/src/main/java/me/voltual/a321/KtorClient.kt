@@ -278,7 +278,8 @@ data class BatchDownloadItem(
                 bucket = bucket,
                 key = key,
                 partNumberStart = partNumber,
-                partNumberEnd = partNumber,
+                // 关键修复：End 必须比 Start 大 1 才能获取到当前块的 URL
+            partNumberEnd = partNumber + 1, 
                 uploadId = uploadId,
                 StorageNode = storageNode
             ))
