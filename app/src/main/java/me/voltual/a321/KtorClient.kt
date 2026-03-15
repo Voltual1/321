@@ -176,7 +176,7 @@ data class FileInfo(
     val Etag: String? = null,
     val S3KeyFlag: String? = null,
     val Category: Int = 0,
-    val DownloadUrl: String = "" 
+    val DownloadUrl: String = "", 
     val Status: Int = 0,
     val UpdateAt: String = "" // 补全此字段
 ) {

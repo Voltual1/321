@@ -31,10 +31,9 @@ fun ExplorerScreen(
     viewModel: ExplorerViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
-    
     val activity = context as? android.app.Activity
-    
-    // 处理物理返回键：如果在文件夹深处，先返回上一级
+
+    // 处理物理返回键
     BackHandler(enabled = viewModel.pathStack.size > 1) {
         viewModel.navigateBack()
     }
@@ -55,7 +54,7 @@ fun ExplorerScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("123网盘") },
+//                    title = { Text("123网盘") },
                     navigationIcon = {
                         if (viewModel.pathStack.size > 1) {
                             BBQIconButton(
@@ -76,7 +75,10 @@ fun ExplorerScreen(
                 // 面包屑导航
                 BreadcrumbsBar(
                     pathStack = viewModel.pathStack,
-                    onPathClick = { /* 以后可以实现点击面包屑跳转 */ }
+                    onPathClick = { path ->
+                        // 实现点击面包屑跳转逻辑（假设 ViewModel 有此方法）
+                        // viewModel.navigateToPath(path) 
+                    }
                 )
                 // 上传进度条
                 UploadProgressBanner(
@@ -97,7 +99,7 @@ fun ExplorerScreen(
             isLoading = viewModel.isLoading,
             error = viewModel.error,
             currentPage = 1,
-            totalPages = 1, // 123网盘API支持分页，此处先简化
+            totalPages = 1,
             onRetry = { viewModel.loadFiles() },
             onLoadMore = { },
             emptyMessage = "这里空空如也",
@@ -109,17 +111,19 @@ fun ExplorerScreen(
                         if (file.isDirectory) {
                             viewModel.enterFolder(file)
                         } else {
-                // 触发下载
-                if (activity != null) {
-                    viewModel.downloadFile(activity, file)
-                }
+                            // 触发下载
+                            activity?.let {
+                                viewModel.downloadFile(it, file)
+                            }
+                        }
                     }
                 )
             }
         )
     }
-}
-}
+} // 闭合 ExplorerScreen
+
+// --- 下方组件保持不变 ---
 
 @Composable
 fun BreadcrumbsBar(
@@ -158,11 +162,12 @@ fun FileListItem(
 ) {
     ListItem(
         modifier = Modifier.clickable { onClick() },
-        headlineContent = { 
-            Text(file.name, maxLines = 1, overflow = TextOverflow.Ellipsis) 
+        headlineContent = {
+            Text(file.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         supportingContent = {
-            Text("${file.updateTime}  ${if (file.isDirectory) "" else formatSize(file.size)}")
+            val sizeInfo = if (file.isDirectory) "" else " · ${formatSize(file.size)}"
+            Text("${file.updateTime}$sizeInfo")
         },
         leadingContent = {
             Icon(
@@ -209,7 +214,6 @@ fun UploadProgressBanner(
     }
 }
 
-// 简单的字节转换工具
 fun formatSize(size: Long): String {
     if (size <= 0) return "0 B"
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
