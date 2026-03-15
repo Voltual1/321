@@ -125,7 +125,6 @@ suspend fun getDownloadUrl(file: PanFile): Result<String> = runCatching {
     apiService.getDownloadUrl(token, tempInfo).getOrThrow()
 }
 
-
     suspend fun getLatestRelease(url: String): Result<UpdateInfo> {
         return apiService.getLatestRelease(url)
     }
