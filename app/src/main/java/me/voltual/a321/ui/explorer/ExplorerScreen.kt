@@ -54,7 +54,7 @@ fun ExplorerScreen(
         topBar = {
             Column {
                 TopAppBar(
-//                    title = { Text("123网盘") },
+                    title = { Text("123pan") },
                     navigationIcon = {
                         if (viewModel.pathStack.size > 1) {
                             BBQIconButton(
