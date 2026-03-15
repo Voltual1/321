@@ -119,6 +119,7 @@ fun ExplorerScreen(
         )
     }
 }
+}
 
 @Composable
 fun BreadcrumbsBar(
