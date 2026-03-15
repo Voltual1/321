@@ -32,6 +32,8 @@ fun ExplorerScreen(
 ) {
     val context = LocalContext.current
     
+    val activity = context as? android.app.Activity
+    
     // 处理物理返回键：如果在文件夹深处，先返回上一级
     BackHandler(enabled = viewModel.pathStack.size > 1) {
         viewModel.navigateBack()
@@ -107,8 +109,10 @@ fun ExplorerScreen(
                         if (file.isDirectory) {
                             viewModel.enterFolder(file)
                         } else {
-                            // TODO: 扔给 1DM+ 或获取直链
-                        }
+                // 触发下载
+                if (activity != null) {
+                    viewModel.downloadFile(activity, file)
+                }
                     }
                 )
             }

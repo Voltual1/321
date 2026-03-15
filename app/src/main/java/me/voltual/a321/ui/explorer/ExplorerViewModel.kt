@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.voltual.a321.data.repository.PanRepository
+import me.voltual.a321.core.utils.Util1DM
 import me.voltual.a321.data.unified.PanFile
 import me.voltual.a321.data.unified.PanPath
 
@@ -60,6 +61,32 @@ class ExplorerViewModel(
             loadFiles()
         }
     }
+    
+    /**
+ * 获取下载链接并调用 1DM+
+ */
+fun downloadFile(activity: android.app.Activity, file: PanFile) {
+    viewModelScope.launch {
+        // 1. 尝试获取直链
+        val result = repository.getDownloadUrl(file)
+        
+        result.onSuccess { url ->
+            try {
+                // 2. 调用 1DM+ 工具类
+                Util1DM.downloadFile(
+                    activity = activity,
+                    url = url,
+                    secureUri = false,
+                    askUserToInstall1DMIfNotInstalled = true
+                )
+            } catch (e: Exception) {
+                error = "调用1DM失败: ${e.message}"
+            }
+        }.onFailure {
+            error = "获取下载链接失败: ${it.message}"
+        }
+    }
+}
 
     fun navigateBack(): Boolean {
         if (pathStack.size > 1) {

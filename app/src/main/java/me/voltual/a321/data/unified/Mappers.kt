@@ -10,7 +10,10 @@ fun KtorClient.FileInfo.toUnifiedModel(): PanFile {
         isDirectory = this.isDirectory,
         updateTime = this.UpdateAt,
         category = this.Category,
-        isAbnormal = this.isAbnormal
+        isAbnormal = this.isAbnormal,
+        etag = this.Etag,
+        s3KeyFlag = this.S3KeyFlag,
+        rawDownloadUrl = this.DownloadUrl // 映射列表自带的 URL
     )
 }
 

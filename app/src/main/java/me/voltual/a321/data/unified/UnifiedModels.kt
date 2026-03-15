@@ -11,8 +11,10 @@ data class PanFile(
     val updateTime: String,
     val category: Int,
     val isAbnormal: Boolean, // 审核是否违规
-    // 原始模型中需要的，但 UI 可能不需要的字段可以排除
-    // 也可以在这里添加 UI 专用的辅助属性
+    // 新增：用于获取下载直链的必要元数据
+    val etag: String?,
+    val s3KeyFlag: String?,
+    val rawDownloadUrl: String?, // 列表自带的 url
     val extension: String = name.substringAfterLast(".", "")
 )
 
