@@ -32,26 +32,6 @@ class PanRepository(private val context: Context) {
         val response = apiService.getFileList(token, page, parentId).getOrThrow()
         response.data?.InfoList?.toUnifiedList() ?: emptyList()
     }
-    
-    /**
- * 获取文件的真实下载直链
- */
-suspend fun getDownloadUrl(file: PanFile): Result<String> = runCatching {
-    val token = AuthManager.getCredentials(context).first().token
-    
-    // 将统一模型转回 FileInfo 传给 API 层（或者直接在 API 层接受参数）
-    // 这里我们构造一个临时的 FileInfo
-    val tempInfo = KtorClient.FileInfo(
-        FileId = file.id,
-        FileName = file.name,
-        Type = if (file.isDirectory) 1 else 0,
-        Size = file.size,
-        Etag = file.etag,
-        S3KeyFlag = file.s3KeyFlag
-    )
-    
-    apiService.getDownloadUrl(token, tempInfo).getOrThrow()
-}
 
     /**
      * 基于 Uri 和 Okio 的流式分块上传
@@ -124,6 +104,26 @@ suspend fun getDownloadUrl(file: PanFile): Result<String> = runCatching {
         onProgress(1.0f)
         "上传成功"
     }
+    
+    /**
+ * 获取文件的真实下载直链
+ */
+suspend fun getDownloadUrl(file: PanFile): Result<String> = runCatching {
+    val token = AuthManager.getCredentials(context).first().token
+    
+    // 将统一模型转回 FileInfo 传给 API 层（或者直接在 API 层接受参数）
+    // 这里我们构造一个临时的 FileInfo
+    val tempInfo = KtorClient.FileInfo(
+        FileId = file.id,
+        FileName = file.name,
+        Type = if (file.isDirectory) 1 else 0,
+        Size = file.size,
+        Etag = file.etag,
+        S3KeyFlag = file.s3KeyFlag
+    )
+    
+    apiService.getDownloadUrl(token, tempInfo).getOrThrow()
+}
 
     suspend fun getLatestRelease(url: String): Result<UpdateInfo> {
         return apiService.getLatestRelease(url)
