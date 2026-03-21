@@ -233,6 +233,15 @@ fun BreadcrumbsBar(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.clickable { onPathClick(path) }
             )
+            if (path != pathStack.last()) {
+                Text(
+                    text = "/",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(horizontal = 2.dp)
+                )
+            }
         }
     }
 }
