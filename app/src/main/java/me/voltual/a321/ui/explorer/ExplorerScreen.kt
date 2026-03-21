@@ -199,21 +199,24 @@ fun FilePane(
         )
         
         BaseListScreen(
-            items = state.fileList,
-            isLoading = state.isLoading,
-            error = state.error,
-            currentPage = 1,
-            totalPages = 1,
-            onRetry = onRetry,
-            onLoadMore = { },
-            emptyMessage = "无文件",
-            itemContent = { file ->
-                FileListItem(
-                    file = file,
-                    onClick = { onFileClick(file) }
-                )
-            }
+    items = state.fileList,
+    isLoading = state.isLoading,
+    error = state.error,
+    currentPage = state.currentPage,
+    totalPages = state.totalPages,
+    onRetry = onRetry,
+    onLoadMore = {
+        // 触发 ViewModel 加载下一页
+        viewModel.loadFiles(if (isActive) viewModel.activePane else /* 逻辑判定 */, isNextPage = true)
+    },
+    emptyMessage = "无文件",
+    itemContent = { file ->
+        FileListItem(
+            file = file,
+            onClick = { onFileClick(file) }
         )
+    }
+)
     }
 }
 

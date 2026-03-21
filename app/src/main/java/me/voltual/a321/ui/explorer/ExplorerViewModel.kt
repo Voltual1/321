@@ -18,12 +18,18 @@ class ExplorerViewModel(
 ) : ViewModel() {
 
     class PaneState {
-        var fileList by mutableStateOf<List<PanFile>>(emptyList())
-        var isLoading by mutableStateOf(false)
-        var error by mutableStateOf<String?>(null)
-        var pathStack by mutableStateOf(listOf(PanPath(0, "/")))
-        val currentPath: PanPath get() = pathStack.last()
-    }
+    var fileList by mutableStateOf<List<PanFile>>(emptyList())
+    var isLoading by mutableStateOf(false)
+    var error by mutableStateOf<String?>(null)
+    var pathStack by mutableStateOf(listOf(PanPath(0, "/")))
+    val currentPath: PanPath get() = pathStack.last()
+
+    // 新增分页状态
+    var currentPage by mutableIntStateOf(1)
+    var totalCount by mutableIntStateOf(0)
+    val pageSize = 100 // 对应 API 中的 limit
+    val totalPages: Int get() = kotlin.math.ceil(totalCount.toDouble() / pageSize).toInt().coerceAtLeast(1)
+}
 
     val leftPane = PaneState()
     val rightPane = PaneState()
@@ -45,32 +51,46 @@ class ExplorerViewModel(
         loadFiles(PaneIndex.RIGHT)
     }
 
-    fun loadFiles(pane: PaneIndex) {
-        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
-        viewModelScope.launch {
-            state.isLoading = true
-            state.error = null
-            repository.getFiles(state.currentPath.id)
-                .onSuccess { originalList ->
-                    // 逻辑处理：如果是根目录(size == 1)，直接显示列表
-                    // 如果不是根目录，在列表首位插入 ".." 文件夹
-                    if (state.pathStack.size > 1) {
-                        val upFolder = PanFile(
-                            id = -1, // 使用特殊ID标识返回操作
-                            name = "..",
-                            isDirectory = true,
-                            size = 0,
-                            updateTime = ""
-                        )
-                        state.fileList = listOf(upFolder) + originalList
-                    } else {
-                        state.fileList = originalList
-                    }
-                }
-                .onFailure { state.error = it.message ?: "加载失败" }
-            state.isLoading = false
+    fun loadFiles(pane: PaneIndex, isNextPage: Boolean = false) {
+    val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+    
+    viewModelScope.launch {
+        if (isNextPage) {
+            if (state.currentPage >= state.totalPages) return@launch
+            state.currentPage++
+        } else {
+            state.isLoading = true // 仅在首次加载或切换目录时显示全屏加载
+            state.currentPage = 1
         }
+        
+        state.error = null
+        
+        // 调用 Repository，传入当前页码
+        repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
+            .onSuccess { (total, newList) ->
+                state.totalCount = total
+                
+                // 处理 ".." 返回目录逻辑
+                val processedList = if (state.pathStack.size > 1 && state.currentPage == 1) {
+                    val upFolder = PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")
+                    listOf(upFolder) + newList
+                } else {
+                    newList
+                }
+
+                if (isNextPage) {
+                    state.fileList = state.fileList + newList // 追加
+                } else {
+                    state.fileList = processedList // 覆盖
+                }
+            }
+            .onFailure { 
+                state.error = it.message ?: "加载失败" 
+                if (isNextPage) state.currentPage-- // 失败时回退页码
+            }
+        state.isLoading = false
     }
+}
 
     fun enterFolder(pane: PaneIndex, folder: PanFile) {
         // 关键逻辑：如果是 ".."，执行返回操作
@@ -97,13 +117,14 @@ class ExplorerViewModel(
     }
 
     fun navigateToPath(pane: PaneIndex, path: PanPath) {
-        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
-        val index = state.pathStack.indexOf(path)
-        if (index != -1) {
-            state.pathStack = state.pathStack.take(index + 1)
-            loadFiles(pane)
-        }
+    val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+    val index = state.pathStack.indexOf(path)
+    if (index != -1) {
+        state.pathStack = state.pathStack.take(index + 1)
+        state.currentPage = 1 // 重置页码
+        loadFiles(pane)
     }
+}
 
     fun downloadFile(activity: android.app.Activity, file: PanFile) {
         // 如果是虚拟的 ".." 文件夹，不触发下载

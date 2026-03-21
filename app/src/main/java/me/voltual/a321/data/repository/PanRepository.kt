@@ -106,6 +106,21 @@ class PanRepository(private val context: Context) {
     }
     
     /**
+ * 获取文件列表及总条数
+ */
+suspend fun getFilesWithTotal(parentId: Long = 0, page: Int = 1): Result<Pair<Int, List<PanFile>>> = runCatching {
+    val credentials = AuthManager.getCredentials(context).first()
+    val token = credentials.token
+    if (token.isEmpty()) throw Exception("Login required")
+    
+    val response = apiService.getFileList(token, page, parentId).getOrThrow()
+    val total = response.data?.Total ?: 0
+    val files = response.data?.InfoList?.toUnifiedList() ?: emptyList()
+    
+    total to files
+}
+    
+    /**
  * 获取文件的真实下载直链
  */
 suspend fun getDownloadUrl(file: PanFile): Result<String> = runCatching {
