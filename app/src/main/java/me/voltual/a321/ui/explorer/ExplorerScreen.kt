@@ -103,13 +103,17 @@ fun ExplorerScreen(
                     .shadow(elevation = leftElevation)
                     .background(MaterialTheme.colorScheme.surface)
                     // 使用 pointerInput 或者在点击事件中明确调用 setActive
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { 
-                        viewModel.setActive(PaneIndex.LEFT) 
-                    }
-                ) {
+// 关键改进：监听按下事件，无论随后是滑动还是点击
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                if (event.type == PointerEventType.Press) {
+                                    viewModel.setActive(PaneIndex.LEFT)
+                                }
+                            }
+                        }
+                    }                ) {
                     FilePane(
                         state = viewModel.leftPane,
                         isActive = viewModel.activePane == PaneIndex.LEFT,
@@ -136,11 +140,16 @@ fun ExplorerScreen(
                     .zIndex(if (viewModel.activePane == PaneIndex.RIGHT) 1f else 0f)
                     .shadow(elevation = rightElevation)
                     .background(MaterialTheme.colorScheme.surface)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { 
-                        viewModel.setActive(PaneIndex.RIGHT) 
+                    // 关键改进：监听按下事件，无论随后是滑动还是点击
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                if (event.type == PointerEventType.Press) {
+                                    viewModel.setActive(PaneIndex.LEFT)
+                                }
+                            }
+                        }
                     }
                 ) {
                     FilePane(
