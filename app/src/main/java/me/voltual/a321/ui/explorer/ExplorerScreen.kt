@@ -32,7 +32,6 @@ import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.awaitPointerEvent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

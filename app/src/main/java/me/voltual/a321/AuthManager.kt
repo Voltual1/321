@@ -9,6 +9,8 @@
 package me.voltual.a321
 
 import android.content.Context
+import android.webkit.CookieManager
+import android.webkit.ValueCallback
 import androidx.datastore.core.DataStore
 import androidx.datastore.dataStore
 import com.google.crypto.tink.Aead
@@ -73,6 +75,17 @@ object AuthManager {
 
     suspend fun clearCredentials(context: Context) {
         context.credentialsStore.updateData { UserCredentials.getDefaultInstance() }
+        // 2. 清除 WebView Cookie
+    val cookieManager = CookieManager.getInstance()
+    
+    // 清除所有当前的 Session Cookie（内存中）
+    cookieManager.removeSessionCookies { }
+    
+    // 清除所有持久化的 Cookie（磁盘中）
+    cookieManager.removeAllCookies {
+        // 确保清除操作落盘
+        cookieManager.flush()
+    }
     }
 
     private fun generateDeviceId(): String = (1..15).map { (0..9).random() }.joinToString("")
