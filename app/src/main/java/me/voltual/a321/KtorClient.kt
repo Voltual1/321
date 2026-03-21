@@ -218,6 +218,48 @@ data class BatchDownloadItem(
     val fileId: Long
 )
 
+// 用户信息
+@Serializable
+data class UserInfo(
+    val UID: Long,
+    val Nickname: String,
+    val SpaceUsed: Long,
+    val SpacePermanent: Long,
+    val SpaceTemp: Long = 0,
+    val FileCount: Int,
+    val SpaceTempExpr: String = "",
+    val Mail: String = "",
+    val Passport: String = "",
+    val HeadImage: String = ""
+)
+
+// 分享请求
+@Serializable
+data class ShareCreateRequest(
+    val driveId: Int = 0,
+    val expiration: String,
+    val fileIdList: String, // 逗号分隔的ID字符串
+    val shareName: String = "分享文件",
+    val sharePwd: String = "",
+    val event: String = "shareCreate"
+)
+
+// 分享响应数据
+@Serializable
+data class ShareCreateData(
+    val ShareKey: String
+)
+
+// 文件夹详情数据
+@Serializable
+data class FolderDetailsData(
+    val FileId: Long,
+    val FileName: String,
+    val FileCount: Int? = null,
+    val FolderCount: Int? = null,
+    val Size: Long? = null
+)
+
     // ===== API 接口定义 =====
 
     interface ApiService {
@@ -243,6 +285,26 @@ data class BatchDownloadItem(
 
     // 4. 最终确认上传完成
     suspend fun confirmUpload(token: String, fileId: String): Result<PanResponse<Unit>>
+    
+    // 获取用户信息
+suspend fun getUserInfo(token: String): Result<PanResponse<UserInfo>>
+
+// 创建分享
+suspend fun createShare(
+    token: String,
+    fileIds: List<Long>,
+    sharePwd: String = "",
+    expiration: String = "2099-12-12T08:00:00+08:00"
+): Result<PanResponse<ShareCreateData>>
+
+// 获取回收站列表
+suspend fun listRecycle(token: String, page: Int = 1): Result<PanResponse<FileListData>>
+
+// 恢复文件（从回收站）
+suspend fun restoreFiles(token: String, fileIds: List<Long>): Result<PanResponse<Unit>>
+
+// 获取文件夹详情（支持多个ID）
+suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanResponse<List<FolderDetailsData>>>
     }
 
     object ApiServiceImpl : ApiService {
@@ -383,6 +445,63 @@ data class BatchDownloadItem(
             ))
         }
     }
+    
+    override suspend fun getUserInfo(token: String) = safeApiCall<PanResponse<UserInfo>> {
+    httpClient.get("/b/api/user/info") {
+        bearerAuth(token)
+    }
+}
+
+override suspend fun createShare(
+    token: String,
+    fileIds: List<Long>,
+    sharePwd: String,
+    expiration: String
+) = safeApiCall<PanResponse<ShareCreateData>> {
+    httpClient.post("/a/api/share/create") {
+        bearerAuth(token)
+        contentType(ContentType.Application.Json)
+        setBody(ShareCreateRequest(
+            expiration = expiration,
+            fileIdList = fileIds.joinToString(","),
+            sharePwd = sharePwd
+        ))
+    }
+}
+
+override suspend fun listRecycle(token: String, page: Int) = safeApiCall<PanResponse<FileListData>> {
+    httpClient.get("/api/file/list/new") {
+        bearerAuth(token)
+        url {
+            parameters.append("driveId", "0")
+            parameters.append("limit", "100")
+            parameters.append("Page", page.toString())
+            parameters.append("parentFileId", "0")
+            parameters.append("orderBy", "fileId")
+            parameters.append("orderDirection", "desc")
+            parameters.append("trashed", "true")
+        }
+    }
+}
+
+override suspend fun restoreFiles(token: String, fileIds: List<Long>) = safeApiCall<PanResponse<Unit>> {
+    httpClient.post("/a/api/file/trash") {
+        bearerAuth(token)
+        contentType(ContentType.Application.Json)
+        setBody(TrashRequest(
+            fileTrashInfoList = fileIds.map { TrashItem(FileId = it) },
+            operation = false   // false 表示恢复
+        ))
+    }
+}
+
+override suspend fun getFolderDetails(token: String, folderIds: List<Long>) = safeApiCall<PanResponse<List<FolderDetailsData>>> {
+    httpClient.post("/b/api/restful/goapi/v1/file/details") {
+        bearerAuth(token)
+        contentType(ContentType.Application.Json)
+        setBody(mapOf("file_ids" to folderIds))
+    }
+}
     }
 
 
