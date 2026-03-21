@@ -201,7 +201,7 @@ fun FilePane(
             onPathClick = onBreadcrumbClick
         )
         
-        BaseListScreen(
+BaseListScreen(
     items = state.fileList,
     isLoading = state.isLoading,
     error = state.error,
@@ -209,7 +209,9 @@ fun FilePane(
     totalPages = state.totalPages,
     onRetry = onRetry,
     onLoadMore = {
-        viewModel.loadFiles(if (isActive) viewModel.activePane else  isNextPage = true)
+        // 要加载哪一侧（可以通过判断 state 是不是 viewModel.leftPane）
+        val targetPane = if (state === viewModel.leftPane) PaneIndex.LEFT else PaneIndex.RIGHT
+        viewModel.loadFiles(pane = targetPane, isNextPage = true)
     },
     emptyMessage = "无文件",
     itemContent = { file ->
