@@ -206,6 +206,7 @@ BaseListScreen(
     isLoading = state.isLoading,
     error = state.error,
     currentPage = state.currentPage,
+    autoLoadMode = true,
     totalPages = state.totalPages,
     onRetry = onRetry,
     onLoadMore = {
@@ -296,7 +297,7 @@ fun FileListItem(
         },
         leadingContent = {
             Icon(
-                imageVector = if (file.isDirectory) Icons.Default.Folder else Icons.Default.InsertDriveFile,
+                imageVector = if (file.isDirectory) Icons.Default.Folder else Icons.AutoMirrored.Filled.InsertDriveFile,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
                 tint = if (file.isDirectory) {
