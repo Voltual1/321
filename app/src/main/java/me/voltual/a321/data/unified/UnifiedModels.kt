@@ -9,12 +9,12 @@ data class PanFile(
     val size: Long,
     val isDirectory: Boolean,
     val updateTime: String,
-    val category: Int,
-    val isAbnormal: Boolean, // 审核是否违规
-    // 新增：用于获取下载直链的必要元数据
-    val etag: String?,
-    val s3KeyFlag: String?,
-    val rawDownloadUrl: String?, // 列表自带的 url
+    // 以下参数提供默认值
+    val category: Int = 0,
+    val isAbnormal: Boolean = false,
+    val etag: String? = null,
+    val s3KeyFlag: String? = null,
+    val rawDownloadUrl: String? = null,
     val extension: String = name.substringAfterLast(".", "")
 )
 
