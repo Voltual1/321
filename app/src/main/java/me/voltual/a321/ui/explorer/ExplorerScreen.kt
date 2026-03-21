@@ -33,19 +33,21 @@ fun ExplorerScreen(
     val context = LocalContext.current
     val activity = context as? android.app.Activity
 
-    // 处理物理返回键
-    BackHandler(enabled = viewModel.pathStack.size > 1) {
-        viewModel.navigateBack()
+    // 处理物理返回键：逻辑稍显复杂，通常 MT 逻辑是哪个窗口有焦点（或最后操作）回退哪个
+    BackHandler(enabled = viewModel.leftPane.pathStack.size > 1 || viewModel.rightPane.pathStack.size > 1) {
+        if (!viewModel.navigateBack(viewModel.activePane)) {
+            val otherPane = if (viewModel.activePane == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
+            viewModel.navigateBack(otherPane)
+        }
     }
 
-    // 文件选择器
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
             val file = DocumentFileCompat.fromUri(context, it)
             if (file != null) {
-                viewModel.uploadFile(it, file.name ?: "unknown", file.length())
+                viewModel.uploadFile(it, file.name ?: "unknown", file.length(), viewModel.activePane)
             }
         }
     }
@@ -54,33 +56,18 @@ fun ExplorerScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("123pan") },
-                    navigationIcon = {
-                        if (viewModel.pathStack.size > 1) {
-                            BBQIconButton(
-                                onClick = { viewModel.navigateBack() },
-                                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "返回"
-                            )
-                        }
-                    },
+                    title = { Text("123pan Dual-Pane") },
                     actions = {
                         BBQIconButton(
-                            onClick = { viewModel.loadFiles() },
+                            onClick = { 
+                                viewModel.loadFiles(PaneIndex.LEFT)
+                                viewModel.loadFiles(PaneIndex.RIGHT)
+                            },
                             icon = Icons.Default.Refresh,
-                            contentDescription = "刷新"
+                            contentDescription = "刷新全部"
                         )
                     }
                 )
-                // 面包屑导航
-                BreadcrumbsBar(
-                    pathStack = viewModel.pathStack,
-                    onPathClick = { path ->
-                        // 实现点击面包屑跳转逻辑（假设 ViewModel 有此方法）
-                        // viewModel.navigateToPath(path) 
-                    }
-                )
-                // 上传进度条
                 UploadProgressBanner(
                     isUploading = viewModel.isUploading,
                     progress = viewModel.uploadProgress,
@@ -90,40 +77,88 @@ fun ExplorerScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { filePickerLauncher.launch("*/*") }) {
-                Icon(Icons.Default.Add, contentDescription = "上传文件")
+                Icon(Icons.Default.FileUpload, contentDescription = "上传到当前窗口")
             }
         }
     ) { paddingValues ->
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // 左窗口
+            Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable { viewModel.activePane = PaneIndex.LEFT }) {
+                FilePane(
+                    paneIndex = PaneIndex.LEFT,
+                    state = viewModel.leftPane,
+                    isActive = viewModel.activePane == PaneIndex.LEFT,
+                    onFileClick = { file ->
+                        if (file.isDirectory) viewModel.enterFolder(PaneIndex.LEFT, file)
+                        else activity?.let { viewModel.downloadFile(it, file) }
+                    },
+                    onBreadcrumbClick = { viewModel.navigateToPath(PaneIndex.LEFT, it) },
+                    onRetry = { viewModel.loadFiles(PaneIndex.LEFT) }
+                )
+            }
+
+            // 垂直分割线
+            VerticalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
+
+            // 右窗口
+            Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable { viewModel.activePane = PaneIndex.RIGHT }) {
+                FilePane(
+                    paneIndex = PaneIndex.RIGHT,
+                    state = viewModel.rightPane,
+                    isActive = viewModel.activePane == PaneIndex.RIGHT,
+                    onFileClick = { file ->
+                        if (file.isDirectory) viewModel.enterFolder(PaneIndex.RIGHT, file)
+                        else activity?.let { viewModel.downloadFile(it, file) }
+                    },
+                    onBreadcrumbClick = { viewModel.navigateToPath(PaneIndex.RIGHT, it) },
+                    onRetry = { viewModel.loadFiles(PaneIndex.RIGHT) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FilePane(
+    paneIndex: PaneIndex,
+    state: ExplorerViewModel.PaneState,
+    isActive: Boolean,
+    onFileClick: (PanFile) -> Unit,
+    onBreadcrumbClick: (PanPath) -> Unit,
+    onRetry: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .then(if (isActive) Modifier.surfaceColorAtElevation(4.dp) else Modifier) // 高亮当前激活窗口
+    ) {
+        BreadcrumbsBar(
+            pathStack = state.pathStack,
+            onPathClick = onBreadcrumbClick
+        )
+        
         BaseListScreen(
-            items = viewModel.fileList,
-            isLoading = viewModel.isLoading,
-            error = viewModel.error,
+            items = state.fileList,
+            isLoading = state.isLoading,
+            error = state.error,
             currentPage = 1,
             totalPages = 1,
-            onRetry = { viewModel.loadFiles() },
+            onRetry = onRetry,
             onLoadMore = { },
-            emptyMessage = "这里空空如也",
-            modifier = Modifier.padding(paddingValues),
+            emptyMessage = "空",
             itemContent = { file ->
                 FileListItem(
                     file = file,
-                    onClick = {
-                        if (file.isDirectory) {
-                            viewModel.enterFolder(file)
-                        } else {
-                            // 触发下载
-                            activity?.let {
-                                viewModel.downloadFile(it, file)
-                            }
-                        }
-                    }
+                    onClick = { onFileClick(file) }
                 )
             }
         )
     }
-} // 闭合 ExplorerScreen
-
-// --- 下方组件保持不变 ---
+}
 
 @Composable
 fun BreadcrumbsBar(
