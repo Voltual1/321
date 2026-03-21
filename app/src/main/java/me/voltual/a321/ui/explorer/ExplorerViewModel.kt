@@ -22,7 +22,7 @@ class ExplorerViewModel(
         var fileList by mutableStateOf<List<PanFile>>(emptyList())
         var isLoading by mutableStateOf(false)
         var error by mutableStateOf<String?>(null)
-        var pathStack by mutableStateOf(listOf(PanPath(0, "全部文件")))
+        var pathStack by mutableStateOf(listOf(PanPath(0, "/")))
         val currentPath: PanPath get() = pathStack.last()
     }
 
