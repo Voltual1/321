@@ -314,7 +314,7 @@ data class BatchDownloadItem(
                     bearerAuth(token)
                     url {
                         parameters.append("driveId", "0")
-                        parameters.append("limit", "100")
+                        parameters.append("limit", "2")
                         parameters.append("Page", page.toString())
                         parameters.append("parentFileId", parentId.toString())
                         parameters.append("orderBy", "file_id")
