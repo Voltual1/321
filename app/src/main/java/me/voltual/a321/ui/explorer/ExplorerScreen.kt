@@ -36,6 +36,7 @@ import org.koin.androidx.compose.koinViewModel
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.combinedClickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,6 +131,10 @@ Box(modifier = Modifier.fillMaxSize()) { // 根容器
                             if (file.isDirectory) viewModel.enterFolder(PaneIndex.LEFT, file)
                             else activity?.let { viewModel.downloadFile(it, file) }
                         },
+                        onFileLongClick = { file ->
+        viewModel.setActive(PaneIndex.LEFT)
+        viewModel.showActionMenu(file) // 触发弹出菜单
+    },
                         onBreadcrumbClick = { 
                             viewModel.setActive(PaneIndex.LEFT) // 点击路径激活
                             viewModel.navigateToPath(PaneIndex.LEFT, it) 
@@ -169,6 +174,10 @@ Box(modifier = Modifier.fillMaxSize()) { // 根容器
                             if (file.isDirectory) viewModel.enterFolder(PaneIndex.RIGHT, file)
                             else activity?.let { viewModel.downloadFile(it, file) }
                         },
+                        onFileLongClick = { file ->
+        viewModel.setActive(PaneIndex.RIGHT)
+        viewModel.showActionMenu(file) // 触发弹出菜单
+    },
                         onBreadcrumbClick = { 
                             viewModel.setActive(PaneIndex.RIGHT)
                             viewModel.navigateToPath(PaneIndex.RIGHT, it) 
@@ -191,40 +200,39 @@ fun FilePane(
     isActive: Boolean,
     viewModel: ExplorerViewModel,
     onFileClick: (PanFile) -> Unit,
+    onFileLongClick: (PanFile) -> Unit, // 新增长按回调
     onBreadcrumbClick: (PanPath) -> Unit,
     onRetry: () -> Unit
 ) {
-
     Column(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = Modifier.fillMaxSize()
     ) {
         BreadcrumbsBar(
             pathStack = state.pathStack,
             onPathClick = onBreadcrumbClick
         )
         
-BaseListScreen(
-    items = state.fileList,
-    isLoading = state.isLoading,
-    error = state.error,
-    currentPage = state.currentPage,
-    autoLoadMode = true,
-    totalPages = state.totalPages,
-    onRetry = onRetry,
-    onLoadMore = {
-        // 要加载哪一侧（可以通过判断 state 是不是 viewModel.leftPane）
-        val targetPane = if (state === viewModel.leftPane) PaneIndex.LEFT else PaneIndex.RIGHT
-        viewModel.loadFiles(pane = targetPane, isNextPage = true)
-    },
-    emptyMessage = "无文件",
-    itemContent = { file ->
-        FileListItem(
-            file = file,
-            onClick = { onFileClick(file) }
+        BaseListScreen(
+            items = state.fileList,
+            isLoading = state.isLoading,
+            error = state.error,
+            currentPage = state.currentPage,
+            autoLoadMode = true,
+            totalPages = state.totalPages,
+            onRetry = onRetry,
+            onLoadMore = {
+                val targetPane = if (state === viewModel.leftPane) PaneIndex.LEFT else PaneIndex.RIGHT
+                viewModel.loadFiles(pane = targetPane, isNextPage = true)
+            },
+            emptyMessage = "无文件",
+            itemContent = { file ->
+                FileListItem(
+                    file = file,
+                    onClick = { onFileClick(file) },
+                    onLongClick = { onFileLongClick(file) } 
+                )
+            }
         )
-    }
-)
     }
 }
 
@@ -263,15 +271,15 @@ fun BreadcrumbsBar(
 @Composable
 fun FileListItem(
     file: PanFile,
-    onLongClick: () -> Unit, // 新增
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     val isUpFolder = file.name == ".." && file.id == -1L
 
     ListItem(
         modifier = Modifier.combinedClickable(
             onClick = onClick,
-            onLongClick = if (!isUpFolder) onLongClick else null // ".." 不触发菜单
+            onLongClick = if (!isUpFolder) onLongClick else null // 屏蔽返回上级的长按
         ),
         headlineContent = {
             Text(
@@ -285,7 +293,6 @@ fun FileListItem(
             )
         },
         supportingContent = {
-            // 如果是 ".."，不显示更新时间和文件大小
             if (!isUpFolder) {
                 val sizeInfo = if (file.isDirectory) "" else " · ${formatSize(file.size)}"
                 Text(
@@ -293,34 +300,17 @@ fun FileListItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .basicMarquee(
-                            iterations = Int.MAX_VALUE,
-                            velocity = 30.dp,
-                            repeatDelayMillis = 3000
-                        )
+                    modifier = Modifier.fillMaxWidth().basicMarquee(iterations = Int.MAX_VALUE)
                 )
             }
         },
         leadingContent = {
-    Icon(
-        imageVector = if (file.isDirectory) {
-            Icons.Default.Folder 
-        } else {
-            Icons.AutoMirrored.Filled.InsertDriveFile
-        },
-        contentDescription = null,
-        modifier = Modifier.size(24.dp),
-        tint = if (file.isDirectory) {
-            if (isUpFolder) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-            // ".." 文件夹可以使用稍微淡一点的颜色以示区分
-            else MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.outline
+            Icon(
+                imageVector = if (file.isDirectory) Icons.Default.Folder else Icons.AutoMirrored.Filled.InsertDriveFile,
+                contentDescription = null,
+                tint = if (file.isDirectory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+            )
         }
-    )
-}
     )
 }
 
