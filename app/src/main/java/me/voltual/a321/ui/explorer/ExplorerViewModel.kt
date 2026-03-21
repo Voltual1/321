@@ -17,7 +17,6 @@ class ExplorerViewModel(
     private val repository: PanRepository
 ) : ViewModel() {
 
-    // 窗口状态封装
     class PaneState {
         var fileList by mutableStateOf<List<PanFile>>(emptyList())
         var isLoading by mutableStateOf(false)
@@ -29,10 +28,8 @@ class ExplorerViewModel(
     val leftPane = PaneState()
     val rightPane = PaneState()
 
-    // 全局上传状态（通常逻辑上一个应用同时处理一个主上传流，或根据焦点窗口处理）
     var activePane by mutableStateOf(PaneIndex.LEFT)
     
-    // 提供一个明确的方法来切换激活状态
     fun setActive(pane: PaneIndex) {
         if (activePane != pane) {
             activePane = pane
@@ -54,13 +51,34 @@ class ExplorerViewModel(
             state.isLoading = true
             state.error = null
             repository.getFiles(state.currentPath.id)
-                .onSuccess { state.fileList = it }
+                .onSuccess { originalList ->
+                    // 逻辑处理：如果是根目录(size == 1)，直接显示列表
+                    // 如果不是根目录，在列表首位插入 ".." 文件夹
+                    if (state.pathStack.size > 1) {
+                        val upFolder = PanFile(
+                            id = -1, // 使用特殊ID标识返回操作
+                            name = "..",
+                            isDirectory = true,
+                            size = 0,
+                            updateTime = ""
+                        )
+                        state.fileList = listOf(upFolder) + originalList
+                    } else {
+                        state.fileList = originalList
+                    }
+                }
                 .onFailure { state.error = it.message ?: "加载失败" }
             state.isLoading = false
         }
     }
 
     fun enterFolder(pane: PaneIndex, folder: PanFile) {
+        // 关键逻辑：如果是 ".."，执行返回操作
+        if (folder.name == ".." && folder.id == -1L) {
+            navigateBack(pane)
+            return
+        }
+
         if (folder.isDirectory) {
             val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
             state.pathStack = state.pathStack + PanPath(folder.id, folder.name)
@@ -88,6 +106,9 @@ class ExplorerViewModel(
     }
 
     fun downloadFile(activity: android.app.Activity, file: PanFile) {
+        // 如果是虚拟的 ".." 文件夹，不触发下载
+        if (file.id == -1L) return
+        
         viewModelScope.launch {
             val result = repository.getDownloadUrl(file)
             result.onSuccess { url ->

@@ -251,44 +251,52 @@ fun FileListItem(
     file: PanFile,
     onClick: () -> Unit
 ) {
+    val isUpFolder = file.name == ".." && file.id == -1L
+
     ListItem(
         modifier = Modifier.clickable { onClick() },
         headlineContent = {
-            // 文件名走马灯：只有当文字超出宽度时才会滚动
             Text(
                 text = file.name,
                 maxLines = 1,
+                fontWeight = if (isUpFolder) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier.basicMarquee(
-                    iterations = Int.MAX_VALUE, // 无限循环
-                    repeatDelayMillis = 2000 // 停顿2秒后开始滚动，更符合阅读习惯
+                    iterations = Int.MAX_VALUE,
+                    repeatDelayMillis = 2000
                 )
             )
         },
         supportingContent = {
-            val sizeInfo = if (file.isDirectory) "" else " · ${formatSize(file.size)}"
-            // 时间和大小的走马灯
-            Text(
-                text = "${file.updateTime}$sizeInfo",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .basicMarquee(
-                        iterations = Int.MAX_VALUE,
-                        velocity = 30.dp, // 滚动速度
-                        repeatDelayMillis = 3000
-                    )
-            )
+            // 如果是 ".."，不显示更新时间和文件大小
+            if (!isUpFolder) {
+                val sizeInfo = if (file.isDirectory) "" else " · ${formatSize(file.size)}"
+                Text(
+                    text = "${file.updateTime}$sizeInfo",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .basicMarquee(
+                            iterations = Int.MAX_VALUE,
+                            velocity = 30.dp,
+                            repeatDelayMillis = 3000
+                        )
+                )
+            }
         },
         leadingContent = {
             Icon(
                 imageVector = if (file.isDirectory) Icons.Default.Folder else Icons.Default.InsertDriveFile,
                 contentDescription = null,
-                modifier = Modifier.size(24.dp), // 稍微缩小一点图标，为文字腾空间
-                tint = if (file.isDirectory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                modifier = Modifier.size(24.dp),
+                tint = if (file.isDirectory) {
+                    // ".." 文件夹可以使用稍微淡一点的颜色以示区分
+                    if (isUpFolder) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f) 
+                    else MaterialTheme.colorScheme.primary 
+                } else MaterialTheme.colorScheme.outline
             )
-        },        
+        }
     )
 }
 
