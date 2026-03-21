@@ -156,13 +156,24 @@ suspend fun getUserQuota(): Result<PanUserQuota> = runCatching {
 }
 
 /**
- * 批量删除文件到回收站（统一返回 Action 结果）
+ * 批量删除文件到回收站
  */
 suspend fun deleteFiles(fileIds: List<Long>): PanActionResult {
-    return runCatching {
-        val token = AuthManager.getCredentials(context).first().token
-        apiService.deleteFiles(token, fileIds)
-    }.toActionResult() // 使用统一的结果映射
+    val token = AuthManager.getCredentials(context).first().token
+    if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+    
+    // 直接使用 apiService 返回的 Result<PanResponse<Unit>>
+    return apiService.deleteFiles(token, fileIds).toActionResult()
+}
+
+/**
+ * 创建文件夹
+ */
+suspend fun createFolder(name: String, parentId: Long): PanActionResult {
+    val token = AuthManager.getCredentials(context).first().token
+    if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+    
+    return apiService.createFolder(token, name, parentId).toActionResult()
 }
 
 /**
@@ -186,17 +197,6 @@ suspend fun shareFiles(fileIds: List<Long>, password: String = ""): Result<Strin
     // 123网盘返回的是 ShareKey，这里可以拼凑成完整链接或只返回 Key
     response.data?.ShareKey ?: throw Exception("Share failed")
 }
-
-/**
- * 创建文件夹
- */
-suspend fun createFolder(name: String, parentId: Long): PanActionResult {
-    return runCatching {
-        val token = AuthManager.getCredentials(context).first().token
-        apiService.createFolder(token, name, parentId)
-    }.toActionResult()
-}
-
 
     suspend fun getLatestRelease(url: String): Result<UpdateInfo> {
         return apiService.getLatestRelease(url)
