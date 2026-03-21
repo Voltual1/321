@@ -26,6 +26,7 @@ import me.voltual.a321.core.ui.components.BaseListScreen
 import me.voltual.a321.core.ui.theme.BBQIconButton
 import me.voltual.a321.data.unified.PanFile
 import me.voltual.a321.data.unified.PanPath
+import androidx.compose.foundation.basicMarquee
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -220,28 +221,65 @@ fun FileListItem(
     ListItem(
         modifier = Modifier.clickable { onClick() },
         headlineContent = {
-            Text(file.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // 文件名走马灯：只有当文字超出宽度时才会滚动
+            Text(
+                text = file.name,
+                maxLines = 1,
+                modifier = Modifier.basicMarquee(
+                    iterations = Int.MAX_VALUE, // 无限循环
+                    delayMillis = 2000 // 停顿2秒后开始滚动，更符合阅读习惯
+                )
+            )
         },
         supportingContent = {
             val sizeInfo = if (file.isDirectory) "" else " · ${formatSize(file.size)}"
-            Text("${file.updateTime}$sizeInfo")
+            // 时间和大小的走马灯
+            Text(
+                text = "${file.updateTime}$sizeInfo",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        velocity = 30.dp, // 滚动速度
+                        delayMillis = 3000
+                    )
+            )
         },
         leadingContent = {
             Icon(
                 imageVector = if (file.isDirectory) Icons.Default.Folder else Icons.Default.InsertDriveFile,
                 contentDescription = null,
+                modifier = Modifier.size(24.dp), // 稍微缩小一点图标，为文字腾空间
                 tint = if (file.isDirectory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
             )
         },
         trailingContent = {
             if (file.isAbnormal) {
-                Icon(Icons.Default.Warning, contentDescription = "违规", tint = MaterialTheme.colorScheme.error)
+                Icon(
+                    imageVector = Icons.Default.Warning, 
+                    contentDescription = "违规", 
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(16.dp)
+                )
             } else {
-                IconButton(onClick = { /* TODO: 更多操作菜单 */ }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "更多")
+                // 在双窗口下，三个点菜单可能会显得拥挤，可以考虑减小其外边距
+                IconButton(
+                    onClick = { /* TODO: 更多操作菜单 */ },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert, 
+                        contentDescription = "更多",
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
-        }
+        },
+        // 关键调整：减少内边距以适应双窗口
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
     )
 }
 
