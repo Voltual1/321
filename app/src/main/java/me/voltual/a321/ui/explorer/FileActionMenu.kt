@@ -1,19 +1,22 @@
 package me.voltual.a321.ui.explorer
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import me.voltual.a321.data.unified.PanFile
 
 @Composable
@@ -23,14 +26,13 @@ fun FileActionMenu(
     onDismiss: () -> Unit,
     onAction: (String) -> Unit
 ) {
-    // 使用 AnimatedVisibility 实现类似弹出效果
     AnimatedVisibility(
         visible = isVisible && file != null,
-        enter = fadeIn() + scaleIn(initialScale = 0.9f),
-        exit = fadeOut() + scaleOut(initialScale = 0.9f),
+        // 修正参数名，使用默认或更兼容的写法
+        enter = fadeIn(animationSpec = tween(200)) + scaleIn(transformOrigin = androidx.compose.ui.graphics.TransformOrigin.Center),
+        exit = fadeOut(animationSpec = tween(150)) + scaleOut(transformOrigin = androidx.compose.ui.graphics.TransformOrigin.Center),
         modifier = Modifier.fillMaxSize()
     ) {
-        // 这是一个透明的 Box，覆盖全屏，点击非菜单区域则关闭
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -40,20 +42,18 @@ fun FileActionMenu(
                 ) { onDismiss() },
             contentAlignment = Alignment.Center
         ) {
-            // 真正的菜单体
             Surface(
                 modifier = Modifier
                     .width(280.dp)
                     .padding(16.dp),
                 shape = RoundedCornerShape(8.dp),
                 color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 3.dp, // 这里的 elevation 提供纵深感
-                shadowElevation = 8.dp  // 核心：MT 管理器那种阴影
+                tonalElevation = 3.dp,
+                shadowElevation = 8.dp
             ) {
                 Column(
                     modifier = Modifier.padding(vertical = 8.dp)
                 ) {
-                    // 头部：显示当前操作的文件名
                     Text(
                         text = file?.name ?: "",
                         modifier = Modifier
@@ -64,13 +64,20 @@ fun FileActionMenu(
                         maxLines = 1
                     )
                     
-                    Divider(modifier = Modifier.padding(horizontal = 8.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
 
-                    // 菜单项
                     ActionMenuItem(Icons.Default.Share, "分享") { onAction("share") }
                     ActionMenuItem(Icons.Default.DriveFileMove, "移动") { onAction("move") }
                     ActionMenuItem(Icons.Default.Edit, "重命名") { onAction("rename") }
-                    ActionMenuItem(Icons.Default.Delete, "删除", color = MaterialTheme.colorScheme.error) { onAction("delete") }
+                    ActionMenuItem(
+                        icon = Icons.Default.Delete, 
+                        label = "删除", 
+                        textColor = MaterialTheme.colorScheme.error
+                    ) { onAction("delete") }
                     ActionMenuItem(Icons.Default.Info, "属性") { onAction("info") }
                 }
             }
@@ -82,7 +89,7 @@ fun FileActionMenu(
 private fun ActionMenuItem(
     icon: ImageVector,
     label: String,
-    color: Color = MaterialTheme.colorScheme.onSurface,
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit
 ) {
     Surface(
@@ -100,13 +107,13 @@ private fun ActionMenuItem(
                 imageVector = icon,
                 contentDescription = label,
                 modifier = Modifier.size(22.dp),
-                tint = color.copy(alpha = 0.8f)
+                tint = if (textColor == MaterialTheme.colorScheme.error) textColor else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyLarge,
-                color = color
+                color = textColor
             )
         }
     }
