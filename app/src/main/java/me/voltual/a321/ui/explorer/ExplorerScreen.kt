@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -237,6 +238,7 @@ fun BreadcrumbsBar(
                 Text(
                     text = "/",
                     style = MaterialTheme.typography.bodyMedium,
+                    fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
                     modifier = Modifier.padding(horizontal = 2.dp)
                 )
