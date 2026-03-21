@@ -1,7 +1,5 @@
 package me.voltual.a321.ui.explorer
 
-package me.voltual.a321.ui.explorer
-
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
