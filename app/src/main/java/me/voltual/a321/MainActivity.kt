@@ -17,8 +17,8 @@ import android.util.DisplayMetrics
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
+//import androidx.biometric.BiometricManager
+//import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
