@@ -147,39 +147,66 @@ fun FilePane(
     onBreadcrumbClick: (PanPath) -> Unit,
     onRetry: () -> Unit
 ) {
-    // 这里的 isActive 可以用来微调背景色，或者面包屑文字颜色
-    val backgroundColor = if (isActive) {
+    // 1. 动态计算高度：激活时浮起，非激活时平贴
+    val elevation by animateDpAsState(
+        targetValue = if (isActive) 8.dp else 0.dp, 
+        label = "PaneElevation"
+    )
+
+    // 2. 动态计算背景色深度
+    val containerColor = if (isActive) {
         MaterialTheme.colorScheme.surface
     } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f) // 非激活状态稍暗
+        // 非激活状态使用更深一点的颜色，模拟“压低”感
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     }
 
-    Column(
+    // 使用 Surface 包裹，利用其自带的 shadow 和 tonalElevation 属性
+    Surface(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .padding(if (isActive) 0.dp else 2.dp), // 非激活时稍微收缩，强化边缘阴影对比
+        shape = MaterialTheme.shapes.extraSmall, // 极小的圆角有助于阴影渲染
+        color = containerColor,
+        tonalElevation = elevation,
+        shadowElevation = elevation
     ) {
-        BreadcrumbsBar(
-            pathStack = state.pathStack,
-            onPathClick = onBreadcrumbClick
-        )
-        
-        BaseListScreen(
-            items = state.fileList,
-            isLoading = state.isLoading,
-            error = state.error,
-            currentPage = 1,
-            totalPages = 1,
-            onRetry = onRetry,
-            onLoadMore = { },
-            emptyMessage = "无文件",
-            itemContent = { file ->
-                FileListItem(
-                    file = file,
-                    onClick = { onFileClick(file) }
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column {
+                BreadcrumbsBar(
+                    pathStack = state.pathStack,
+                    onPathClick = onBreadcrumbClick,
+                    isActive = isActive // 传入状态控制文字颜色
+                )
+                
+                BaseListScreen(
+                    items = state.fileList,
+                    isLoading = state.isLoading,
+                    error = state.error,
+                    currentPage = 1,
+                    totalPages = 1,
+                    onRetry = onRetry,
+                    onLoadMore = { },
+                    emptyMessage = "无文件",
+                    itemContent = { file ->
+                        FileListItem(
+                            file = file,
+                            isActive = isActive, // 传入状态
+                            onClick = { onFileClick(file) }
+                        )
+                    }
                 )
             }
-        )
+
+            // 3. 关键：非激活状态下的“压暗”遮罩
+            if (!isActive) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.05f)) // 极淡的遮罩
+                )
+            }
+        }
     }
 }
 
