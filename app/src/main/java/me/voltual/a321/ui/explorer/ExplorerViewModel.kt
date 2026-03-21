@@ -27,7 +27,7 @@ class ExplorerViewModel(
     // 新增分页状态
     var currentPage by mutableIntStateOf(1)
     var totalCount by mutableIntStateOf(0)
-    val pageSize = 4 // 对应 API 中的 limit
+    val pageSize = 100 // 对应 API 中的 limit
     val totalPages: Int get() = kotlin.math.ceil(totalCount.toDouble() / pageSize).toInt().coerceAtLeast(1)
 }
 
