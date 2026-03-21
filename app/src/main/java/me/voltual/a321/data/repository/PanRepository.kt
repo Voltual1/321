@@ -10,8 +10,7 @@ import kotlinx.coroutines.flow.first
 import me.voltual.a321.AuthManager
 import me.voltual.a321.KtorClient
 import me.voltual.a321.data.UpdateInfo
-import me.voltual.a321.data.unified.PanFile
-import me.voltual.a321.data.unified.toUnifiedList
+import me.voltual.a321.data.unified.*
 import me.voltual.a321.utils.PanUtils
 import okio.buffer
 import okio.source
@@ -138,6 +137,64 @@ suspend fun getDownloadUrl(file: PanFile): Result<String> = runCatching {
     )
     
     apiService.getDownloadUrl(token, tempInfo).getOrThrow()
+}
+
+// 在 PanRepository 类中添加以下方法
+
+/**
+ * 获取统一的用户信息模型
+ */
+suspend fun getUserQuota(): Result<PanUserQuota> = runCatching {
+    val token = AuthManager.getCredentials(context).first().token
+    if (token.isEmpty()) throw Exception("Login required")
+    
+    val response = apiService.getUserInfo(token).getOrThrow()
+    val data = response.data ?: throw Exception("Failed to get user info")
+    
+    // 使用我们在 unified 包中定义的映射函数
+    data.toUnifiedQuota()
+}
+
+/**
+ * 批量删除文件到回收站（统一返回 Action 结果）
+ */
+suspend fun deleteFiles(fileIds: List<Long>): PanActionResult {
+    return runCatching {
+        val token = AuthManager.getCredentials(context).first().token
+        apiService.deleteFiles(token, fileIds)
+    }.toActionResult() // 使用统一的结果映射
+}
+
+/**
+ * 获取回收站文件列表
+ */
+suspend fun getRecycleBinFiles(page: Int = 1): Result<PanPageResult> = runCatching {
+    val token = AuthManager.getCredentials(context).first().token
+    val response = apiService.listRecycle(token, page).getOrThrow()
+    
+    val data = response.data ?: throw Exception("Empty recycle bin")
+    data.toPageResult() // 映射为统一分页模型
+}
+
+/**
+ * 创建文件分享（统一模型输出）
+ */
+suspend fun shareFiles(fileIds: List<Long>, password: String = ""): Result<String> = runCatching {
+    val token = AuthManager.getCredentials(context).first().token
+    val response = apiService.createShare(token, fileIds, password).getOrThrow()
+    
+    // 123网盘返回的是 ShareKey，这里可以拼凑成完整链接或只返回 Key
+    response.data?.ShareKey ?: throw Exception("Share failed")
+}
+
+/**
+ * 创建文件夹
+ */
+suspend fun createFolder(name: String, parentId: Long): PanActionResult {
+    return runCatching {
+        val token = AuthManager.getCredentials(context).first().token
+        apiService.createFolder(token, name, parentId)
+    }.toActionResult()
 }
 
 
