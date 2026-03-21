@@ -93,28 +93,38 @@ fun ExplorerScreen(
                 progress = viewModel.uploadProgress,
                 message = viewModel.uploadMessage
             )
-
             Row(modifier = Modifier.fillMaxSize()) {
-                // 左侧窗口：增加 zIndex 确保投影能压在右侧窗口上方
+                // 左侧窗口
                 Box(modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
                     .zIndex(if (viewModel.activePane == PaneIndex.LEFT) 1f else 0f)
                     .shadow(elevation = leftElevation)
                     .background(MaterialTheme.colorScheme.surface)
-                    .clickable(interactionSource = null, indication = null) { 
-                        viewModel.activePane = PaneIndex.LEFT 
+                    // 使用 pointerInput 或者在点击事件中明确调用 setActive
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { 
+                        viewModel.setActive(PaneIndex.LEFT) 
                     }
                 ) {
                     FilePane(
                         state = viewModel.leftPane,
                         isActive = viewModel.activePane == PaneIndex.LEFT,
                         onFileClick = { file ->
+                            viewModel.setActive(PaneIndex.LEFT) // 点击文件时也激活该侧
                             if (file.isDirectory) viewModel.enterFolder(PaneIndex.LEFT, file)
                             else activity?.let { viewModel.downloadFile(it, file) }
                         },
-                        onBreadcrumbClick = { viewModel.navigateToPath(PaneIndex.LEFT, it) },
-                        onRetry = { viewModel.loadFiles(PaneIndex.LEFT) }
+                        onBreadcrumbClick = { 
+                            viewModel.setActive(PaneIndex.LEFT) // 点击路径激活
+                            viewModel.navigateToPath(PaneIndex.LEFT, it) 
+                        },
+                        onRetry = { 
+                            viewModel.setActive(PaneIndex.LEFT)
+                            viewModel.loadFiles(PaneIndex.LEFT) 
+                        }
                     )
                 }
 
@@ -125,19 +135,29 @@ fun ExplorerScreen(
                     .zIndex(if (viewModel.activePane == PaneIndex.RIGHT) 1f else 0f)
                     .shadow(elevation = rightElevation)
                     .background(MaterialTheme.colorScheme.surface)
-                    .clickable(interactionSource = null, indication = null) { 
-                        viewModel.activePane = PaneIndex.RIGHT 
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { 
+                        viewModel.setActive(PaneIndex.RIGHT) 
                     }
                 ) {
                     FilePane(
                         state = viewModel.rightPane,
                         isActive = viewModel.activePane == PaneIndex.RIGHT,
                         onFileClick = { file ->
+                            viewModel.setActive(PaneIndex.RIGHT)
                             if (file.isDirectory) viewModel.enterFolder(PaneIndex.RIGHT, file)
                             else activity?.let { viewModel.downloadFile(it, file) }
                         },
-                        onBreadcrumbClick = { viewModel.navigateToPath(PaneIndex.RIGHT, it) },
-                        onRetry = { viewModel.loadFiles(PaneIndex.RIGHT) }
+                        onBreadcrumbClick = { 
+                            viewModel.setActive(PaneIndex.RIGHT)
+                            viewModel.navigateToPath(PaneIndex.RIGHT, it) 
+                        },
+                        onRetry = { 
+                            viewModel.setActive(PaneIndex.RIGHT)
+                            viewModel.loadFiles(PaneIndex.RIGHT) 
+                        }
                     )
                 }
             }

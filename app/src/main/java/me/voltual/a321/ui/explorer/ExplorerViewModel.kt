@@ -31,6 +31,14 @@ class ExplorerViewModel(
 
     // 全局上传状态（通常逻辑上一个应用同时处理一个主上传流，或根据焦点窗口处理）
     var activePane by mutableStateOf(PaneIndex.LEFT)
+    
+    // 提供一个明确的方法来切换激活状态
+    fun setActive(pane: PaneIndex) {
+        if (activePane != pane) {
+            activePane = pane
+        }
+    }
+    
     var isUploading by mutableStateOf(false)
     var uploadProgress by mutableStateOf(0f)
     var uploadMessage by mutableStateOf("")
