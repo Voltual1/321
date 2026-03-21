@@ -206,8 +206,7 @@ fun FilePane(
     totalPages = state.totalPages,
     onRetry = onRetry,
     onLoadMore = {
-        // 触发 ViewModel 加载下一页
-        viewModel.loadFiles(if (isActive) viewModel.activePane else /* 逻辑判定 */, isNextPage = true)
+        viewModel.loadFiles(if (isActive) viewModel.activePane else  isNextPage = true)
     },
     emptyMessage = "无文件",
     itemContent = { file ->
