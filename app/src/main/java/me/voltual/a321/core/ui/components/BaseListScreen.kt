@@ -226,13 +226,13 @@ private fun AutoLoadPageInfo(currentPage: Int, totalPages: Int) {
     ) {
         if (currentPage < totalPages) {
             Text(
-                text = "正在加载更多...",
+                text = "别急……已经在加载了！",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary
             )
         } else {
             Text(
-                text = "已加载全部数据",
+                text = "真的……没有啦！",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
