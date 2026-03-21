@@ -149,7 +149,7 @@ fun ExplorerScreen(
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
                                 if (event.type == PointerEventType.Press) {
-                                    viewModel.setActive(PaneIndex.LEFT)
+                                    viewModel.setActive(PaneIndex.RIGHT)
                                 }
                             }
                         }
