@@ -235,7 +235,7 @@ fun BreadcrumbsBar(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.clickable { onPathClick(path) }
             )
-            if (path != pathStack.last() && pathStack.size > 2) {
+            if (path != pathStack.last() && pathStack.id != 0 ) {
                 Text(
                     text = "/",
                     style = MaterialTheme.typography.bodyMedium,
