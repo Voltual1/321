@@ -227,7 +227,7 @@ fun FileListItem(
                 maxLines = 1,
                 modifier = Modifier.basicMarquee(
                     iterations = Int.MAX_VALUE, // 无限循环
-                    delayMillis = 2000 // 停顿2秒后开始滚动，更符合阅读习惯
+                    repeatDelayMillis = 2000 // 停顿2秒后开始滚动，更符合阅读习惯
                 )
             )
         },
