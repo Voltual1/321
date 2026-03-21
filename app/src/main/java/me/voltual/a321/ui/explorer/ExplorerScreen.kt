@@ -29,6 +29,10 @@ import me.voltual.a321.core.ui.theme.BBQIconButton
 import me.voltual.a321.data.unified.PanFile
 import me.voltual.a321.data.unified.PanPath
 import org.koin.androidx.compose.koinViewModel
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.awaitPointerEvent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
