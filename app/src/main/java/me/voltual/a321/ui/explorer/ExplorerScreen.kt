@@ -255,29 +255,7 @@ fun FileListItem(
                 modifier = Modifier.size(24.dp), // 稍微缩小一点图标，为文字腾空间
                 tint = if (file.isDirectory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
             )
-        },
-        trailingContent = {
-            if (file.isAbnormal) {
-                Icon(
-                    imageVector = Icons.Default.Warning, 
-                    contentDescription = "违规", 
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(16.dp)
-                )
-            } else {
-                // 在双窗口下，三个点菜单可能会显得拥挤，可以考虑减小其外边距
-                IconButton(
-                    onClick = { /* TODO: 更多操作菜单 */ },
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert, 
-                        contentDescription = "更多",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        },
+        },        
     )
 }
 
