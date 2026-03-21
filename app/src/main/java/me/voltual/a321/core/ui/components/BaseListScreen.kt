@@ -52,7 +52,7 @@ fun <T> BaseListScreen(
         }
         
         LaunchedEffect(shouldLoadMore) {
-            if (shouldLoadMore && !isLoading && currentPage < totalPages) {
+            if (/*shouldLoadMore &&*/ !isLoading && currentPage < totalPages) {
                 onLoadMore()
             }
         }
