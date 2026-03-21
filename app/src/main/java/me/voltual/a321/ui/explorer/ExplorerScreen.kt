@@ -1,16 +1,19 @@
 package me.voltual.a321.ui.explorer
 
+package me.voltual.a321.ui.explorer
+
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,14 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.anggrayudi.storage.file.DocumentFileCompat
 import me.voltual.a321.core.ui.components.BaseListScreen
 import me.voltual.a321.core.ui.theme.BBQIconButton
 import me.voltual.a321.data.unified.PanFile
 import me.voltual.a321.data.unified.PanPath
-import androidx.compose.foundation.basicMarquee
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,13 +39,13 @@ fun ExplorerScreen(
     val context = LocalContext.current
     val activity = context as? android.app.Activity
 
-    // 动画化阴影高度
+    // 阴影动画：激活时 6dp 产生明显的投影，未激活时 0dp
     val leftElevation by animateDpAsState(
-        targetValue = if (viewModel.activePane == PaneIndex.LEFT) 8.dp else 0.dp,
+        targetValue = if (viewModel.activePane == PaneIndex.LEFT) 6.dp else 0.dp,
         label = "LeftPaneElevation"
     )
     val rightElevation by animateDpAsState(
-        targetValue = if (viewModel.activePane == PaneIndex.RIGHT) 8.dp else 0.dp,
+        targetValue = if (viewModel.activePane == PaneIndex.RIGHT) 6.dp else 0.dp,
         label = "RightPaneElevation"
     )
 
@@ -95,12 +97,12 @@ fun ExplorerScreen(
             )
 
             Row(modifier = Modifier.fillMaxSize()) {
-                // 左侧窗口
+                // 左侧窗口：增加 zIndex 确保投影能压在右侧窗口上方
                 Box(modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .zIndex(if (viewModel.activePane == PaneIndex.LEFT) 1f else 0f) // 确保激活的在上面
-                    .shadow(elevation = leftElevation) // 动态阴影
+                    .zIndex(if (viewModel.activePane == PaneIndex.LEFT) 1f else 0f)
+                    .shadow(elevation = leftElevation)
                     .background(MaterialTheme.colorScheme.surface)
                     .clickable(interactionSource = null, indication = null) { 
                         viewModel.activePane = PaneIndex.LEFT 
@@ -118,15 +120,12 @@ fun ExplorerScreen(
                     )
                 }
 
-                // 移除原有的中间硬分割线，改用动态边缘
-                // 如果你想要 MT 管理器那种即便没选中也有的极细线，可以保留一个无阴影的 Box
-
                 // 右侧窗口
                 Box(modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
                     .zIndex(if (viewModel.activePane == PaneIndex.RIGHT) 1f else 0f)
-                    .shadow(elevation = rightElevation) // 动态阴影
+                    .shadow(elevation = rightElevation)
                     .background(MaterialTheme.colorScheme.surface)
                     .clickable(interactionSource = null, indication = null) { 
                         viewModel.activePane = PaneIndex.RIGHT 
@@ -160,7 +159,6 @@ fun FilePane(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
     ) {
         BreadcrumbsBar(
             pathStack = state.pathStack,
