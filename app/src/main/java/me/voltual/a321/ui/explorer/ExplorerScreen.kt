@@ -244,7 +244,7 @@ fun FileListItem(
                     .basicMarquee(
                         iterations = Int.MAX_VALUE,
                         velocity = 30.dp, // 滚动速度
-                        delayMillis = 3000
+                        repeatDelayMillis = 3000
                     )
             )
         },
@@ -278,8 +278,6 @@ fun FileListItem(
                 }
             }
         },
-        // 关键调整：减少内边距以适应双窗口
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
     )
 }
 
