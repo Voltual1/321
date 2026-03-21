@@ -196,16 +196,9 @@ Box(modifier = Modifier.fillMaxSize()) { // 根容器
             file = viewModel.selectedFileForAction,
             onDismiss = { viewModel.hideActionMenu() },
             onAction = { action ->
-                // 处理具体的菜单点击事件
-                when (action) {
-                    "share" -> { /* TODO */ }
-                    "move" -> { /* TODO */ }
-                    "rename" -> { /* TODO */ }
-                    "delete" -> { /* TODO */ }
-                    "info" -> { /* TODO */ }
-                }
-                viewModel.hideActionMenu()
-            }
+            // 这里传入当前的 activePane，确保操作后刷新正确的窗口
+            viewModel.performAction(action, viewModel.activePane)
+        }
         )
 }
 }

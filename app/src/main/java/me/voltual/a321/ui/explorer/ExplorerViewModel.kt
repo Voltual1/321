@@ -159,6 +159,47 @@ fun hideActionMenu() {
             }
         }
     }
+    
+    /**
+     * 执行文件操作（从 ActionMenu 触发）
+     */
+    fun performAction(action: String, pane: PaneIndex) {
+        val file = selectedFileForAction ?: return
+        hideActionMenu() // 执行前先关闭菜单
+
+        viewModelScope.launch {
+            when (action) {
+                "delete" -> {
+                    // 批量接口也支持单文件删除
+                    val result = repository.deleteFiles(listOf(file.id))
+                    if (result is PanActionResult.Success) {
+                        loadFiles(pane) // 刷新当前侧列表
+                    } else if (result is PanActionResult.Error) {
+                        updatePaneError(pane, result.message)
+                    }
+                }
+                "share" -> {
+                    repository.shareFiles(listOf(file.id))
+                        .onSuccess { shareKey ->
+                            // 这里可以弹出一个 Dialog 显示链接，或者直接复制到剪贴板
+                            uploadMessage = "分享成功，Key: $shareKey" 
+                            // 暂时借用上传消息提示，实际建议用 Snackbar
+                        }
+                        .onFailure { updatePaneError(pane, it.message ?: "分享失败") }
+                }
+                "rename" -> {
+                    // TODO: 需要弹出重命名输入框，逻辑类似 createFolder
+                }
+                "info" -> {
+                    // TODO: 显示文件详情弹窗
+                }
+            }
+        }
+    }
+
+    private fun updatePaneError(pane: PaneIndex, message: String) {
+        if (pane == PaneIndex.LEFT) leftPane.error = message else rightPane.error = message
+    }
 
     fun uploadFile(uri: Uri, name: String, size: Long, targetPane: PaneIndex) {
         val state = if (targetPane == PaneIndex.LEFT) leftPane else rightPane
