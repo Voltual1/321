@@ -296,17 +296,23 @@ fun FileListItem(
             }
         },
         leadingContent = {
-            Icon(
-                imageVector = if (file.isDirectory) Icons.Default.Folder else Icons.AutoMirrored.Filled.InsertDriveFile,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = if (file.isDirectory) {
-                    // ".." 文件夹可以使用稍微淡一点的颜色以示区分
-                    if (isUpFolder) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f) 
-                    else MaterialTheme.colorScheme.primary 
-                } else MaterialTheme.colorScheme.outline
-            )
+    Icon(
+        imageVector = if (file.isDirectory) {
+            Icons.Default.Folder 
+        } else {
+            Icons.AutoMirrored.Filled.InsertDriveFile
+        },
+        contentDescription = null,
+        modifier = Modifier.size(24.dp),
+        tint = if (file.isDirectory) {
+            if (isUpFolder) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+            // ".." 文件夹可以使用稍微淡一点的颜色以示区分
+            else MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.outline
         }
+    )
+}
     )
 }
 
