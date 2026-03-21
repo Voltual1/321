@@ -121,6 +121,7 @@ fun ExplorerScreen(
                     }                ) {
                     FilePane(
                         state = viewModel.leftPane,
+                        viewModel = viewModel,
                         isActive = viewModel.activePane == PaneIndex.LEFT,
                         onFileClick = { file ->
                             viewModel.setActive(PaneIndex.LEFT) // 点击文件时也激活该侧
@@ -160,6 +161,7 @@ fun ExplorerScreen(
                     FilePane(
                         state = viewModel.rightPane,
                         isActive = viewModel.activePane == PaneIndex.RIGHT,
+                        viewModel = viewModel,
                         onFileClick = { file ->
                             viewModel.setActive(PaneIndex.RIGHT)
                             if (file.isDirectory) viewModel.enterFolder(PaneIndex.RIGHT, file)
@@ -184,6 +186,7 @@ fun ExplorerScreen(
 fun FilePane(
     state: ExplorerViewModel.PaneState,
     isActive: Boolean,
+    viewModel: ExplorerViewModel,
     onFileClick: (PanFile) -> Unit,
     onBreadcrumbClick: (PanPath) -> Unit,
     onRetry: () -> Unit
