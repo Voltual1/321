@@ -50,6 +50,22 @@ class ExplorerViewModel(
         loadFiles(PaneIndex.LEFT)
         loadFiles(PaneIndex.RIGHT)
     }
+    
+    // 在 ExplorerViewModel.kt 中添加
+var isActionMenuVisible by mutableStateOf(false)
+    private set
+var selectedFileForAction by mutableStateOf<PanFile?>(null)
+    private set
+
+fun showActionMenu(file: PanFile) {
+    selectedFileForAction = file
+    isActionMenuVisible = true
+}
+
+fun hideActionMenu() {
+    isActionMenuVisible = false
+    selectedFileForAction = null
+}
 
     fun loadFiles(pane: PaneIndex, isNextPage: Boolean = false) {
     val state = if (pane == PaneIndex.LEFT) leftPane else rightPane

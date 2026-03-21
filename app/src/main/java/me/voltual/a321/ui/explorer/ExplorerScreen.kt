@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
@@ -71,7 +72,7 @@ fun ExplorerScreen(
             }
         }
     }
-
+Box(modifier = Modifier.fillMaxSize()) { // 根容器
     Scaffold(
         topBar = {
             TopAppBar(
@@ -182,6 +183,7 @@ fun ExplorerScreen(
         }
     }
 }
+}
 
 @Composable
 fun FilePane(
@@ -257,15 +259,20 @@ fun BreadcrumbsBar(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FileListItem(
     file: PanFile,
+    onLongClick: () -> Unit, // 新增
     onClick: () -> Unit
 ) {
     val isUpFolder = file.name == ".." && file.id == -1L
 
     ListItem(
-        modifier = Modifier.clickable { onClick() },
+        modifier = Modifier.combinedClickable(
+            onClick = onClick,
+            onLongClick = if (!isUpFolder) onLongClick else null // ".." 不触发菜单
+        ),
         headlineContent = {
             Text(
                 text = file.name,
