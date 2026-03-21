@@ -72,7 +72,7 @@ fun ExplorerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("123pan Geek") },
+                title = { Text("A321") },
                 actions = {
                     BBQIconButton(
                         onClick = { 
@@ -233,14 +233,6 @@ fun BreadcrumbsBar(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.clickable { onPathClick(path) }
             )
-            if (path != pathStack.last()) {
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.outline
-                )
-            }
         }
     }
 }
