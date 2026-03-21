@@ -37,6 +37,16 @@ fun ExplorerScreen(
     val context = LocalContext.current
     val activity = context as? android.app.Activity
 
+    // 动画化阴影高度
+    val leftElevation by animateDpAsState(
+        targetValue = if (viewModel.activePane == PaneIndex.LEFT) 8.dp else 0.dp,
+        label = "LeftPaneElevation"
+    )
+    val rightElevation by animateDpAsState(
+        targetValue = if (viewModel.activePane == PaneIndex.RIGHT) 8.dp else 0.dp,
+        label = "RightPaneElevation"
+    )
+
     BackHandler(enabled = viewModel.leftPane.pathStack.size > 1 || viewModel.rightPane.pathStack.size > 1) {
         if (!viewModel.navigateBack(viewModel.activePane)) {
             val otherPane = if (viewModel.activePane == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
@@ -78,7 +88,6 @@ fun ExplorerScreen(
         }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-            // 全局进度条放在 TopBar 下方
             UploadProgressBanner(
                 isUploading = viewModel.isUploading,
                 progress = viewModel.uploadProgress,
@@ -90,6 +99,9 @@ fun ExplorerScreen(
                 Box(modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
+                    .zIndex(if (viewModel.activePane == PaneIndex.LEFT) 1f else 0f) // 确保激活的在上面
+                    .shadow(elevation = leftElevation) // 动态阴影
+                    .background(MaterialTheme.colorScheme.surface)
                     .clickable(interactionSource = null, indication = null) { 
                         viewModel.activePane = PaneIndex.LEFT 
                     }
@@ -106,19 +118,16 @@ fun ExplorerScreen(
                     )
                 }
 
-                // 中间分割线：模仿 MT 管理器的纵深阴影感
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(1.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant)
-                        .shadow(elevation = 2.dp) // 增加微弱阴影
-                )
+                // 移除原有的中间硬分割线，改用动态边缘
+                // 如果你想要 MT 管理器那种即便没选中也有的极细线，可以保留一个无阴影的 Box
 
                 // 右侧窗口
                 Box(modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
+                    .zIndex(if (viewModel.activePane == PaneIndex.RIGHT) 1f else 0f)
+                    .shadow(elevation = rightElevation) // 动态阴影
+                    .background(MaterialTheme.colorScheme.surface)
                     .clickable(interactionSource = null, indication = null) { 
                         viewModel.activePane = PaneIndex.RIGHT 
                     }
@@ -147,66 +156,33 @@ fun FilePane(
     onBreadcrumbClick: (PanPath) -> Unit,
     onRetry: () -> Unit
 ) {
-    // 1. 动态计算高度：激活时浮起，非激活时平贴
-    val elevation by animateDpAsState(
-        targetValue = if (isActive) 8.dp else 0.dp, 
-        label = "PaneElevation"
-    )
 
-    // 2. 动态计算背景色深度
-    val containerColor = if (isActive) {
-        MaterialTheme.colorScheme.surface
-    } else {
-        // 非激活状态使用更深一点的颜色，模拟“压低”感
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    }
-
-    // 使用 Surface 包裹，利用其自带的 shadow 和 tonalElevation 属性
-    Surface(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(if (isActive) 0.dp else 2.dp), // 非激活时稍微收缩，强化边缘阴影对比
-        shape = MaterialTheme.shapes.extraSmall, // 极小的圆角有助于阴影渲染
-        color = containerColor,
-        tonalElevation = elevation,
-        shadowElevation = elevation
+            .background(backgroundColor)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column {
-                BreadcrumbsBar(
-                    pathStack = state.pathStack,
-                    onPathClick = onBreadcrumbClick,
-                    isActive = isActive // 传入状态控制文字颜色
-                )
-                
-                BaseListScreen(
-                    items = state.fileList,
-                    isLoading = state.isLoading,
-                    error = state.error,
-                    currentPage = 1,
-                    totalPages = 1,
-                    onRetry = onRetry,
-                    onLoadMore = { },
-                    emptyMessage = "无文件",
-                    itemContent = { file ->
-                        FileListItem(
-                            file = file,
-                            isActive = isActive, // 传入状态
-                            onClick = { onFileClick(file) }
-                        )
-                    }
+        BreadcrumbsBar(
+            pathStack = state.pathStack,
+            onPathClick = onBreadcrumbClick
+        )
+        
+        BaseListScreen(
+            items = state.fileList,
+            isLoading = state.isLoading,
+            error = state.error,
+            currentPage = 1,
+            totalPages = 1,
+            onRetry = onRetry,
+            onLoadMore = { },
+            emptyMessage = "无文件",
+            itemContent = { file ->
+                FileListItem(
+                    file = file,
+                    onClick = { onFileClick(file) }
                 )
             }
-
-            // 3. 关键：非激活状态下的“压暗”遮罩
-            if (!isActive) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.05f)) // 极淡的遮罩
-                )
-            }
-        }
+        )
     }
 }
 
