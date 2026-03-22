@@ -203,14 +203,11 @@ fun hideShareSheet() {
     isShareSheetVisible = false
 }
 
-// 定义一个事件包装类
-sealed class ExplorerEvent {
-    data class ShowSnackbar(val message: String, val actionLabel: String? = null) : ExplorerEvent()
-}
+// 1. 明确 Channel 的类型
+private val _events = kotlinx.coroutines.channels.Channel<ExplorerEvent>(kotlinx.coroutines.channels.Channel.BUFFERED)
 
-//添加事件流
-private val _events = kotlinx.coroutines.channels.Channel<ExplorerEvent>()
-val events = receiveAsFlow(_events)
+// 2. 修改 events 的声明方式，显式指定类型并调用扩展函数
+val events: kotlinx.coroutines.flow.Flow<ExplorerEvent> = _events.receiveAsFlow()
 
 // 最终提交分享的方法
 fun confirmShare(password: String, expiration: String) {
@@ -254,4 +251,9 @@ fun confirmShare(password: String, expiration: String) {
             isUploading = false
         }
     }
+}
+
+// 定义一个事件包装类
+sealed class ExplorerEvent {
+    data class ShowSnackbar(val message: String, val actionLabel: String? = null) : ExplorerEvent()
 }

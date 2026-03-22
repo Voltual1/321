@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import android.content.ClipboardManager
 import com.anggrayudi.storage.file.DocumentFileCompat
 import me.voltual.a321.core.ui.components.BaseListScreen
 import me.voltual.a321.core.ui.theme.BBQIconButton
@@ -37,7 +38,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.combinedClickable
-import android.content.ClipData.newPlainText
+import android.content.ClipData
 import android.content.Context
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,7 +73,7 @@ fun ExplorerScreen(
                     // 如果用户点击了“复制”按钮
                     if (result == SnackbarResult.ActionPerformed && event.actionLabel == "复制") {
                         val url = event.message.substringAfter("：")
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         val clip = ClipData.newPlainText("123Pan Share", url)
                         clipboard.setPrimaryClip(clip)
                     }
