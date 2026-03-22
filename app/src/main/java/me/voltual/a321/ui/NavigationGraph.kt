@@ -81,7 +81,7 @@ fun BBQNavDisplay(
         entryProvider = { key ->
             when (key) {
                 is Home -> NavEntry(key) {
-                    ExplorerScreen()
+                    ExplorerScreen(snackbarHostState = snackbarHostState)
                 }
                 
                 is ThemeCustomize -> NavEntry(key) {

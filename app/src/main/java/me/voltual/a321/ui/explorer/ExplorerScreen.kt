@@ -41,7 +41,8 @@ import androidx.compose.foundation.combinedClickable
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExplorerScreen(
-    viewModel: ExplorerViewModel = koinViewModel()
+    viewModel: ExplorerViewModel = koinViewModel(),
+    snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
     val activity = context as? android.app.Activity
