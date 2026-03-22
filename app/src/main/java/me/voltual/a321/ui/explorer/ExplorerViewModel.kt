@@ -11,6 +11,7 @@ import me.voltual.a321.core.utils.Util1DM
 import me.voltual.a321.data.unified.PanFile
 import me.voltual.a321.data.unified.PanPath
 import me.voltual.a321.data.unified.PanActionResult
+import kotlinx.coroutines.flow.receiveAsFlow
 
 enum class PaneIndex { LEFT, RIGHT }
 
@@ -209,7 +210,7 @@ sealed class ExplorerEvent {
 
 //添加事件流
 private val _events = kotlinx.coroutines.channels.Channel<ExplorerEvent>()
-val events = kotlinx.coroutines.flow.receiveAsFlow(_events)
+val events = receiveAsFlow(_events)
 
 // 最终提交分享的方法
 fun confirmShare(password: String, expiration: String) {

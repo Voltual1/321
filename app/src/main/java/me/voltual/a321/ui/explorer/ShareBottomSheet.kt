@@ -55,7 +55,7 @@ fun ShareFileSheet(
                 value = password.value,
                 onValueChange = { password.value = it },
                 label = { Text("提取码 (留空为无密码)") },
-                placeholder = { Text("请输入4位提取码") },
+                placeholder = { Text("请输入提取码") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -84,10 +84,23 @@ fun ShareFileSheet(
             // 3. 确认按钮
             Button(
                 onClick = {
-                    // 将 LocalDateTime 转为 ISO 8601 格式字符串
-                    val isoString = LocalDateTime(selectedDate, LocalTime(8, 0, 0)).toString() + "+08:00"
-                    onConfirm(password.value, isoString)
-                },
+    // 1. 获取当前时间或指定时间的 LocalDateTime
+    val time = LocalTime(8, 0, 0, 0) // 这里的最后一个参数是纳秒 (nanoseconds)
+    val dateTime = LocalDateTime(selectedDate, time)
+    
+    // 2. 手动构建满足服务器要求的 ISO 8601 格式
+    // 使用 format 确保补全 0
+    val isoString = "${dateTime.year}-" +
+            "${dateTime.monthNumber.toString().padStart(2, '0')}-" +
+            "${dateTime.dayOfMonth.toString().padStart(2, '0')}T" +
+            "${dateTime.hour.toString().padStart(2, '0')}:" +
+            "${dateTime.minute.toString().padStart(2, '0')}:" +
+            "${dateTime.second.toString().padStart(2, '0')}." +
+            "${(dateTime.nanosecond / 1_000_000).toString().padStart(3, '0')}" +
+            "+08:00"
+
+    onConfirm(password.value, isoString)
+},
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(16.dp)
             ) {
