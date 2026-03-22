@@ -66,7 +66,6 @@ fun showActionMenu(file: PanFile) {
 
 fun hideActionMenu() {
     isActionMenuVisible = false
-    selectedFileForAction = null
 }
 
     fun loadFiles(pane: PaneIndex, isNextPage: Boolean = false) {
@@ -179,6 +178,7 @@ fun hideActionMenu() {
                     } else if (result is PanActionResult.Error) {
                         updatePaneError(pane, result.message)
                     }
+                    selectedFileForAction = null // 操作完成后清理
                 }
                 "share" -> {showShareSheet()                }
                 "rename" -> {
@@ -201,6 +201,7 @@ fun showShareSheet() {
 
 fun hideShareSheet() {
     isShareSheetVisible = false
+    selectedFileForAction = null // 在这里清理，因为分享流程彻底结束了
 }
 
 // 1. 明确 Channel 的类型

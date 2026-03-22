@@ -55,7 +55,7 @@ fun ShareFileSheet(
                 value = password.value,
                 onValueChange = { password.value = it },
                 label = { Text("提取码 (留空为无密码)") },
-                placeholder = { Text("请输入提取码") },
+                placeholder = { Text("请输入4位提取码") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
