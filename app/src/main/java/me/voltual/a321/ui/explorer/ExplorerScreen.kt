@@ -37,6 +37,8 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.combinedClickable
+import android.content.ClipData.newPlainText
+import android.content.Context
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +58,28 @@ fun ExplorerScreen(
         targetValue = if (viewModel.activePane == PaneIndex.RIGHT) 6.dp else 0.dp,
         label = "RightPaneElevation"
     )
+    
+    // 监听 ViewModel 事件
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is ExplorerEvent.ShowSnackbar -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = event.message,
+                        actionLabel = event.actionLabel,
+                        duration = SnackbarDuration.Short
+                    )
+                    // 如果用户点击了“复制”按钮
+                    if (result == SnackbarResult.ActionPerformed && event.actionLabel == "复制") {
+                        val url = event.message.substringAfter("：")
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clip = ClipData.newPlainText("123Pan Share", url)
+                        clipboard.setPrimaryClip(clip)
+                    }
+                }
+            }
+        }
+    }
 
     BackHandler(enabled = viewModel.leftPane.pathStack.size > 1 || viewModel.rightPane.pathStack.size > 1) {
         if (!viewModel.navigateBack(viewModel.activePane)) {

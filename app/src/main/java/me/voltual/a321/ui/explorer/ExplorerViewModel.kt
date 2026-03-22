@@ -202,22 +202,29 @@ fun hideShareSheet() {
     isShareSheetVisible = false
 }
 
+// 定义一个事件包装类
+sealed class ExplorerEvent {
+    data class ShowSnackbar(val message: String, val actionLabel: String? = null) : ExplorerEvent()
+}
+
+//添加事件流
+private val _events = kotlinx.coroutines.channels.Channel<ExplorerEvent>()
+val events = kotlinx.coroutines.flow.receiveAsFlow(_events)
+
 // 最终提交分享的方法
 fun confirmShare(password: String, expiration: String) {
     val file = selectedFileForAction ?: return
-    val pane = activePane
     hideShareSheet()
 
     viewModelScope.launch {
         repository.shareFiles(listOf(file.id), password, expiration)
             .onSuccess { shareKey ->
-                // 这里建议使用特定的成功提示，或者直接把链接存入剪贴板
-                val fullUrl = "https://www.123pan.com/s/$shareKey" 
-                uploadMessage = "分享成功！链接已生成" 
-                // TODO: 可以在此处调用系统剪贴板 API 自动复制 fullUrl
+                val fullUrl = "https://www.123pan.com/s/$shareKey"
+                // 发送事件：通知 UI 弹出 Snackbar 并包含链接
+                _events.send(ExplorerEvent.ShowSnackbar("分享成功：$fullUrl", "复制"))
             }
             .onFailure { 
-                updatePaneError(pane, it.message ?: "分享失败") 
+                _events.send(ExplorerEvent.ShowSnackbar("分享失败：${it.message}"))
             }
     }
 }
