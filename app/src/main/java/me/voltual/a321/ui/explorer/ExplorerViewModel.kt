@@ -179,15 +179,7 @@ fun hideActionMenu() {
                         updatePaneError(pane, result.message)
                     }
                 }
-                "share" -> {
-                    repository.shareFiles(listOf(file.id))
-                        .onSuccess { shareKey ->
-                            // 这里可以弹出一个 Dialog 显示链接，或者直接复制到剪贴板
-                            uploadMessage = "分享成功，Key: $shareKey" 
-                            // 暂时借用上传消息提示，实际建议用 Snackbar
-                        }
-                        .onFailure { updatePaneError(pane, it.message ?: "分享失败") }
-                }
+                "share" -> {showShareSheet()                }
                 "rename" -> {
                     // TODO: 需要弹出重命名输入框，逻辑类似 createFolder
                 }
@@ -196,7 +188,39 @@ fun hideActionMenu() {
                 }
             }
         }
+    }    
+
+var isShareSheetVisible by mutableStateOf(false)
+    private set
+
+fun showShareSheet() {
+    // selectedFileForAction 已经在 showActionMenu 时赋值了
+    isShareSheetVisible = true
+}
+
+fun hideShareSheet() {
+    isShareSheetVisible = false
+}
+
+// 最终提交分享的方法
+fun confirmShare(password: String, expiration: String) {
+    val file = selectedFileForAction ?: return
+    val pane = activePane
+    hideShareSheet()
+
+    viewModelScope.launch {
+        repository.shareFiles(listOf(file.id), password, expiration)
+            .onSuccess { shareKey ->
+                // 这里建议使用特定的成功提示，或者直接把链接存入剪贴板
+                val fullUrl = "https://www.123pan.com/s/$shareKey" 
+                uploadMessage = "分享成功！链接已生成" 
+                // TODO: 可以在此处调用系统剪贴板 API 自动复制 fullUrl
+            }
+            .onFailure { 
+                updatePaneError(pane, it.message ?: "分享失败") 
+            }
     }
+}
 
     private fun updatePaneError(pane: PaneIndex, message: String) {
         if (pane == PaneIndex.LEFT) leftPane.error = message else rightPane.error = message

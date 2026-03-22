@@ -201,6 +201,18 @@ Box(modifier = Modifier.fillMaxSize()) { // 根容器
             viewModel.performAction(action, viewModel.activePane)
         }
         )
+        if (viewModel.isShareSheetVisible) {
+    val file = viewModel.selectedFileForAction
+    if (file != null) {
+        ShareFileSheet(
+            fileName = file.name,
+            onDismiss = { viewModel.hideShareSheet() },
+            onConfirm = { password, expiration ->
+                viewModel.confirmShare(password, expiration)
+            }
+        )
+    }
+}
 }
 }
 

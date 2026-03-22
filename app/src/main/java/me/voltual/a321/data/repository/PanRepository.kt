@@ -188,14 +188,18 @@ suspend fun getRecycleBinFiles(page: Int = 1): Result<PanPageResult> = runCatchi
 }
 
 /**
- * 创建文件分享（统一模型输出）
+ * 创建文件分享
+ * @param expiration ISO 8601 格式字符串，例如 "2099-12-12T08:00:00+08:00"
  */
-suspend fun shareFiles(fileIds: List<Long>, password: String = ""): Result<String> = runCatching {
+suspend fun shareFiles(
+    fileIds: List<Long>, 
+    password: String = "", 
+    expiration: String = ""
+): Result<String> = runCatching {
     val token = AuthManager.getCredentials(context).first().token
-    val response = apiService.createShare(token, fileIds, password).getOrThrow()
+    val response = apiService.createShare(token, fileIds, password, expiration).getOrThrow()
     
-    // 123网盘返回的是 ShareKey，这里可以拼凑成完整链接或只返回 Key
-    response.data?.ShareKey ?: throw Exception("Share failed")
+    response.data?.ShareKey ?: throw Exception("分享失败：未获取到 Key")
 }
 
     suspend fun getLatestRelease(url: String): Result<UpdateInfo> {
