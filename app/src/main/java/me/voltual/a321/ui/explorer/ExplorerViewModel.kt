@@ -184,7 +184,6 @@ fun hideActionMenu() {
                 "rename" -> {
             hideActionMenu()
             showRenameDialog() // 触发显示输入框
-            selectedFileForAction = null // 操作完成后清理
         }
                 "move" -> {
                 // 1. 确定目标窗口：如果是从左往右移，目标就是右窗口；反之亦然
@@ -227,21 +226,44 @@ fun hideRenameDialog() {
 /**
  * 提交重命名请求
  */
+// 1. 增加一个私有变量作为“锁”
+private var isProcessingRename = false
+
 fun confirmRename(newName: String, pane: PaneIndex) {
+    // 2. 如果正在处理中，直接拦截后续请求
+    if (isProcessingRename) return
+    
     val file = selectedFileForAction ?: return
+    
+    // 如果名字没变，直接关闭即可
+    if (newName == file.name) {
+        hideRenameDialog()
+        selectedFileForAction = null
+        return
+    }
+
+    // 3. 立即上锁并关闭对话框
+    isProcessingRename = true
     hideRenameDialog()
 
     viewModelScope.launch {
-        val result = repository.renameFile(file.id, newName)
-        if (result is PanActionResult.Success) {
-            loadFiles(pane) // 刷新列表
-            _events.send(ExplorerEvent.ShowSnackbar("重命名成功"))
-        } else if (result is PanActionResult.Error) {
-            _events.send(ExplorerEvent.ShowSnackbar("重命名失败: ${result.message}"))
+        try {
+            val result = repository.renameFile(file.id, newName)
+            if (result is PanActionResult.Success) {
+                _events.send(ExplorerEvent.ShowSnackbar("重命名成功"))
+                loadFiles(pane)
+            } else if (result is PanActionResult.Error) {
+                _events.send(ExplorerEvent.ShowSnackbar("重命名失败: ${result.message}"))
+            }
+        } catch (e: Exception) {
+            _events.send(ExplorerEvent.ShowSnackbar("发生错误: ${e.message}"))
+        } finally {
+            // 4. 无论成功失败，处理完成后解锁并清理引用
+            selectedFileForAction = null
+            isProcessingRename = false
         }
-        selectedFileForAction = null // 流程结束，清理引用
     }
-}    
+}
 
 var isShareSheetVisible by mutableStateOf(false)
     private set
