@@ -260,6 +260,17 @@ data class FolderDetailsData(
     val Size: Long? = null
 )
 
+@Serializable
+data class MoveFileRequest(
+    val fileIdList: List<MoveFileItem>,
+    val parentFileId: Long
+)
+
+@Serializable
+data class MoveFileItem(
+    val FileId: Long
+)
+
     // ===== API 接口定义 =====
 
     interface ApiService {
@@ -305,6 +316,13 @@ suspend fun restoreFiles(token: String, fileIds: List<Long>): Result<PanResponse
 
 // 获取文件夹详情（支持多个ID）
 suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanResponse<List<FolderDetailsData>>>
+
+/**
+     * 移动文件或文件夹
+     * @param fileIds 需要移动的文件/文件夹 ID 列表
+     * @param targetParentId 目标目录的 ID
+     */
+    suspend fun moveFiles(token: String, fileIds: List<Long>, targetParentId: Long): Result<PanResponse<Unit>>
     }
 
     object ApiServiceImpl : ApiService {
@@ -500,6 +518,17 @@ override suspend fun getFolderDetails(token: String, folderIds: List<Long>) = sa
         bearerAuth(token)
         contentType(ContentType.Application.Json)
         setBody(mapOf("file_ids" to folderIds))
+    }
+}
+
+override suspend fun moveFiles(token: String, fileIds: List<Long>, targetParentId: Long) = safeApiCall<PanResponse<Unit>> {
+    httpClient.post("/api/file/mod_pid") {
+        bearerAuth(token)
+        contentType(ContentType.Application.Json)
+        setBody(MoveFileRequest(
+            fileIdList = fileIds.map { MoveFileItem(it) },
+            parentFileId = targetParentId
+        ))
     }
 }
     }
