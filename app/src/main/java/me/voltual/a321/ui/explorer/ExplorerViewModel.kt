@@ -76,69 +76,78 @@ class ExplorerViewModel(
     }
 
     fun loadFiles(pane: PaneIndex, isNextPage: Boolean = false) {
-        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+    val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
 
-        viewModelScope.launch {
-            if (isNextPage) {
-                if (state.currentPage >= state.totalPages) return@launch
-                state.currentPage++
-            } else {
-                state.isLoading = true
-                state.currentPage = 1
-            }
-
-            state.error = null
-
-            // 分支逻辑：回收站 vs 普通目录
-            if (state.isRecycleBin) {
-                repository.getRecycleBinFiles(state.currentPage)
-                    .onSuccess { pageResult ->
-                        state.totalCount = total
-                        val newList = pageResult.files
-                        
-                        // 回收站第一页增加返回按钮，点击返回普通文件模式
-                        val processedList = if (state.currentPage == 1) {
-                            val backFolder = PanFile(id = -2, name = ".. [退出回收站]", isDirectory = true, size = 0, updateTime = "")
-                            listOf(backFolder) + newList
-                        } else {
-                            newList
-                        }
-
-                        if (isNextPage) {
-                            state.fileList = state.fileList + newList
-                        } else {
-                            state.fileList = processedList
-                        }
-                    }
-                    .onFailure {
-                        state.error = it.message ?: "加载回收站失败"
-                        if (isNextPage) state.currentPage--
-                    }
-            } else {
-                repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
-                    .onSuccess { (total, newList) ->
-                        state.totalCount = total
-                        val processedList = if (state.pathStack.size > 1 && state.currentPage == 1) {
-                            val upFolder = PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")
-                            listOf(upFolder) + newList
-                        } else {
-                            newList
-                        }
-
-                        if (isNextPage) {
-                            state.fileList = state.fileList + newList
-                        } else {
-                            state.fileList = processedList
-                        }
-                    }
-                    .onFailure {
-                        state.error = it.message ?: "加载失败"
-                        if (isNextPage) state.currentPage--
-                    }
-            }
-            state.isLoading = false
+    viewModelScope.launch {
+        if (isNextPage) {
+            if (state.currentPage >= state.totalPages) return@launch
+            state.currentPage++
+        } else {
+            state.isLoading = true
+            state.currentPage = 1
         }
+
+        state.error = null
+
+        if (state.isRecycleBin) {
+            // 加载回收站列表
+            repository.getRecycleBinFiles(state.currentPage)
+                .onSuccess { pageResult ->
+                    // 修复点：使用 totalCount 匹配您的 PanPageResult 模型
+                    state.totalCount = pageResult.totalCount
+                    val newList = pageResult.files
+                    
+                    // 处理回收站的“返回”逻辑：在第一页添加一个特殊的退出项
+                    val processedList = if (state.currentPage == 1) {
+                        val backItem = PanFile(
+                            id = -2, 
+                            name = ".. [退出回收站]", 
+                            isDirectory = true, 
+                            size = 0, 
+                            updateTime = ""
+                        )
+                        listOf(backItem) + newList
+                    } else {
+                        newList
+                    }
+
+                    if (isNextPage) {
+                        state.fileList = state.fileList + newList
+                    } else {
+                        state.fileList = processedList
+                    }
+                }
+                .onFailure {
+                    state.error = it.message ?: "加载回收站失败"
+                    if (isNextPage) state.currentPage--
+                }
+        } else {
+            // 加载普通文件列表
+            repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
+                .onSuccess { (total, newList) ->
+                    state.totalCount = total
+
+                    val processedList = if (state.pathStack.size > 1 && state.currentPage == 1) {
+                        val upFolder = PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")
+                        listOf(upFolder) + newList
+                    } else {
+                        newList
+                    }
+
+                    if (isNextPage) {
+                        state.fileList = state.fileList + newList
+                    } else {
+                        state.fileList = processedList
+                    }
+                }
+                .onFailure {
+                    state.error = it.message ?: "加载失败"
+                    if (isNextPage) state.currentPage--
+                }
+        }
+        state.isLoading = false
     }
+}
 
         /**
      * 进入或退出回收站
