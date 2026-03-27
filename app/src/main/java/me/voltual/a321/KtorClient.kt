@@ -344,7 +344,6 @@ suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanRe
         fileId: Long, 
         newName: String
     ): Result<PanResponse<FileInfo>> // 这里的泛型根据返回的 "data" 结构，抓包显示返回的是文件详细信息
-}
     }
 
     object ApiServiceImpl : ApiService {
