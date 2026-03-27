@@ -184,6 +184,24 @@ fun hideActionMenu() {
                 "rename" -> {
                     // TODO: 需要弹出重命名输入框，逻辑类似 createFolder
                 }
+                "move" -> {
+                // 1. 确定目标窗口：如果是从左往右移，目标就是右窗口；反之亦然
+                val targetPane = if (pane == PaneIndex.LEFT) rightPane else leftPane
+                val targetPathId = targetPane.currentPath.id
+                
+                // 2. 调用 Repository
+                val result = repository.moveFiles(listOf(file.id), targetPathId)
+                
+                if (result is PanActionResult.Success) {
+                    // 3. 移动成功后，两边都要刷新
+                    loadFiles(PaneIndex.LEFT)
+                    loadFiles(PaneIndex.RIGHT)
+                    _events.send(ExplorerEvent.ShowSnackbar("已移动至 ${targetPane.currentPath.name}"))
+                } else if (result is PanActionResult.Error) {
+                    updatePaneError(pane, result.message)
+                }
+                selectedFileForAction = null
+            }
                 "info" -> {
                     // TODO: 显示文件详情弹窗
                 }

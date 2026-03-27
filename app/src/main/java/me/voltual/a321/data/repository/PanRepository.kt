@@ -139,8 +139,6 @@ suspend fun getDownloadUrl(file: PanFile): Result<String> = runCatching {
     apiService.getDownloadUrl(token, tempInfo).getOrThrow()
 }
 
-// 在 PanRepository 类中添加以下方法
-
 /**
  * 获取统一的用户信息模型
  */
@@ -151,7 +149,6 @@ suspend fun getUserQuota(): Result<PanUserQuota> = runCatching {
     val response = apiService.getUserInfo(token).getOrThrow()
     val data = response.data ?: throw Exception("Failed to get user info")
     
-    // 使用我们在 unified 包中定义的映射函数
     data.toUnifiedQuota()
 }
 
@@ -185,6 +182,33 @@ suspend fun getRecycleBinFiles(page: Int = 1): Result<PanPageResult> = runCatchi
     
     val data = response.data ?: throw Exception("Empty recycle bin")
     data.toPageResult() // 映射为统一分页模型
+}
+
+/**
+ * 移动文件或文件夹到指定目录
+ * @param fileIds 需要移动的文件/文件夹 ID 列表
+ * @param targetParentId 目标文件夹的 ID (根目录为 0)
+ */
+suspend fun moveFiles(fileIds: List<Long>, targetParentId: Long): PanActionResult {
+    return runCatching {
+        // 1. 获取 Token
+        val credentials = AuthManager.getCredentials(context).first()
+        val token = credentials.token
+        if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+
+        // 2. 调用 API 层
+        val response = apiService.moveFiles(token, fileIds, targetParentId).getOrThrow()
+        
+        // 3. 转换为统一结果模型
+        if (response.isSuccess) {
+            PanActionResult.Success
+        } else {
+            PanActionResult.Error(response.code, response.message)
+        }
+    }.getOrElse { throwable ->
+        // 异常处理
+        PanActionResult.Error(-1, throwable.message ?: "Unknown Error during move")
+    }
 }
 
 /**
