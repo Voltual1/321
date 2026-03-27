@@ -30,6 +30,7 @@ import androidx.compose.ui.zIndex
 import android.content.ClipboardManager
 import com.anggrayudi.storage.file.DocumentFileCompat
 import me.voltual.a321.ui.dialog.StringInputPrefDialogUI
+import me.voltual.a321.ui.dialog.ActionsDialogUI
 import me.voltual.a321.core.ui.components.BaseListScreen
 import me.voltual.a321.core.ui.theme.BBQIconButton
 import me.voltual.a321.data.unified.PanFile
@@ -267,6 +268,25 @@ if (viewModel.isPropertyDialogVisible) {
             file = file,
             onDismiss = { viewModel.hidePropertyDialog() }
         )
+    }
+}
+// 删除确认对话框
+if (viewModel.isDeleteDialogVisible) {
+    val file = viewModel.selectedFileForAction
+    if (file != null) {
+        Dialog(onDismissRequest = { viewModel.hideDeleteDialog() }) {
+            ActionsDialogUI(
+                titleText = "删除",
+                messageText = "是否删除 ${file.name}？",
+                primaryText = "删除",
+                // 这里可以根据需要设置图标
+                primaryIcon = Icons.Default.Delete,
+                primaryAction = {
+                    viewModel.confirmDelete(viewModel.activePane)
+                },
+                onDismiss = { viewModel.hideDeleteDialog() }
+            )
+        }
     }
 }
 }

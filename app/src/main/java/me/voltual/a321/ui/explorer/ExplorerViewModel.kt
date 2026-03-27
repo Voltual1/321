@@ -171,15 +171,8 @@ fun hideActionMenu() {
         viewModelScope.launch {
             when (action) {
                 "delete" -> {
-                    // 批量接口也支持单文件删除
-                    val result = repository.deleteFiles(listOf(file.id))
-                    if (result is PanActionResult.Success) {
-                        loadFiles(pane) // 刷新当前侧列表
-                    } else if (result is PanActionResult.Error) {
-                        updatePaneError(pane, result.message)
-                    }
-                    selectedFileForAction = null // 操作完成后清理
-                }
+            showDeleteDialog() // 触发显示删除确认框
+        }
                 "share" -> {showShareSheet()                }
                 "rename" -> {
             hideActionMenu()
@@ -267,6 +260,38 @@ fun showShareSheet() {
 fun hideShareSheet() {
     isShareSheetVisible = false
     selectedFileForAction = null // 在这里清理，因为分享流程彻底结束了
+}
+
+// 控制删除对话框显示
+var isDeleteDialogVisible by mutableStateOf(false)
+    private set
+
+fun showDeleteDialog() {
+    isDeleteDialogVisible = true
+}
+
+fun hideDeleteDialog() {
+    isDeleteDialogVisible = false
+    // 只有在确认删除或取消后才考虑是否清理 selectedFileForAction
+}
+
+/**
+ * 确认执行删除操作
+ */
+fun confirmDelete(pane: PaneIndex) {
+    val file = selectedFileForAction ?: return
+    hideDeleteDialog()
+
+    viewModelScope.launch {
+        val result = repository.deleteFiles(listOf(file.id))
+        if (result is PanActionResult.Success) {
+            loadFiles(pane) // 刷新列表
+            _events.send(ExplorerEvent.ShowSnackbar("已删除 ${file.name}"))
+        } else if (result is PanActionResult.Error) {
+            _events.send(ExplorerEvent.ShowSnackbar("删除失败: ${result.message}"))
+        }
+        selectedFileForAction = null // 流程结束，清理引用
+    }
 }
 
 // 1. 明确 Channel 的类型
