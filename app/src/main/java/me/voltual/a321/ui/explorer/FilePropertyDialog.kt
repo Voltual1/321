@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import me.voltual.a321.core.utils.extension.text.formatSize  
 import me.voltual.a321.data.unified.PanFile
 
 @Composable
@@ -26,9 +27,9 @@ fun FilePropertyDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier
-                .width(300.dp) // 略宽于菜单，给长文本留空间
+                .width(300.dp)
                 .wrapContentHeight(),
-            shape = RoundedCornerShape(12.dp), // 保持一致的圆角
+            shape = RoundedCornerShape(12.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
         ) {
@@ -37,7 +38,6 @@ fun FilePropertyDialog(
                     .padding(vertical = 16.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                // 标题栏
                 Text(
                     text = "文件属性",
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
@@ -51,13 +51,11 @@ fun FilePropertyDialog(
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
 
-                // 属性列表
                 PropertyItem("文件名", file.name)
-                PropertyItem("大小", formatFileSize(file.size))
+                PropertyItem("大小", file.size.formatSize())  // 使用扩展函数
                 PropertyItem("类型", if (file.isDirectory) "文件夹" else "${file.extension.uppercase()} 文件")
                 PropertyItem("修改时间", file.updateTime)
                 
-                // 针对 MT 风格的高级属性：使用 SelectionContainer 允许用户复制 ID 或路径
                 PropertyItem("文件 ID", file.id.toString(), isMonospace = true)
                 
                 if (file.etag != null) {
@@ -70,7 +68,6 @@ fun FilePropertyDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 底部按钮
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier
@@ -103,7 +100,6 @@ private fun PropertyItem(
         )
         Spacer(modifier = Modifier.height(2.dp))
         
-        // 允许长按选择/复制
         SelectionContainer {
             Text(
                 text = value,
@@ -117,12 +113,4 @@ private fun PropertyItem(
             )
         }
     }
-}
-
-// 简单的文件大小格式化辅助函数
-private fun formatFileSize(size: Long): String {
-    if (size <= 0) return "0 B"
-    val units = arrayOf("B", "KB", "MB", "GB", "TB")
-    val digitGroups = (Math.log10(size.toDouble()) / Math.log10(1024.0)).toInt()
-    return String.format("%.2f %s", size / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
 }

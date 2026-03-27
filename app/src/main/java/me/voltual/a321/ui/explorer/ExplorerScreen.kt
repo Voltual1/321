@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import me.voltual.a321.core.utils.extension.text.formatSize
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -394,7 +395,7 @@ fun FileListItem(
         },
         supportingContent = {
             if (!isUpFolder) {
-                val sizeInfo = if (file.isDirectory) "" else " · ${formatSize(file.size)}"
+                val sizeInfo = if (file.isDirectory) "" else " · ${file.size.formatSize()}"
                 Text(
                     text = "${file.updateTime}$sizeInfo",
                     style = MaterialTheme.typography.bodySmall,
@@ -449,15 +450,4 @@ fun UploadProgressBanner(
             }
         }
     }
-}
-
-fun formatSize(size: Long): String {
-    if (size <= 0) return "0 B"
-    val units = arrayOf("B", "KB", "MB", "GB", "TB")
-    val digitGroups = (Math.log10(size.toDouble()) / Math.log10(1024.0)).toInt()
-    return String.format(
-        "%.2f %s",
-        size / Math.pow(1024.0, digitGroups.toDouble()),
-        units[digitGroups]
-    )
 }

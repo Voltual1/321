@@ -31,7 +31,7 @@ class AuthViewModel(
      */
     fun checkAndExtractToken(manual: Boolean = false): Boolean {
         val cookieManager = CookieManager.getInstance()
-        // 按照你的测试结果，直接获取 123pan.com 的 Cookie
+        //直接获取 login.123pan.com 的 Cookie
         val cookies = cookieManager.getCookie(targetCookieUrl) ?: ""
         
         val token = cookies.split(";")

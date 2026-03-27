@@ -4,113 +4,117 @@ import android.net.Uri
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import me.voltual.a321.data.repository.PanRepository
 import me.voltual.a321.core.utils.Util1DM
+import me.voltual.a321.data.repository.PanRepository
+import me.voltual.a321.data.unified.PanActionResult
 import me.voltual.a321.data.unified.PanFile
 import me.voltual.a321.data.unified.PanPath
-import me.voltual.a321.data.unified.PanActionResult
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlin.math.ceil
 
 enum class PaneIndex { LEFT, RIGHT }
+
+sealed class ExplorerEvent {
+    data class ShowSnackbar(val message: String, val actionLabel: String? = null) : ExplorerEvent()
+}
 
 class ExplorerViewModel(
     private val repository: PanRepository
 ) : ViewModel() {
 
+    // --- 内部状态类 ---
     class PaneState {
-    var fileList by mutableStateOf<List<PanFile>>(emptyList())
-    var isLoading by mutableStateOf(false)
-    var error by mutableStateOf<String?>(null)
-    var pathStack by mutableStateOf(listOf(PanPath(0, "/")))
-    val currentPath: PanPath get() = pathStack.last()
+        var fileList by mutableStateOf<List<PanFile>>(emptyList())
+        var isLoading by mutableStateOf(false)
+        var error by mutableStateOf<String?>(null)
+        var pathStack by mutableStateOf(listOf(PanPath(0, "/")))
+        val currentPath: PanPath get() = pathStack.last()
 
-    // 新增分页状态
-    var currentPage by mutableIntStateOf(1)
-    var totalCount by mutableIntStateOf(0)
-    val pageSize = 100 // 对应 API 中的 limit
-    val totalPages: Int get() = kotlin.math.ceil(totalCount.toDouble() / pageSize).toInt().coerceAtLeast(1)
-}
+        // 分页状态
+        var currentPage by mutableIntStateOf(1)
+        var totalCount by mutableIntStateOf(0)
+        val pageSize = 100 
+        val totalPages: Int get() = ceil(totalCount.toDouble() / pageSize).toInt().coerceAtLeast(1)
+    }
 
+    // --- 响应式 UI 状态 ---
     val leftPane = PaneState()
     val rightPane = PaneState()
-
     var activePane by mutableStateOf(PaneIndex.LEFT)
-    
-    fun setActive(pane: PaneIndex) {
-        if (activePane != pane) {
-            activePane = pane
-        }
-    }
-    
+
+    // 上传状态
     var isUploading by mutableStateOf(false)
     var uploadProgress by mutableStateOf(0f)
     var uploadMessage by mutableStateOf("")
+
+    // 弹窗与交互状态
+    var isActionMenuVisible by mutableStateOf(false) ; private set
+    var isRenameDialogVisible by mutableStateOf(false) ; private set
+    var isPropertyDialogVisible by mutableStateOf(false) ; private set
+    var isShareSheetVisible by mutableStateOf(false) ; private set
+    var isDeleteDialogVisible by mutableStateOf(false) ; private set
+    var selectedFileForAction by mutableStateOf<PanFile?>(null) ; private set
+
+    // 事件流
+    private val _events = Channel<ExplorerEvent>(Channel.BUFFERED)
+    val events: Flow<ExplorerEvent> = _events.receiveAsFlow()
 
     init {
         loadFiles(PaneIndex.LEFT)
         loadFiles(PaneIndex.RIGHT)
     }
-    
-    // 在 ExplorerViewModel.kt 中添加
-var isActionMenuVisible by mutableStateOf(false)
-    private set
-var selectedFileForAction by mutableStateOf<PanFile?>(null)
-    private set
 
-fun showActionMenu(file: PanFile) {
-    selectedFileForAction = file
-    isActionMenuVisible = true
-}
+    // --- 核心逻辑：文件加载与导航 ---
 
-fun hideActionMenu() {
-    isActionMenuVisible = false
-}
+    fun setActive(pane: PaneIndex) {
+        if (activePane != pane) activePane = pane
+    }
 
     fun loadFiles(pane: PaneIndex, isNextPage: Boolean = false) {
-    val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
-    
-    viewModelScope.launch {
-        if (isNextPage) {
-            if (state.currentPage >= state.totalPages) return@launch
-            state.currentPage++
-        } else {
-            state.isLoading = true // 仅在首次加载或切换目录时显示全屏加载
-            state.currentPage = 1
-        }
-        
-        state.error = null
-        
-        // 调用 Repository，传入当前页码
-        repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
-            .onSuccess { (total, newList) ->
-                state.totalCount = total
-                
-                // 处理 ".." 返回目录逻辑
-                val processedList = if (state.pathStack.size > 1 && state.currentPage == 1) {
-                    val upFolder = PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")
-                    listOf(upFolder) + newList
-                } else {
-                    newList
-                }
+        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
 
-                if (isNextPage) {
-                    state.fileList = state.fileList + newList // 追加
-                } else {
-                    state.fileList = processedList // 覆盖
+        viewModelScope.launch {
+            if (isNextPage) {
+                if (state.currentPage >= state.totalPages) return@launch
+                state.currentPage++
+            } else {
+                state.isLoading = true
+                state.currentPage = 1
+            }
+
+            state.error = null
+
+            repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
+                .onSuccess { (total, newList) ->
+                    state.totalCount = total
+
+                    // 处理 ".." 返回目录逻辑：仅在第一页且非根目录时添加
+                    val processedList = if (state.pathStack.size > 1 && state.currentPage == 1) {
+                        val upFolder = PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")
+                        listOf(upFolder) + newList
+                    } else {
+                        newList
+                    }
+
+                    if (isNextPage) {
+                        state.fileList = state.fileList + newList
+                    } else {
+                        state.fileList = processedList
+                    }
                 }
-            }
-            .onFailure { 
-                state.error = it.message ?: "加载失败" 
-                if (isNextPage) state.currentPage-- // 失败时回退页码
-            }
-        state.isLoading = false
+                .onFailure {
+                    state.error = it.message ?: "加载失败"
+                    if (isNextPage) state.currentPage--
+                }
+            state.isLoading = false
+        }
     }
-}
 
     fun enterFolder(pane: PaneIndex, folder: PanFile) {
-        // 关键逻辑：如果是 ".."，执行返回操作
         if (folder.name == ".." && folder.id == -1L) {
             navigateBack(pane)
             return
@@ -134,193 +138,138 @@ fun hideActionMenu() {
     }
 
     fun navigateToPath(pane: PaneIndex, path: PanPath) {
-    val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
-    val index = state.pathStack.indexOf(path)
-    if (index != -1) {
-        state.pathStack = state.pathStack.take(index + 1)
-        state.currentPage = 1 // 重置页码
-        loadFiles(pane)
+        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+        val index = state.pathStack.indexOf(path)
+        if (index != -1) {
+            state.pathStack = state.pathStack.take(index + 1)
+            state.currentPage = 1
+            loadFiles(pane)
+        }
     }
-}
+
+    // --- 文件操作：下载、重命名、删除、移动、分享 ---
 
     fun downloadFile(activity: android.app.Activity, file: PanFile) {
-        // 如果是虚拟的 ".." 文件夹，不触发下载
         if (file.id == -1L) return
-        
+
         viewModelScope.launch {
-            val result = repository.getDownloadUrl(file)
-            result.onSuccess { url ->
-                try {
+            repository.getDownloadUrl(file).onSuccess { url ->
+                runCatching {
                     Util1DM.downloadFile(activity, url, false, true)
-                } catch (e: Exception) {
-                    if (activePane == PaneIndex.LEFT) leftPane.error = "1DM失败" else rightPane.error = "1DM失败"
+                }.onFailure {
+                    updatePaneError(activePane, "1DM 调用失败")
                 }
-            }.onFailure {
-                // 错误处理...
             }
         }
     }
-    
-    /**
-     * 执行文件操作（从 ActionMenu 触发）
-     */
+
     fun performAction(action: String, pane: PaneIndex) {
         val file = selectedFileForAction ?: return
-        hideActionMenu() // 执行前先关闭菜单
+        hideActionMenu()
 
         viewModelScope.launch {
             when (action) {
-                "delete" -> {
-            showDeleteDialog() // 触发显示删除确认框
-        }
-                "share" -> {showShareSheet()                }
-                "rename" -> {
-            hideActionMenu()
-            showRenameDialog() // 触发显示输入框
-        }
-                "move" -> {
-                // 1. 确定目标窗口：如果是从左往右移，目标就是右窗口；反之亦然
-                val targetPane = if (pane == PaneIndex.LEFT) rightPane else leftPane
-                val targetPathId = targetPane.currentPath.id
-                
-                // 2. 调用 Repository
-                val result = repository.moveFiles(listOf(file.id), targetPathId)
-                
-                if (result is PanActionResult.Success) {
-                    // 3. 移动成功后，两边都要刷新
-                    loadFiles(PaneIndex.LEFT)
-                    loadFiles(PaneIndex.RIGHT)
-                    _events.send(ExplorerEvent.ShowSnackbar("已移动至 ${targetPane.currentPath.name}"))
-                } else if (result is PanActionResult.Error) {
-                    updatePaneError(pane, result.message)
+                "delete" -> showDeleteDialog()
+                "share"  -> showShareSheet()
+                "rename" -> showRenameDialog()
+                "info"   -> showPropertyDialog()
+                "move"   -> {
+                    val targetPane = if (pane == PaneIndex.LEFT) rightPane else leftPane
+                    val result = repository.moveFiles(listOf(file.id), targetPane.currentPath.id)
+
+                    if (result is PanActionResult.Success) {
+                        loadFiles(PaneIndex.LEFT)
+                        loadFiles(PaneIndex.RIGHT)
+                        _events.send(ExplorerEvent.ShowSnackbar("已移动至 ${targetPane.currentPath.name}"))
+                    } else if (result is PanActionResult.Error) {
+                        _events.send(ExplorerEvent.ShowSnackbar("移动失败: ${result.message}"))
+                    }
+                    selectedFileForAction = null
                 }
-                selectedFileForAction = null
-            }
-                "info" -> {
-                hideActionMenu() // 先关闭菜单
-                showPropertyDialog() // 显示属性弹窗
-            }
             }
         }
     }
-    
-    // 控制重命名对话框显示
-var isRenameDialogVisible by mutableStateOf(false)
-    private set
 
-fun showRenameDialog() {
-    isRenameDialogVisible = true
-}
+    // --- 弹窗控制逻辑 ---
 
-fun hideRenameDialog() {
-    isRenameDialogVisible = false
-    // 注意：这里先不要清理 selectedFileForAction，因为对话框还需要它
-}
-
-/**
- * 提交重命名请求
- */
-fun confirmRename(newName: String, pane: PaneIndex) {
-    val file = selectedFileForAction ?: return
-    hideRenameDialog()
-
-    viewModelScope.launch {
-        val result = repository.renameFile(file.id, newName)
-        if (result is PanActionResult.Success) {
-            loadFiles(pane) // 刷新列表
-            _events.send(ExplorerEvent.ShowSnackbar("重命名成功"))
-        } else if (result is PanActionResult.Error) {
-            _events.send(ExplorerEvent.ShowSnackbar("重命名失败: ${result.message}"))
-        }
-        selectedFileForAction = null // 流程结束，清理引用
+    fun showActionMenu(file: PanFile) {
+        selectedFileForAction = file
+        isActionMenuVisible = true
     }
-}
 
-var isPropertyDialogVisible by mutableStateOf(false)
-    private set
+    fun hideActionMenu() { isActionMenuVisible = false }
 
-fun showPropertyDialog() {
-    isPropertyDialogVisible = true
-}
+    fun showRenameDialog() { isRenameDialogVisible = true }
 
-fun hidePropertyDialog() {
-    isPropertyDialogVisible = false
-    // 属性对话框关闭后，可以清理选中的文件引用
-    selectedFileForAction = null 
-}
+    fun hideRenameDialog() { isRenameDialogVisible = false }
 
-var isShareSheetVisible by mutableStateOf(false)
-    private set
+    fun confirmRename(newName: String, pane: PaneIndex) {
+        val file = selectedFileForAction ?: return
+        hideRenameDialog()
 
-fun showShareSheet() {
-    // selectedFileForAction 已经在 showActionMenu 时赋值了
-    isShareSheetVisible = true
-}
-
-fun hideShareSheet() {
-    isShareSheetVisible = false
-    selectedFileForAction = null // 在这里清理，因为分享流程彻底结束了
-}
-
-// 控制删除对话框显示
-var isDeleteDialogVisible by mutableStateOf(false)
-    private set
-
-fun showDeleteDialog() {
-    isDeleteDialogVisible = true
-}
-
-fun hideDeleteDialog() {
-    isDeleteDialogVisible = false
-    // 只有在确认删除或取消后才考虑是否清理 selectedFileForAction
-}
-
-/**
- * 确认执行删除操作
- */
-fun confirmDelete(pane: PaneIndex) {
-    val file = selectedFileForAction ?: return
-    hideDeleteDialog()
-
-    viewModelScope.launch {
-        val result = repository.deleteFiles(listOf(file.id))
-        if (result is PanActionResult.Success) {
-            loadFiles(pane) // 刷新列表
-            _events.send(ExplorerEvent.ShowSnackbar("已删除 ${file.name}"))
-        } else if (result is PanActionResult.Error) {
-            _events.send(ExplorerEvent.ShowSnackbar("删除失败: ${result.message}"))
-        }
-        selectedFileForAction = null // 流程结束，清理引用
-    }
-}
-
-// 1. 明确 Channel 的类型
-private val _events = kotlinx.coroutines.channels.Channel<ExplorerEvent>(kotlinx.coroutines.channels.Channel.BUFFERED)
-
-// 2. 修改 events 的声明方式，显式指定类型并调用扩展函数
-val events: kotlinx.coroutines.flow.Flow<ExplorerEvent> = _events.receiveAsFlow()
-
-// 最终提交分享的方法
-fun confirmShare(password: String, expiration: String) {
-    val file = selectedFileForAction ?: return
-    hideShareSheet()
-
-    viewModelScope.launch {
-        repository.shareFiles(listOf(file.id), password, expiration)
-            .onSuccess { shareKey ->
-                val fullUrl = "https://www.123pan.com/s/$shareKey"
-                // 发送事件：通知 UI 弹出 Snackbar 并包含链接
-                _events.send(ExplorerEvent.ShowSnackbar("分享成功：$fullUrl", "复制"))
+        viewModelScope.launch {
+            val result = repository.renameFile(file.id, newName)
+            if (result is PanActionResult.Success) {
+                loadFiles(pane)
+                _events.send(ExplorerEvent.ShowSnackbar("重命名成功"))
+            } else if (result is PanActionResult.Error) {
+                _events.send(ExplorerEvent.ShowSnackbar("重命名失败: ${result.message}"))
             }
-            .onFailure { 
-                _events.send(ExplorerEvent.ShowSnackbar("分享失败：${it.message}"))
-            }
+            selectedFileForAction = null
+        }
     }
-}
 
-    private fun updatePaneError(pane: PaneIndex, message: String) {
-        if (pane == PaneIndex.LEFT) leftPane.error = message else rightPane.error = message
+    fun showPropertyDialog() { isPropertyDialogVisible = true }
+
+    fun hidePropertyDialog() {
+        isPropertyDialogVisible = false
+        selectedFileForAction = null
     }
+
+    fun showShareSheet() { isShareSheetVisible = true }
+
+    fun hideShareSheet() {
+        isShareSheetVisible = false
+        selectedFileForAction = null
+    }
+
+    fun confirmShare(password: String, expiration: String) {
+        val file = selectedFileForAction ?: return
+        hideShareSheet()
+
+        viewModelScope.launch {
+            repository.shareFiles(listOf(file.id), password, expiration)
+                .onSuccess { shareKey ->
+                    val fullUrl = "https://www.123pan.com/s/$shareKey"
+                    _events.send(ExplorerEvent.ShowSnackbar("分享成功：$fullUrl", "复制"))
+                }
+                .onFailure {
+                    _events.send(ExplorerEvent.ShowSnackbar("分享失败：${it.message}"))
+                }
+        }
+    }
+
+    fun showDeleteDialog() { isDeleteDialogVisible = true }
+
+    fun hideDeleteDialog() { isDeleteDialogVisible = false }
+
+    fun confirmDelete(pane: PaneIndex) {
+        val file = selectedFileForAction ?: return
+        hideDeleteDialog()
+
+        viewModelScope.launch {
+            val result = repository.deleteFiles(listOf(file.id))
+            if (result is PanActionResult.Success) {
+                loadFiles(pane)
+                _events.send(ExplorerEvent.ShowSnackbar("已删除 ${file.name}"))
+            } else if (result is PanActionResult.Error) {
+                _events.send(ExplorerEvent.ShowSnackbar("删除失败: ${result.message}"))
+            }
+            selectedFileForAction = null
+        }
+    }
+
+    // --- 辅助功能 ---
 
     fun uploadFile(uri: Uri, name: String, size: Long, targetPane: PaneIndex) {
         val state = if (targetPane == PaneIndex.LEFT) leftPane else rightPane
@@ -342,9 +291,8 @@ fun confirmShare(password: String, expiration: String) {
             isUploading = false
         }
     }
-}
 
-// 定义一个事件包装类
-sealed class ExplorerEvent {
-    data class ShowSnackbar(val message: String, val actionLabel: String? = null) : ExplorerEvent()
+    private fun updatePaneError(pane: PaneIndex, message: String) {
+        if (pane == PaneIndex.LEFT) leftPane.error = message else rightPane.error = message
+    }
 }
