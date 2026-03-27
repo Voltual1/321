@@ -249,8 +249,8 @@ if (viewModel.isRenameDialogVisible) {
                 title = "重命名",
                 initialValue = file.name,
                 onDismiss = { viewModel.hideRenameDialog() },
-                onConfirm = { newName ->
-                        viewModel.confirmRename(newName, viewModel.activePane)
+                onConfirm = {// newName ->
+//                        viewModel.confirmRename(newName, viewModel.activePane)
                 }
             )
         }
