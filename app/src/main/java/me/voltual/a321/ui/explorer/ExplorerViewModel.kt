@@ -233,11 +233,10 @@ fun confirmRename(newName: String, pane: PaneIndex) {
     viewModelScope.launch {
         val result = repository.renameFile(file.id, newName)
         if (result is PanActionResult.Success) {
-            loadFiles(pane) // 刷新列表
-            _events.send(ExplorerEvent.ShowSnackbar("重命名成功"))
-        } else if (result is PanActionResult.Error) {
-            _events.send(ExplorerEvent.ShowSnackbar("重命名失败: ${result.message}"))
-        }
+    loadFiles(pane)
+    _events.send(ExplorerEvent.ShowSnackbar("重命名成功"))
+}
+// 失败时什么都不做
         selectedFileForAction = null // 流程结束，清理引用
     }
 }    
