@@ -226,6 +226,28 @@ suspend fun shareFiles(
     response.data?.ShareKey ?: throw Exception("分享失败：未获取到 Key")
 }
 
+/**
+ * 重命名文件或文件夹
+ * @param fileId 文件/文件夹的唯一 ID
+ * @param newName 新的文件名（如果是文件，应包含后缀名）
+ */
+suspend fun renameFile(fileId: Long, newName: String): PanActionResult {
+    return runCatching {
+        val credentials = AuthManager.getCredentials(context).first()
+        val token = credentials.token
+        if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+        val response = apiService.renameFile(token, fileId, newName).getOrThrow()
+        if (response.isSuccess) {
+            PanActionResult.Success
+        } else {
+            PanActionResult.Error(response.code, response.message)
+        }
+    }.getOrElse { throwable ->
+        // 异常捕获
+        PanActionResult.Error(-1, throwable.message ?: "Unknown Error during rename")
+    }
+}
+
     suspend fun getLatestRelease(url: String): Result<UpdateInfo> {
         return apiService.getLatestRelease(url)
     }
