@@ -44,7 +44,6 @@ sealed class IconSource {
     data class Remote(val url: String) : IconSource()
 }
 
-// 修改数据类
 data class DrawerItem(
     val id: String, 
     val label: String,
