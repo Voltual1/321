@@ -260,6 +260,15 @@ if (viewModel.isRenameDialogVisible) {
         }
     }
 }
+if (viewModel.isPropertyDialogVisible) {
+    val file = viewModel.selectedFileForAction
+    if (file != null) {
+        FilePropertyDialog(
+            file = file,
+            onDismiss = { viewModel.hidePropertyDialog() }
+        )
+    }
+}
 }
 }
 

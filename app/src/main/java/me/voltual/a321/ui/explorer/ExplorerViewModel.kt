@@ -204,8 +204,9 @@ fun hideActionMenu() {
                 selectedFileForAction = null
             }
                 "info" -> {
-                    // TODO: 显示文件详情弹窗
-                }
+                hideActionMenu() // 先关闭菜单
+                showPropertyDialog() // 显示属性弹窗
+            }
             }
         }
     }
@@ -240,6 +241,19 @@ fun confirmRename(newName: String, pane: PaneIndex) {
         }
         selectedFileForAction = null // 流程结束，清理引用
     }
+}
+
+var isPropertyDialogVisible by mutableStateOf(false)
+    private set
+
+fun showPropertyDialog() {
+    isPropertyDialogVisible = true
+}
+
+fun hidePropertyDialog() {
+    isPropertyDialogVisible = false
+    // 属性对话框关闭后，可以清理选中的文件引用
+    selectedFileForAction = null 
 }
 
 var isShareSheetVisible by mutableStateOf(false)
