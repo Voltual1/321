@@ -8,6 +8,9 @@
             <string name="check_update_failed">检查更新失败</string>
         <string name="check_update_error">检查更新出错</string>
         <string name="already_latest_version">当前已是最新版本</string>
+            <string name="save">保存</string>
+                <string name="cancel">取消</string>
+                    <string name="clear_text">明文</string>
         <string name="back">返回</string>
     
         <string name="crash_report_copied">崩溃报告已复制到剪贴板</string>
