@@ -143,7 +143,7 @@ data class CreateFolderRequest(
         val message: String,
         val data: T? = null
     ) {
-        val isSuccess: Boolean get() = code == 0 || code == 200
+        val isSuccess: Boolean get() = code == 0
     }
 
     @Serializable
@@ -343,7 +343,7 @@ suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanRe
         token: String, 
         fileId: Long, 
         newName: String
-    ): Result<PanResponse<FileInfo>> // 这里的泛型根据返回的 "data" 结构，抓包显示返回的是文件详细信息
+    ): Result<PanResponse<Unit>> // 这里的泛型根据返回的 "data" 结构，抓包显示返回的是文件详细信息
     }
 
     object ApiServiceImpl : ApiService {
@@ -557,7 +557,7 @@ override suspend fun renameFile(
     token: String, 
     fileId: Long, 
     newName: String 
-) = safeApiCall<PanResponse<FileInfo>> {
+) = safeApiCall<PanResponse<Unit>> {
     httpClient.post("/api/file/rename") {
         bearerAuth(token)
         contentType(ContentType.Application.Json)

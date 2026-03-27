@@ -250,7 +250,11 @@ if (viewModel.isRenameDialogVisible) {
                 initialValue = file.name,
                 onDismiss = { viewModel.hideRenameDialog() },
                 onConfirm = { newName ->
+                    if (newName.isNotBlank() && newName != file.name) {
                         viewModel.confirmRename(newName, viewModel.activePane)
+                    } else {
+                        viewModel.hideRenameDialog()
+                    }
                 }
             )
         }
