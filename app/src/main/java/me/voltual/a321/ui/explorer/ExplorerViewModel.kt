@@ -33,6 +33,7 @@ class ExplorerViewModel(
         var error by mutableStateOf<String?>(null)
         var pathStack by mutableStateOf(listOf(PanPath(0, "/")))
         val currentPath: PanPath get() = pathStack.last()
+        var isRecycleBin by mutableStateOf(false)
 
         // 分页状态
         var currentPage by mutableIntStateOf(1)
@@ -88,40 +89,88 @@ class ExplorerViewModel(
 
             state.error = null
 
-            repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
-                .onSuccess { (total, newList) ->
-                    state.totalCount = total
+            // 分支逻辑：回收站 vs 普通目录
+            if (state.isRecycleBin) {
+                repository.getRecycleBinFiles(state.currentPage)
+                    .onSuccess { pageResult ->
+                        state.totalCount = pageResult.total
+                        val newList = pageResult.files
+                        
+                        // 回收站第一页增加返回按钮，点击返回普通文件模式
+                        val processedList = if (state.currentPage == 1) {
+                            val backFolder = PanFile(id = -2, name = ".. [退出回收站]", isDirectory = true, size = 0, updateTime = "")
+                            listOf(backFolder) + newList
+                        } else {
+                            newList
+                        }
 
-                    // 处理 ".." 返回目录逻辑：仅在第一页且非根目录时添加
-                    val processedList = if (state.pathStack.size > 1 && state.currentPage == 1) {
-                        val upFolder = PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")
-                        listOf(upFolder) + newList
-                    } else {
-                        newList
+                        if (isNextPage) {
+                            state.fileList = state.fileList + newList
+                        } else {
+                            state.fileList = processedList
+                        }
                     }
+                    .onFailure {
+                        state.error = it.message ?: "加载回收站失败"
+                        if (isNextPage) state.currentPage--
+                    }
+            } else {
+                repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
+                    .onSuccess { (total, newList) ->
+                        state.totalCount = total
+                        val processedList = if (state.pathStack.size > 1 && state.currentPage == 1) {
+                            val upFolder = PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")
+                            listOf(upFolder) + newList
+                        } else {
+                            newList
+                        }
 
-                    if (isNextPage) {
-                        state.fileList = state.fileList + newList
-                    } else {
-                        state.fileList = processedList
+                        if (isNextPage) {
+                            state.fileList = state.fileList + newList
+                        } else {
+                            state.fileList = processedList
+                        }
                     }
-                }
-                .onFailure {
-                    state.error = it.message ?: "加载失败"
-                    if (isNextPage) state.currentPage--
-                }
+                    .onFailure {
+                        state.error = it.message ?: "加载失败"
+                        if (isNextPage) state.currentPage--
+                    }
+            }
             state.isLoading = false
         }
     }
 
+        /**
+     * 进入或退出回收站
+     */
+    fun toggleRecycleBin(pane: PaneIndex) {
+        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+        if (!state.isRecycleBin) {
+            state.isRecycleBin = true
+            // 进入回收站时，我们可以给 pathStack 加一个虚拟节点，或者清空它
+            state.pathStack = listOf(PanPath(-2, "回收站"))
+        } else {
+            state.isRecycleBin = false
+            state.pathStack = listOf(PanPath(0, "/"))
+        }
+        loadFiles(pane)
+    }
+
     fun enterFolder(pane: PaneIndex, folder: PanFile) {
+        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+        
+        // 处理回收站中的特殊返回
+        if (state.isRecycleBin && folder.id == -2L) {
+            toggleRecycleBin(pane)
+            return
+        }
+
         if (folder.name == ".." && folder.id == -1L) {
             navigateBack(pane)
             return
         }
 
         if (folder.isDirectory) {
-            val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
             state.pathStack = state.pathStack + PanPath(folder.id, folder.name)
             loadFiles(pane)
         }
@@ -129,6 +178,13 @@ class ExplorerViewModel(
 
     fun navigateBack(pane: PaneIndex): Boolean {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+        
+        // 如果在回收站，返回则退出回收站
+        if (state.isRecycleBin) {
+            toggleRecycleBin(pane)
+            return true
+        }
+
         if (state.pathStack.size > 1) {
             state.pathStack = state.pathStack.dropLast(1)
             loadFiles(pane)

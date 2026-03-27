@@ -111,6 +111,16 @@ fun ExplorerScreen(
                 TopAppBar(
                     title = { Text("A321") },
                     actions = {
+                    // 回收站按钮
+                        val activeState = if (viewModel.activePane == PaneIndex.LEFT) viewModel.leftPane else viewModel.rightPane
+                        BBQIconButton(
+                            onClick = {
+                            viewModel.toggleRecycleBin(viewModel.activePane)
+                            },
+                            icon = if (activeState.isRecycleBin) Icons.Default.CloudQueue else Icons.Default.DeleteSweep,
+                            contentDescription = "回收站",
+                            tint = if (activeState.isRecycleBin) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                            )
                         BBQIconButton(
                             onClick = {
                                 viewModel.loadFiles(PaneIndex.LEFT)
