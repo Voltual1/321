@@ -271,6 +271,14 @@ data class MoveFileItem(
     val FileId: Long
 )
 
+@Serializable
+data class RenameRequest(
+    val driveId: Int = 0,
+    val fileName: String,
+    val fileId: Long
+)
+
+
     // ===== API 接口定义 =====
 
     interface ApiService {
@@ -323,6 +331,20 @@ suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanRe
      * @param targetParentId 目标目录的 ID
      */
     suspend fun moveFiles(token: String, fileIds: List<Long>, targetParentId: Long): Result<PanResponse<Unit>>
+    
+    /**
+     * 重命名文件或文件夹
+     * @param token 用户授权 Token
+     * @param fileId 文件或文件夹的 ID
+     * @param newName 新的文件名（需包含后缀名）
+     * @param authKey 可选：部分 API 要求的 URL 参数 auth-key
+     */
+    suspend fun renameFile(
+        token: String, 
+        fileId: Long, 
+        newName: String
+    ): Result<PanResponse<FileInfo>> // 这里的泛型根据返回的 "data" 结构，抓包显示返回的是文件详细信息
+}
     }
 
     object ApiServiceImpl : ApiService {
@@ -528,6 +550,23 @@ override suspend fun moveFiles(token: String, fileIds: List<Long>, targetParentI
         setBody(MoveFileRequest(
             fileIdList = fileIds.map { MoveFileItem(it) },
             parentFileId = targetParentId
+        ))
+    }
+}
+
+override suspend fun renameFile(
+    token: String, 
+    fileId: Long, 
+    newName: String 
+) = safeApiCall<PanResponse<FileInfo>> {
+    httpClient.post("/api/file/rename") {
+        bearerAuth(token)
+        contentType(ContentType.Application.Json)
+        
+        setBody(RenameRequest(
+            driveId = 0,
+            fileName = newName,
+            fileId = fileId
         ))
     }
 }
