@@ -270,7 +270,7 @@ fun StringInputDialogUI(
             ) {
                 DialogNegativeButton(textId = R.string.cancel, onClick = onDismiss)
                 Spacer(Modifier.weight(1f))
-                DialogPositiveButton(textId = R.string.save, onClick = submit)
+                DialogPositiveButton(textId = R.string.save, onClick = { submit() })
             }
         }
     }
