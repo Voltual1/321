@@ -182,8 +182,9 @@ fun hideActionMenu() {
                 }
                 "share" -> {showShareSheet()                }
                 "rename" -> {
-                    // TODO: 需要弹出重命名输入框，逻辑类似 createFolder
-                }
+            hideActionMenu()
+            showRenameDialog() // 触发显示输入框
+        }
                 "move" -> {
                 // 1. 确定目标窗口：如果是从左往右移，目标就是右窗口；反之亦然
                 val targetPane = if (pane == PaneIndex.LEFT) rightPane else leftPane
@@ -207,7 +208,39 @@ fun hideActionMenu() {
                 }
             }
         }
-    }    
+    }
+    
+    // 控制重命名对话框显示
+var isRenameDialogVisible by mutableStateOf(false)
+    private set
+
+fun showRenameDialog() {
+    isRenameDialogVisible = true
+}
+
+fun hideRenameDialog() {
+    isRenameDialogVisible = false
+    // 注意：这里先不要清理 selectedFileForAction，因为对话框还需要它
+}
+
+/**
+ * 提交重命名请求
+ */
+fun confirmRename(newName: String, pane: PaneIndex) {
+    val file = selectedFileForAction ?: return
+    hideRenameDialog()
+
+    viewModelScope.launch {
+        val result = repository.renameFile(file.id, newName)
+        if (result is PanActionResult.Success) {
+            loadFiles(pane) // 刷新列表
+            _events.send(ExplorerEvent.ShowSnackbar("重命名成功"))
+        } else if (result is PanActionResult.Error) {
+            _events.send(ExplorerEvent.ShowSnackbar("重命名失败: ${result.message}"))
+        }
+        selectedFileForAction = null // 流程结束，清理引用
+    }
+}    
 
 var isShareSheetVisible by mutableStateOf(false)
     private set

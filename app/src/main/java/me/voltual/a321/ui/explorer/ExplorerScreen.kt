@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import android.content.ClipboardManager
 import com.anggrayudi.storage.file.DocumentFileCompat
+import me.voltual.a321.ui.dialog.StringInputPrefDialogUI
 import me.voltual.a321.core.ui.components.BaseListScreen
 import me.voltual.a321.core.ui.theme.BBQIconButton
 import me.voltual.a321.data.unified.PanFile
@@ -38,6 +39,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.window.Dialog
 import android.content.ClipData
 import android.content.Context
 
@@ -236,6 +238,26 @@ Box(modifier = Modifier.fillMaxSize()) { // 根容器
                 viewModel.confirmShare(password, expiration)
             }
         )
+    }
+}
+// 重命名对话框
+if (viewModel.isRenameDialogVisible) {
+    val file = viewModel.selectedFileForAction
+    if (file != null) {
+        Dialog(onDismissRequest = { viewModel.hideRenameDialog() }) {
+            StringInputPrefDialogUI(
+                title = "重命名",
+                initialValue = file.name,
+                onDismiss = { viewModel.hideRenameDialog() },
+                onConfirm = { newName ->
+                    if (newName.isNotBlank() && newName != file.name) {
+                        viewModel.confirmRename(newName, viewModel.activePane)
+                    } else {
+                        viewModel.hideRenameDialog()
+                    }
+                }
+            )
+        }
     }
 }
 }
