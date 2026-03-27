@@ -184,6 +184,7 @@ fun hideActionMenu() {
                 "rename" -> {
             hideActionMenu()
             showRenameDialog() // 触发显示输入框
+            selectedFileForAction = null // 操作完成后清理
         }
                 "move" -> {
                 // 1. 确定目标窗口：如果是从左往右移，目标就是右窗口；反之亦然
