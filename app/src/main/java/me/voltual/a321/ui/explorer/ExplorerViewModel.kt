@@ -93,7 +93,7 @@ class ExplorerViewModel(
             if (state.isRecycleBin) {
                 repository.getRecycleBinFiles(state.currentPage)
                     .onSuccess { pageResult ->
-                        state.totalCount = pageResult.total
+                        state.totalCount = total
                         val newList = pageResult.files
                         
                         // 回收站第一页增加返回按钮，点击返回普通文件模式
