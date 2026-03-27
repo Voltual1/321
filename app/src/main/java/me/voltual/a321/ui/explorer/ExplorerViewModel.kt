@@ -228,17 +228,17 @@ fun hideRenameDialog() {
  */
 fun confirmRename(newName: String, pane: PaneIndex) {
     val file = selectedFileForAction ?: return
-    hideRenameDialog()
-
     viewModelScope.launch {
         val result = repository.renameFile(file.id, newName)
-        if (result is PanActionResult.Success) {
-    loadFiles(pane)
-    _events.send(ExplorerEvent.ShowSnackbar("重命名成功"))
-}
-// 失败时什么都不做
-        selectedFileForAction = null // 流程结束，清理引用
+                if (result is PanActionResult.Success) {
+            loadFiles(pane) // 刷新列表
+            _events.send(ExplorerEvent.ShowSnackbar("重命名成功"))
+        } else if (result is PanActionResult.Error) {
+            _events.send(ExplorerEvent.ShowSnackbar("重命名失败: ${result.message}"))
+        }
     }
+            selectedFileForAction = null // 流程结束，清理引用
+            hideRenameDialog()
 }    
 
 var isShareSheetVisible by mutableStateOf(false)
