@@ -324,6 +324,21 @@ suspend fun searchFiles(
 }
 
 /**
+ * 获取分享列表（支持分页）
+ * @param next 分页游标，首次请求传 null，后续使用响应中的 nextMarker
+ * @param limit 每页数量，默认 100
+ * @return 统一分页结果，可直接用于文件列表 UI
+ */
+suspend fun getShareList(next: String? = null, limit: Int = 100): Result<PanPageResult> = runCatching {
+    val token = AuthManager.getCredentials(context).first().token
+    if (token.isEmpty()) throw Exception("Login required")
+
+    val response = apiService.listShares(token, next, limit).getOrThrow()
+    val data = response.data ?: throw Exception("获取分享列表失败")
+    data.toPageResult()
+}
+
+/**
  * 重命名文件或文件夹
  * @param fileId 文件/文件夹的唯一 ID
  * @param newName 新的文件名（如果是文件，应包含后缀名）

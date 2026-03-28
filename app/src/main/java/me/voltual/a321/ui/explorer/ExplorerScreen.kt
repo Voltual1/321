@@ -86,7 +86,11 @@ fun ExplorerScreen(
         }
     }
 
-    BackHandler(enabled = viewModel.leftPane.pathStack.size > 1 || viewModel.rightPane.pathStack.size > 1) {
+    // 更新 BackHandler，增加对分享列表模式的检测
+    BackHandler(enabled = viewModel.leftPane.pathStack.size > 1 || 
+                viewModel.rightPane.pathStack.size > 1 ||
+                viewModel.leftPane.isShareListMode ||
+                viewModel.rightPane.isShareListMode) {
         if (!viewModel.navigateBack(viewModel.activePane)) {
             val otherPane = if (viewModel.activePane == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
             viewModel.navigateBack(otherPane)
@@ -117,18 +121,27 @@ fun ExplorerScreen(
                 TopAppBar(
                     title = { Text("A321") },
                     actions = {
-                        // 新增搜索按钮
+                        // 搜索按钮
                         BBQIconButton(
                             onClick = { viewModel.showSearchDialog() },
                             icon = Icons.Default.Search,
                             contentDescription = "搜索"
                         )
+                        // 新增：分享列表按钮
+                        BBQIconButton(
+                            onClick = { viewModel.toggleShareList(viewModel.activePane) },
+                            icon = Icons.Default.Share,
+                            contentDescription = "已分享",
+                            tint = if (activeState.isShareListMode) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                        )
+                        // 回收站按钮
                         BBQIconButton(
                             onClick = { viewModel.toggleRecycleBin(viewModel.activePane) },
                             icon = if (activeState.isRecycleBin) Icons.Default.CloudQueue else Icons.Default.DeleteSweep,
                             contentDescription = "回收站",
                             tint = if (activeState.isRecycleBin) MaterialTheme.colorScheme.primary else LocalContentColor.current
                         )
+                        // 刷新按钮
                         BBQIconButton(
                             onClick = {
                                 viewModel.loadFiles(PaneIndex.LEFT)
