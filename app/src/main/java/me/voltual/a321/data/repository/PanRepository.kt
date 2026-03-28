@@ -362,73 +362,45 @@ suspend fun renameFile(fileId: Long, newName: String): PanActionResult {
     }
 }
 
+// PanRepository.kt 内添加
+
 /**
  * 获取分享链接中的文件列表
  * @param shareKey 分享标识
- * @param page 页码（从1开始）
- * @param limit 每页数量，默认 100
- * @param parentId 文件夹ID（0表示根目录）
+ * @param parentId 文件夹 ID（0 表示根目录）
+ * @param page 页码（从 1 开始）
  * @param sharePwd 提取码（可选）
- * @return 统一的分页结果，可直接用于文件列表 UI
  */
-suspend fun getShareFiles(
+suspend fun getShareInfo(
     shareKey: String,
-    page: Int = 1,
-    limit: Int = 100,
     parentId: Long = 0,
+    page: Int = 1,
     sharePwd: String? = null
 ): Result<PanPageResult> = runCatching {
     val token = AuthManager.getCredentials(context).first().token
     if (token.isEmpty()) throw Exception("Login required")
-    
-    val response = apiService.getShareInfo(token, shareKey, page, limit, parentId, sharePwd).getOrThrow()
-    val data = response.data ?: throw Exception("获取分享内容失败")
-    
-    // 将 FileInfo 转换为 PanFile
-    val files = data.InfoList.map { fileInfo ->
-        PanFile(
-            id = fileInfo.FileId,
-            name = fileInfo.FileName,
-            isDirectory = fileInfo.Type == 1,
-            size = fileInfo.Size,
-            etag = fileInfo.Etag ?: "",
-            s3KeyFlag = fileInfo.S3KeyFlag ?: "",
-            updateAt = fileInfo.UpdateAt,
-            downloadUrl = fileInfo.DownloadUrl
-        )
-    }
-    
-    PanPageResult(
-        files = files,
-        totalCount = data.Len,
-        hasMore = data.Next != "-1" && data.Next != null
-    )
+
+    val response = apiService.getShareInfo(token, shareKey, page, 200, parentId, sharePwd).getOrThrow()
+    val data = response.data ?: throw Exception("获取分享信息失败")
+    data.toPageResult() // 需要实现扩展函数
 }
 
 /**
  * 取消分享（删除已创建的分享）
- * @param shareIds 要删除的分享 ID 列表
- * @return 操作结果，成功时返回被删除的分享 ID 列表
+ * @param shareId 分享 ID
  */
-suspend fun cancelShares(shareIds: List<Long>): Result<List<Long>> = runCatching {
+suspend fun deleteShare(shareId: Long): PanActionResult = runCatching {
     val token = AuthManager.getCredentials(context).first().token
-    if (token.isEmpty()) throw Exception("Login required")
-    
-    val response = apiService.deleteShare(token, shareIds).getOrThrow()
-    val data = response.data ?: throw Exception("取消分享失败")
-    
-    // 返回实际被删除的分享 ID 列表
-    data.InfoList.map { it.ShareId }
-}
+    if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
 
-/**
- * 取消单个分享
- * @param shareId 要删除的分享 ID
- * @return 操作结果
- */
-suspend fun cancelShare(shareId: Long): Result<Boolean> = runCatching {
-    val result = cancelShares(listOf(shareId)).getOrThrow()
-    result.isNotEmpty()
+    val response = apiService.deleteShare(token, listOf(shareId)).getOrThrow()
+    if (response.isSuccess) {
+        PanActionResult.Success
+    } else {
+        PanActionResult.Error(response.code, response.message)
+    }
+}.getOrElse { throwable ->
+    PanActionResult.Error(-1, throwable.message ?: "取消分享失败")
 }
 
     suspend fun getLatestRelease(url: String): Result<UpdateInfo> {

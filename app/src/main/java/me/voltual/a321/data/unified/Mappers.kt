@@ -113,3 +113,12 @@ fun KtorClient.ShareListData.toPageResult(): PanPageResult {
         nextMarker = if (this.Next != "-1" && this.Next != "0") this.Next else null
     )
 }
+
+fun KtorClient.ShareGetResponseData.toPageResult(): PanPageResult {
+    return PanPageResult(
+        files = this.InfoList.toUnifiedList(),
+        totalCount = this.Len,               // Len 是当前页返回的数量，非总数（接口未提供总数）
+        hasMore = this.Next != "-1" && this.Len > 0,
+        nextMarker = if (this.Next != "-1") this.Next else null
+    )
+}
