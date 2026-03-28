@@ -214,7 +214,7 @@ fun ExplorerScreen(
         ExplorerDialogs(
         viewModel = viewModel,
         activePaneState = activeState
-    )ExplorerDialogs(viewModel)
+    )
     }
 }
 
