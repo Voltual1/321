@@ -6,16 +6,19 @@ import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
@@ -25,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import me.voltual.a321.core.utils.extension.text.formatSize
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -36,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import com.anggrayudi.storage.file.DocumentFileCompat
+import me.voltual.a321.core.utils.extension.text.formatSize
 import me.voltual.a321.core.ui.components.BaseListScreen
 import me.voltual.a321.core.ui.theme.BBQIconButton
 import me.voltual.a321.data.unified.PanFile
@@ -44,7 +47,7 @@ import me.voltual.a321.ui.dialog.ActionsDialogUI
 import me.voltual.a321.ui.dialog.StringInputPrefDialogUI
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ExplorerScreen(
     viewModel: ExplorerViewModel = koinViewModel(),
@@ -128,6 +131,36 @@ fun ExplorerScreen(
                 FloatingActionButton(onClick = { filePickerLauncher.launch("*/*") }) {
                     Icon(Icons.Default.Add, contentDescription = "上传")
                 }
+            },
+            bottomBar = {
+                val leftSelected = viewModel.leftPane.isSelectionMode
+                val rightSelected = viewModel.rightPane.isSelectionMode
+                AnimatedVisibility(
+                    visible = leftSelected || rightSelected,
+                    enter = expandVertically(),
+                    exit = shrinkVertically()
+                ) {
+                    val activeSelectionPane = if (leftSelected) PaneIndex.LEFT else PaneIndex.RIGHT
+                    BottomAppBar(
+                        actions = {
+                            IconButton(onClick = { viewModel.moveSelectedFiles(activeSelectionPane) }) {
+                                Icon(Icons.Default.DriveFileMove, contentDescription = "批量移动")
+                            }
+                            IconButton(onClick = { /* 批量分享可选实现 */ }) {
+                                Icon(Icons.Default.Share, contentDescription = "批量分享")
+                            }
+                        },
+                        floatingActionButton = {
+                            FloatingActionButton(
+                                onClick = { viewModel.deleteSelectedFiles(activeSelectionPane) },
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.error
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = "批量删除")
+                            }
+                        }
+                    )
+                }
             }
         ) { paddingValues ->
             Column(modifier = Modifier.padding(paddingValues)) {
@@ -146,6 +179,7 @@ fun ExplorerScreen(
                         FilePane(
                             state = viewModel.leftPane,
                             viewModel = viewModel,
+                            paneIndex = PaneIndex.LEFT,
                             isActive = viewModel.activePane == PaneIndex.LEFT,
                             onFileClick = { file ->
                                 viewModel.setActive(PaneIndex.LEFT)
@@ -175,8 +209,9 @@ fun ExplorerScreen(
                     ) {
                         FilePane(
                             state = viewModel.rightPane,
-                            isActive = viewModel.activePane == PaneIndex.RIGHT,
                             viewModel = viewModel,
+                            paneIndex = PaneIndex.RIGHT,
+                            isActive = viewModel.activePane == PaneIndex.RIGHT,
                             onFileClick = { file ->
                                 viewModel.setActive(PaneIndex.RIGHT)
                                 if (file.isDirectory) viewModel.enterFolder(PaneIndex.RIGHT, file)
@@ -236,7 +271,7 @@ private fun PaneContainer(
 @Composable
 fun ExplorerDialogs(
     viewModel: ExplorerViewModel,
-    activePaneState: ExplorerViewModel.PaneState 
+    activePaneState: ExplorerViewModel.PaneState
 ) {
     val selectedFile = viewModel.selectedFileForAction
     val activePaneIndex = viewModel.activePane
@@ -244,7 +279,7 @@ fun ExplorerDialogs(
     FileActionMenu(
         isVisible = viewModel.isActionMenuVisible,
         file = selectedFile,
-        isRecycleBin = activePaneState.isRecycleBin, 
+        isRecycleBin = activePaneState.isRecycleBin,
         onDismiss = { viewModel.hideActionMenu() },
         onAction = { action -> viewModel.performAction(action, activePaneIndex) }
     )
@@ -293,49 +328,112 @@ fun ExplorerDialogs(
             )
         }
     }
-    
+
     if (viewModel.isPropertyDialogVisible && selectedFile != null) {
         FilePropertyDialog(file = selectedFile, onDismiss = { viewModel.hidePropertyDialog() })
-    }    
+    }
 }
 
 @Composable
 fun FilePane(
     state: ExplorerViewModel.PaneState,
-    isActive: Boolean,
     viewModel: ExplorerViewModel,
+    paneIndex: PaneIndex,
+    isActive: Boolean,
     onFileClick: (PanFile) -> Unit,
     onFileLongClick: (PanFile) -> Unit,
     onBreadcrumbClick: (PanPath) -> Unit,
     onRetry: () -> Unit
 ) {
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(listState, state.fileList) {
+        // 滚动到底部自动加载更多
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+            .collect { lastVisibleIndex ->
+                if (lastVisibleIndex != null && lastVisibleIndex >= state.fileList.size - 2 && !state.isLoading && state.currentPage < state.totalPages) {
+                    viewModel.loadFiles(pane = paneIndex, isNextPage = true)
+                }
+            }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         BreadcrumbsBar(pathStack = state.pathStack, onPathClick = onBreadcrumbClick)
 
-        BaseListScreen(
-            items = state.fileList,
-            isLoading = state.isLoading,
-            error = state.error,
-            currentPage = state.currentPage,
-            autoLoadMode = true,
-            totalPages = state.totalPages,
-            onRetry = onRetry,
-            onLoadMore = {
-                val targetPane = if (state === viewModel.leftPane) PaneIndex.LEFT else PaneIndex.RIGHT
-                viewModel.loadFiles(pane = targetPane, isNextPage = true)
-            },
-            emptyMessage = "无文件",
-            itemContent = { file ->
-                // 检查是否需要高亮
-                val isHighlighted = viewModel.recentlyModifiedIds.contains(file.id)
-                FileListItem(
-                    file = file,
-                    isHighlighted = isHighlighted,
-                    onClick = { onFileClick(file) },
-                    onLongClick = { onFileLongClick(file) }
-                )
+        AnimatedVisibility(visible = state.isSelectionMode) {
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("已选择 ${state.selectedIds.size} 项", style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = { state.clearSelection() }) {
+                        Text("取消")
+                    }
+                }
             }
-        )
+        }
+
+        if (state.isLoading && state.fileList.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (state.error != null && state.fileList.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = state.error ?: "未知错误", color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = onRetry) {
+                        Text("重试")
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(
+                    items = state.fileList,
+                    key = { it.id }
+                ) { file ->
+                    val index = state.fileList.indexOf(file)
+                    FileListItem(
+                        file = file,
+                        index = index,
+                        isSelected = state.selectedIds.contains(file.id),
+                        isHighlighted = viewModel.recentlyModifiedIds.contains(file.id),
+                        onClick = {
+                            if (state.isSelectionMode) {
+                                viewModel.toggleSelection(paneIndex, index)
+                            } else {
+                                onFileClick(file)
+                            }
+                        },
+                        onLongClick = { onFileLongClick(file) },
+                        onSwipeToSelect = { idx ->
+                            viewModel.toggleSelection(paneIndex, idx)
+                        }
+                    )
+                }
+
+                if (state.isLoading && state.fileList.isNotEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -369,24 +467,43 @@ fun BreadcrumbsBar(pathStack: List<PanPath>, onPathClick: (PanPath) -> Unit) {
 @Composable
 fun FileListItem(
     file: PanFile,
-    isHighlighted: Boolean = false, // 新增参数
+    index: Int,
+    isSelected: Boolean,
+    isHighlighted: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    onSwipeToSelect: (Int) -> Unit
 ) {
     val isUpFolder = file.name == ".." && file.id == -1L
+    val backgroundColor = when {
+        isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+        isHighlighted -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+        else -> Color.Transparent
+    }
 
     ListItem(
-        modifier = Modifier.combinedClickable(
-            onClick = onClick,
-            onLongClick = if (!isUpFolder) onLongClick else null
-        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundColor)
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { _, dragAmount ->
+                        if (kotlin.math.abs(dragAmount) > 15f && !isUpFolder) {
+                            onSwipeToSelect(index)
+                        }
+                    }
+                )
+            }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = if (!isUpFolder) onLongClick else null
+            ),
         headlineContent = {
             Text(
                 text = file.name,
                 maxLines = 1,
-                // 如果高亮，使用 Primary 颜色并加粗
-                color = if (isHighlighted) MaterialTheme.colorScheme.primary else Color.Unspecified,
-                fontWeight = if (isUpFolder || isHighlighted) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected || isHighlighted) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                fontWeight = if (isUpFolder || isSelected || isHighlighted) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE, repeatDelayMillis = 2000)
             )
         },
@@ -406,10 +523,9 @@ fun FileListItem(
             Icon(
                 imageVector = if (file.isDirectory) Icons.Default.Folder else Icons.AutoMirrored.Filled.InsertDriveFile,
                 contentDescription = null,
-                // 图标也可以同步高亮颜色
-                tint = if (isHighlighted) MaterialTheme.colorScheme.primary 
-                       else if (file.isDirectory) MaterialTheme.colorScheme.primary 
-                       else MaterialTheme.colorScheme.outline
+                tint = if (isSelected || isHighlighted) MaterialTheme.colorScheme.primary
+                else if (file.isDirectory) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.outline
             )
         }
     )
