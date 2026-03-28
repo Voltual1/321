@@ -86,7 +86,7 @@ fun ShareFileSheet(
                     
                     val isoString = "${dateTime.year}-" +
                 "${dateTime.month.number.toString().padStart(2, '0')}-" +
-                "${dateTime.dayOfMonth.toString().padStart(2, '0')}T" +
+                "${dateTime.day.toString().padStart(2, '0')}T" +
                 "${dateTime.hour.toString().padStart(2, '0')}:" +
                 "${dateTime.minute.toString().padStart(2, '0')}:" +
                 "${dateTime.second.toString().padStart(2, '0')}." +
