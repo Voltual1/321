@@ -227,6 +227,50 @@ suspend fun shareFiles(
 }
 
 /**
+ * 彻底删除文件（不可恢复）
+ * 对应 API: /api/file/delete
+ */
+suspend fun deleteFilesPermanently(fileIds: List<Long>): PanActionResult {
+    return runCatching {
+        val token = AuthManager.getCredentials(context).first().token
+        if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+
+        val response = apiService.deleteFilesPermanently(token, fileIds).getOrThrow()
+        
+        // 123云盘彻底删除可能返回 0 或 7301 (表示正在异步释放空间)
+        if (response.code == 0 || response.code == 7301) {
+            PanActionResult.Success
+        } else {
+            PanActionResult.Error(response.code, response.message)
+        }
+    }.getOrElse { throwable ->
+        PanActionResult.Error(-1, throwable.message ?: "彻底删除失败")
+    }
+}
+
+/**
+ * 从回收站恢复文件
+ * 对应 API: /a/api/file/trash (operation = false)
+ */
+suspend fun restoreFiles(fileIds: List<Long>): PanActionResult {
+    return runCatching {
+        val token = AuthManager.getCredentials(context).first().token
+        if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+
+        // 调用 ApiService 中的 restoreFiles (内部 operation 为 false)
+        val response = apiService.restoreFiles(token, fileIds).getOrThrow()
+        
+        if (response.isSuccess) {
+            PanActionResult.Success
+        } else {
+            PanActionResult.Error(response.code, response.message)
+        }
+    }.getOrElse { throwable ->
+        PanActionResult.Error(-1, throwable.message ?: "恢复文件失败")
+    }
+}
+
+/**
  * 重命名文件或文件夹
  * @param fileId 文件/文件夹的唯一 ID
  * @param newName 新的文件名（如果是文件，应包含后缀名）
