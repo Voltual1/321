@@ -130,10 +130,13 @@ data class TrashItem(
 @Serializable
 data class CreateFolderRequest(
     val driveId: Int = 0,
+    val duplicate: Int = 1,
+    val NotReuse: Boolean = true, 
+    val etag: String? = null,
     val fileName: String,
     val parentFileId: Long,
-    val type: Int = 1,
-    val duplicate: Int = 1
+    val size: Int = 0,
+    val type: Int = 1
 )
 
     @Serializable
