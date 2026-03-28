@@ -67,7 +67,7 @@ fun FilePropertyDialog(
                     PropertyItem("类型", if (file.isDirectory) "文件夹" else "${file.extension.uppercase()} 文件")
                     PropertyItem("修改时间", file.updateTime)
                     PropertyItem("文件 ID", file.id.toString(), isMonospace = true)
-                    if (file.etag != null) {
+                    if (file.etag != "") {
                         PropertyItem("Etag (Hash)", file.etag, isMonospace = true)
                     }
                     if (file.rawDownloadUrl != "") {

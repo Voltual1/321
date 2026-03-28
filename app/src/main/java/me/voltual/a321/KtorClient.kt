@@ -175,7 +175,7 @@ data class FileInfo(
     val FileName: String,
     val Type: Int, // 1: 文件夹, 0: 文件
     val Size: Long,
-    val Etag: String? = null,
+    val Etag: String,
     val S3KeyFlag: String? = null,
     val Category: Int = 0,
     val DownloadUrl: String = "", 
@@ -203,7 +203,7 @@ data class FileInfo(
 data class DownloadInfoRequest(
     val driveId: Int = 0,
     val fileId: Long,
-    val etag: String?,
+    val etag: String,
     val fileName: String,
     val size: Long,
     val s3keyFlag: String?,

@@ -78,7 +78,7 @@ fun KtorClient.ShareInfo.toUnifiedModel(): PanFile {
         updateTime = this.UpdateAt,
         category = 10,
         isAbnormal = this.isViolation == 1,
-        etag = null,
+        etag = "",
         s3KeyFlag = null,
         rawDownloadUrl = this.shareLinkList.list.first(),
         extension = "",

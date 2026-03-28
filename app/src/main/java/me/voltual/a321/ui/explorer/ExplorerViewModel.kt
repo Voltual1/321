@@ -290,16 +290,16 @@ class ExplorerViewModel(
                 val processedList = if (!isNextPage) {
                     when {
                         state.isRecycleBin -> {
-                            listOf(PanFile(id = -2, name = ".. [trash]", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "")) + newList
+                            listOf(PanFile(id = -2, name = ".. [trash]", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
                         }
                         state.isSearchMode -> {
-                            listOf(PanFile(id = -3, name = ".. [search_results]", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "")) + newList
+                            listOf(PanFile(id = -3, name = ".. [search_results]", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
                         }
                         state.isShareListMode -> {
-                            listOf(PanFile(id = -4, name = ".. [shares]", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "")) + newList
+                            listOf(PanFile(id = -4, name = ".. [shares]", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
                         }
                         state.pathStack.size > 1 -> {
-                            listOf(PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "")) + newList
+                            listOf(PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
                         }
                         else -> newList
                     }

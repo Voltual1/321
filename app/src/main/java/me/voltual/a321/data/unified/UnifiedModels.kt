@@ -11,7 +11,7 @@ data class PanFile(
     val updateTime: String,
     val category: Int = 0, // 0:普通, 1:文件夹, 10:分享项
     val isAbnormal: Boolean = false,
-    val etag: String? = null,
+    val etag: String,
     val s3KeyFlag: String? = null,
     val rawDownloadUrl: String,
     val extension: String = name.substringAfterLast(".", ""),
