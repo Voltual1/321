@@ -70,7 +70,7 @@ fun DrawerHeader(modifier: Modifier = Modifier, backgroundUri: String?) {
 @Composable
 fun NavigationDrawerItems(
     navigator: Navigator,
-    currentTopLevelRoute: NavKey?,           // ← 使用 NavKey 类型
+    currentTopLevelRoute: NavKey?,           
     drawerState: DrawerState,
     scope: CoroutineScope
 ) {
