@@ -106,13 +106,13 @@ fun ExplorerScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+    val activeState = if (viewModel.activePane == PaneIndex.LEFT) viewModel.leftPane else viewModel.rightPane
         Scaffold(
             topBar = {
                 TopAppBar(
                     title = { Text("A321") },
                     actions = {
-                    // 回收站按钮
-                        val activeState = if (viewModel.activePane == PaneIndex.LEFT) viewModel.leftPane else viewModel.rightPane
+                    // 回收站按钮                        
                         BBQIconButton(
                             onClick = {
                             viewModel.toggleRecycleBin(viewModel.activePane)
@@ -211,7 +211,10 @@ fun ExplorerScreen(
         }
 
         // 弹窗管理部分
-        ExplorerDialogs(viewModel)
+        ExplorerDialogs(
+        viewModel = viewModel,
+        activePaneState = activeState
+    )ExplorerDialogs(viewModel)
     }
 }
 
@@ -245,19 +248,25 @@ private fun PaneContainer(
 }
 
 @Composable
-fun ExplorerDialogs(viewModel: ExplorerViewModel) {
+fun ExplorerDialogs(
+    viewModel: ExplorerViewModel,
+    activePaneState: ExplorerViewModel.PaneState 
+) {
     val selectedFile = viewModel.selectedFileForAction
+    val activePaneIndex = viewModel.activePane
 
+    // 1. 操作菜单：传入 isRecycleBin
     FileActionMenu(
         isVisible = viewModel.isActionMenuVisible,
         file = selectedFile,
-        isRecycleBin = activeState.isRecycleBin,
+        isRecycleBin = activePaneState.isRecycleBin, 
         onDismiss = { viewModel.hideActionMenu() },
         onAction = { action ->
-            viewModel.performAction(action, viewModel.activePane)
+            viewModel.performAction(action, activePaneIndex)
         }
     )
 
+    // 2. 分享逻辑
     if (viewModel.isShareSheetVisible && selectedFile != null) {
         ShareFileSheet(
             fileName = selectedFile.name,
@@ -268,15 +277,16 @@ fun ExplorerDialogs(viewModel: ExplorerViewModel) {
         )
     }
 
+    // 3. 重命名逻辑：confirmRename 需要知道在哪个 Pane 操作
     if (viewModel.isRenameDialogVisible && selectedFile != null) {
         Dialog(onDismissRequest = { viewModel.hideRenameDialog() }) {
             StringInputPrefDialogUI(
-                title = "重命名",
+                title = if (activePaneState.isRecycleBin) "重命名并恢复" else "重命名",
                 initialValue = selectedFile.name,
                 onDismiss = { viewModel.hideRenameDialog() },
                 onConfirm = { newName ->
                     if (newName.isNotBlank() && newName != selectedFile.name) {
-                        viewModel.confirmRename(newName, viewModel.activePane)
+                        viewModel.confirmRename(newName, activePaneIndex)
                     } else {
                         viewModel.hideRenameDialog()
                     }
@@ -285,27 +295,26 @@ fun ExplorerDialogs(viewModel: ExplorerViewModel) {
         }
     }
 
-    if (viewModel.isPropertyDialogVisible && selectedFile != null) {
-        FilePropertyDialog(
-            file = selectedFile,
-            onDismiss = { viewModel.hidePropertyDialog() }
-        )
-    }
-
+    // 4. 删除逻辑：根据是否在回收站显示不同的文本
     if (viewModel.isDeleteDialogVisible && selectedFile != null) {
+        val isRecycle = activePaneState.isRecycleBin
         Dialog(onDismissRequest = { viewModel.hideDeleteDialog() }) {
             ActionsDialogUI(
-                titleText = "删除",
-                messageText = "是否删除 ${selectedFile.name}？",
-                primaryText = "删除",
-                primaryIcon = Icons.Default.Delete,
+                titleText = if (isRecycle) "彻底删除" else "删除",
+                messageText = if (isRecycle) "文件将从回收站永久移除，不可恢复！" else "是否将 ${selectedFile.name} 移入回收站？",
+                primaryText = if (isRecycle) "永久删除" else "放入回收站",
+                primaryIcon = if (isRecycle) Icons.Default.DeleteForever else Icons.Default.Delete,
                 primaryAction = {
-                    viewModel.confirmDelete(viewModel.activePane)
+                    if (isRecycle) {
+                        viewModel.confirmDeletePermanently(activePaneIndex)
+                    } else {
+                        viewModel.confirmDelete(activePaneIndex)
+                    }
                 },
                 onDismiss = { viewModel.hideDeleteDialog() }
             )
         }
-    }
+    }    
 }
 
 @Composable
