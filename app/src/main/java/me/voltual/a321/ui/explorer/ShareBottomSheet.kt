@@ -84,10 +84,14 @@ fun ShareFileSheet(
                     val time = LocalTime(8, 0, 0, 0)
                     val dateTime = LocalDateTime(selectedDate, time)
                     
-                    // 修复建议：直接使用 dateTime.toString() 会生成类似 "2099-12-12T08:00"
-                    // 如果后端需要包含秒和毫秒，toString() 也会自动处理。
-                    // 加上时区偏移即可。
-                    val isoString = "${dateTime}+08:00"
+                    val isoString = "${dateTime.year}-" +
+                "${dateTime.month.number.toString().padStart(2, '0')}-" +
+                "${dateTime.dayOfMonth.toString().padStart(2, '0')}T" +
+                "${dateTime.hour.toString().padStart(2, '0')}:" +
+                "${dateTime.minute.toString().padStart(2, '0')}:" +
+                "${dateTime.second.toString().padStart(2, '0')}." +
+                "${(dateTime.nanosecond / 1_000_000).toString().padStart(3, '0')}" +
+                "+08:00"
 
                     onConfirm(password.value, isoString)
                 },
