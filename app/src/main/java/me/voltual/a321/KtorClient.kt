@@ -76,7 +76,7 @@ object KtorClient {
 
     @Serializable
     data class LoginRequest(
-    val type: Int = 1,
+        val type: Int = 1,
     val passport: String,
     val password: String
 )
