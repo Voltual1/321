@@ -14,6 +14,7 @@ import me.voltual.a321.data.repository.PanRepository
 import me.voltual.a321.data.unified.PanActionResult
 import me.voltual.a321.data.unified.PanFile
 import me.voltual.a321.data.unified.PanPath
+import me.voltual.a321.data.unified.PanPageResult
 import kotlin.math.ceil
 
 enum class PaneIndex { LEFT, RIGHT }
