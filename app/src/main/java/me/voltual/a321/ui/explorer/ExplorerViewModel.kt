@@ -26,7 +26,6 @@ class ExplorerViewModel(
     private val repository: PanRepository
 ) : ViewModel() {
 
-    // --- 内部状态类 ---
     class PaneState {
         var fileList by mutableStateOf<List<PanFile>>(emptyList())
         var isLoading by mutableStateOf(false)
@@ -35,27 +34,23 @@ class ExplorerViewModel(
         val currentPath: PanPath get() = pathStack.last()
         var isRecycleBin by mutableStateOf(false)
 
-        // 分页状态
         var currentPage by mutableIntStateOf(1)
         var totalCount by mutableIntStateOf(0)
         val pageSize = 100 
         val totalPages: Int get() = ceil(totalCount.toDouble() / pageSize).toInt().coerceAtLeast(1)
     }
 
-    // --- 响应式 UI 状态 ---
     val leftPane = PaneState()
     val rightPane = PaneState()
     var activePane by mutableStateOf(PaneIndex.LEFT)
 
-    // 记录最近被修改过的文件 ID (MT 管理器风格)
+    // 记录最近被修改过的文件 ID
     val recentlyModifiedIds = mutableStateListOf<Long>()
 
-    // 上传状态
     var isUploading by mutableStateOf(false)
     var uploadProgress by mutableStateOf(0f)
     var uploadMessage by mutableStateOf("")
 
-    // 弹窗与交互状态
     var isActionMenuVisible by mutableStateOf(false) ; private set
     var isRenameDialogVisible by mutableStateOf(false) ; private set
     var isPropertyDialogVisible by mutableStateOf(false) ; private set
@@ -63,7 +58,6 @@ class ExplorerViewModel(
     var isDeleteDialogVisible by mutableStateOf(false) ; private set
     var selectedFileForAction by mutableStateOf<PanFile?>(null) ; private set
 
-    // 事件流
     private val _events = Channel<ExplorerEvent>(Channel.BUFFERED)
     val events: Flow<ExplorerEvent> = _events.receiveAsFlow()
 
@@ -72,13 +66,15 @@ class ExplorerViewModel(
         loadFiles(PaneIndex.RIGHT)
     }
 
-    // --- 核心逻辑：文件加载与导航 ---
-
-    fun setActive(pane: PaneIndex) {
-        if (activePane != pane) activePane = pane
-    }
-
-    fun loadFiles(pane: PaneIndex, isNextPage: Boolean = false) {
+    /**
+     * 核心加载函数
+     * @param highlightIds 需要在加载完成后高亮的文件 ID 列表
+     */
+    fun loadFiles(
+        pane: PaneIndex, 
+        isNextPage: Boolean = false, 
+        highlightIds: List<Long>? = null
+    ) {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
 
         viewModelScope.launch {
@@ -92,57 +88,55 @@ class ExplorerViewModel(
 
             state.error = null
 
-            if (state.isRecycleBin) {
+            val result = if (state.isRecycleBin) {
                 repository.getRecycleBinFiles(state.currentPage)
-                    .onSuccess { pageResult ->
-                        state.totalCount = pageResult.totalCount
-                        val newList = pageResult.files
-                        
-                        val processedList = if (state.currentPage == 1) {
-                            val backItem = PanFile(
-                                id = -2, 
-                                name = ".. [退出回收站]", 
-                                isDirectory = true, 
-                                size = 0, 
-                                updateTime = ""
-                            )
-                            listOf(backItem) + newList
-                        } else {
-                            newList
-                        }
-
-                        if (isNextPage) {
-                            state.fileList = state.fileList + newList
-                        } else {
-                            state.fileList = processedList
-                        }
-                    }
-                    .onFailure {
-                        state.error = it.message ?: "加载回收站失败"
-                        if (isNextPage) state.currentPage--
-                    }
             } else {
                 repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
-                    .onSuccess { (total, newList) ->
-                        state.totalCount = total
+            }
 
-                        val processedList = if (state.pathStack.size > 1 && state.currentPage == 1) {
-                            val upFolder = PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")
-                            listOf(upFolder) + newList
-                        } else {
-                            newList
-                        }
+            // 处理结果
+            if (result.isSuccess) {
+                // --- MT 管理器逻辑：非分页加载时，先清除之前的所有高亮 ---
+                if (!isNextPage) {
+                    recentlyModifiedIds.clear()
+                }
 
-                        if (isNextPage) {
-                            state.fileList = state.fileList + newList
-                        } else {
-                            state.fileList = processedList
-                        }
-                    }
-                    .onFailure {
-                        state.error = it.message ?: "加载失败"
-                        if (isNextPage) state.currentPage--
-                    }
+                val pageResult = result.getOrNull()
+                // 这里的 result 处理逻辑根据 repository 返回值微调
+                // 假设 repository.getFilesWithTotal 返回的是 Pair<Int, List<PanFile>>
+                // 假设 repository.getRecycleBinFiles 返回的是 PanPageResult
+                
+                val (total, newList) = if (state.isRecycleBin) {
+                    val res = result.getOrThrow() as me.voltual.a321.data.unified.PanPageResult
+                    res.totalCount to res.files
+                } else {
+                    result.getOrThrow() as Pair<Int, List<PanFile>>
+                }
+
+                state.totalCount = total
+                
+                val processedList = if (!state.isRecycleBin && state.pathStack.size > 1 && state.currentPage == 1) {
+                    val upFolder = PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")
+                    listOf(upFolder) + newList
+                } else if (state.isRecycleBin && state.currentPage == 1) {
+                    val backItem = PanFile(id = -2, name = ".. [退出回收站]", isDirectory = true, size = 0, updateTime = "")
+                    listOf(backItem) + newList
+                } else {
+                    newList
+                }
+
+                if (isNextPage) {
+                    state.fileList = state.fileList + newList
+                } else {
+                    state.fileList = processedList
+                }
+
+                // --- MT 管理器逻辑：如果传入了高亮 ID，则添加 ---
+                highlightIds?.let { recentlyModifiedIds.addAll(it) }
+
+            } else {
+                state.error = result.exceptionOrNull()?.message ?: "加载失败"
+                if (isNextPage) state.currentPage--
             }
             state.isLoading = false
         }
@@ -157,38 +151,36 @@ class ExplorerViewModel(
             state.isRecycleBin = false
             state.pathStack = listOf(PanPath(0, "/"))
         }
+        // loadFiles 会自动清除高亮
         loadFiles(pane)
     }
 
     fun enterFolder(pane: PaneIndex, folder: PanFile) {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
-        
         if (state.isRecycleBin && folder.id == -2L) {
             toggleRecycleBin(pane)
             return
         }
-
         if (folder.name == ".." && folder.id == -1L) {
             navigateBack(pane)
             return
         }
-
         if (folder.isDirectory) {
             state.pathStack = state.pathStack + PanPath(folder.id, folder.name)
+            // loadFiles 会自动清除高亮
             loadFiles(pane)
         }
     }
 
     fun navigateBack(pane: PaneIndex): Boolean {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
-        
         if (state.isRecycleBin) {
             toggleRecycleBin(pane)
             return true
         }
-
         if (state.pathStack.size > 1) {
             state.pathStack = state.pathStack.dropLast(1)
+            // loadFiles 会自动清除高亮
             loadFiles(pane)
             return true
         }
@@ -200,76 +192,27 @@ class ExplorerViewModel(
         val index = state.pathStack.indexOf(path)
         if (index != -1) {
             state.pathStack = state.pathStack.take(index + 1)
-            state.currentPage = 1
+            // loadFiles 会自动清除高亮
             loadFiles(pane)
         }
     }
 
-    // --- 文件操作 ---
-
-    fun downloadFile(activity: android.app.Activity, file: PanFile) {
-        if (file.id == -1L) return
-
-        viewModelScope.launch {
-            repository.getDownloadUrl(file).onSuccess { url ->
-                runCatching {
-                    Util1DM.downloadFile(activity, url, false, true)
-                }.onFailure {
-                    updatePaneError(activePane, "1DM 调用失败")
-                }
-            }
-        }
-    }
-
-    fun performAction(action: String, paneIndex: PaneIndex) {
-        val file = selectedFileForAction ?: return
-        val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
-        hideActionMenu()
-
-        viewModelScope.launch {
-            when (action) {
-                "info" -> showPropertyDialog()
-                "share" -> {
-                    if (state.isRecycleBin) {
-                        _events.send(ExplorerEvent.ShowSnackbar("回收站文件需恢复后分享"))
-                    } else {
-                        showShareSheet()
-                    }
-                }
-                "rename" -> showRenameDialog()
-                "move" -> {
-                    val targetPaneIndex = if (paneIndex == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
-                    val targetPathId = (if (targetPaneIndex == PaneIndex.LEFT) leftPane else rightPane).currentPath.id
-                    executeMoveWorkflow(file, paneIndex, targetPathId)
-                }
-                "delete" -> {
-                    if (state.isRecycleBin) {
-                        confirmDeletePermanently(paneIndex)
-                    } else {
-                        showDeleteDialog()
-                    }
-                }
-                "restore" -> {
-                    executeRestore(file, paneIndex)
-                }
-            }
-        }
-    }
+    // --- 文件操作：在刷新列表时传入 highlightIds ---
 
     private suspend fun executeMoveWorkflow(file: PanFile, sourcePane: PaneIndex, targetPathId: Long) {
         val state = if (sourcePane == PaneIndex.LEFT) leftPane else rightPane
         val moveResult = repository.moveFiles(listOf(file.id), targetPathId)
         
         if (moveResult is PanActionResult.Success) {
-            markAsModified(file.id) // 标记 ID
             if (state.isRecycleBin) {
                 repository.restoreFiles(listOf(file.id))
                 _events.send(ExplorerEvent.ShowSnackbar("已从回收站移出并恢复"))
             } else {
                 _events.send(ExplorerEvent.ShowSnackbar("移动成功"))
             }
-            loadFiles(PaneIndex.LEFT)
-            loadFiles(PaneIndex.RIGHT)
+            // 刷新并高亮
+            loadFiles(PaneIndex.LEFT, highlightIds = listOf(file.id))
+            loadFiles(PaneIndex.RIGHT, highlightIds = listOf(file.id))
         } else if (moveResult is PanActionResult.Error) {
             _events.send(ExplorerEvent.ShowSnackbar("移动失败: ${moveResult.message}"))
         }
@@ -278,32 +221,10 @@ class ExplorerViewModel(
 
     private suspend fun executeRestore(file: PanFile, paneIndex: PaneIndex) {
         repository.restoreFiles(listOf(file.id))
-        markAsModified(file.id) // 标记 ID
         _events.send(ExplorerEvent.ShowSnackbar("文件已恢复至原位置"))
-        loadFiles(paneIndex)
+        // 刷新并高亮
+        loadFiles(paneIndex, highlightIds = listOf(file.id))
     }
-    
-    fun confirmDeletePermanently(paneIndex: PaneIndex) {
-        val file = selectedFileForAction ?: return
-        viewModelScope.launch {
-            val result = repository.deleteFilesPermanently(listOf(file.id))
-            if (result is PanActionResult.Success) {
-                // 删除操作不需要标记高亮，因为文件已经没了
-                loadFiles(paneIndex)
-                _events.send(ExplorerEvent.ShowSnackbar("文件已永久删除"))
-            }
-            hideDeleteDialog()
-        }
-    }
-
-    fun showActionMenu(file: PanFile) {
-        selectedFileForAction = file
-        isActionMenuVisible = true
-    }
-
-    fun hideActionMenu() { isActionMenuVisible = false }
-    fun showRenameDialog() { isRenameDialogVisible = true }
-    fun hideRenameDialog() { isRenameDialogVisible = false }
 
     fun confirmRename(newName: String, paneIndex: PaneIndex) {
         val file = selectedFileForAction ?: return
@@ -313,14 +234,14 @@ class ExplorerViewModel(
         viewModelScope.launch {
             val renameRes = repository.renameFile(file.id, newName)
             if (renameRes is PanActionResult.Success) {
-                markAsModified(file.id) // 标记 ID
                 if (state.isRecycleBin) {
                     repository.restoreFiles(listOf(file.id))
                     _events.send(ExplorerEvent.ShowSnackbar("已重命名并恢复文件"))
                 } else {
                     _events.send(ExplorerEvent.ShowSnackbar("重命名成功"))
                 }
-                loadFiles(paneIndex)
+                // 刷新并高亮
+                loadFiles(paneIndex, highlightIds = listOf(file.id))
             } else {
                 _events.send(ExplorerEvent.ShowSnackbar("操作失败"))
             }
