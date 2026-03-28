@@ -343,23 +343,23 @@ fun FilePane(
     Column(modifier = Modifier.fillMaxSize()) {
         BreadcrumbsBar(pathStack = state.pathStack, onPathClick = onBreadcrumbClick)
 
-        AnimatedVisibility(visible = state.isSelectionMode) {
-            Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("已选择 ${state.selectedIds.size} 项", style = MaterialTheme.typography.titleSmall)
-                    Spacer(Modifier.weight(1f))
-                    TextButton(onClick = { state.clearSelection() }) {
-                        Text("取消")
-                    }
-                }
+        AnimatedVisibility(visible = state.isSelectionMode && state.selectedIds.size > 1) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("已选择 ${state.selectedIds.size} 项", style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = { state.clearSelection() }) {
+                Text("取消")
             }
         }
+    }
+}
 
         if (state.isLoading && state.fileList.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
