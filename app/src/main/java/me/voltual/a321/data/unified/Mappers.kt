@@ -41,6 +41,7 @@ fun KtorClient.FolderDetailsData.toUnifiedModel(): PanFile {
         isDirectory = true,
         updateTime = "",
         rawDownloadUrl = "",
+        etag = "",
         category = 1
     )
 }
