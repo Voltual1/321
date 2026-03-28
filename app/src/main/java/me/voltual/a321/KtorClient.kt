@@ -694,25 +694,25 @@ override suspend fun searchFiles(
 }
 
 override suspend fun listShares(
-        token: String,
-        next: String?,
-        limit: Int,
-        orderBy: String,
-        orderDirection: String,
-        searchData: String?
-    ): Result<PanResponse<ShareListData>> = safeApiCall {
-        httpClient.get("/api/share/list") {
-            bearerAuth(token)
-            url {
-                parameters.append("driveId", "0")
-                parameters.append("limit", limit.toString())
-                if (next != null) parameters.append("next", next)
-                parameters.append("orderBy", orderBy)
-                parameters.append("orderDirection", orderDirection)
-                if (searchData != null) parameters.append("SearchData", searchData)
-            }
+    token: String,
+    next: String?,
+    limit: Int,
+    orderBy: String,
+    orderDirection: String,
+    searchData: String?
+): Result<PanResponse<ShareListData>> = safeApiCall {
+    httpClient.get("/api/share/list") {
+        bearerAuth(token)
+        url {
+            parameters.append("driveId", "0")
+            parameters.append("limit", limit.toString())
+            parameters.append("next", next ?: "0")
+            parameters.append("orderBy", orderBy)
+            parameters.append("orderDirection", orderDirection)
+            if (searchData != null) parameters.append("SearchData", searchData)
         }
     }
+}
     }
 
 

@@ -108,7 +108,8 @@ fun KtorClient.ShareListData.toPageResult(): PanPageResult {
     return PanPageResult(
         files = this.InfoList.map { it.toUnifiedModel() },
         totalCount = this.Total,
-        hasMore = this.Next != "-1",           // Next 为 "-1" 表示没有更多数据
-        nextMarker = if (this.Next != "-1") this.Next else null
+        // Next 为 "-1" 表示没有更多数据，否则继续
+        hasMore = this.Next != "-1" && this.Next.toIntOrNull() != -1,
+        nextMarker = if (this.Next != "-1" && this.Next != "0") this.Next else null
     )
 }

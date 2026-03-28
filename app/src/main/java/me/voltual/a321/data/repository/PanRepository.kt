@@ -325,7 +325,7 @@ suspend fun searchFiles(
 
 /**
  * 获取分享列表（支持分页）
- * @param next 分页游标，首次请求传 null，后续使用响应中的 nextMarker
+ * @param next 分页游标，首次请求传 null 或 "0"
  * @param limit 每页数量，默认 100
  * @return 统一分页结果，可直接用于文件列表 UI
  */
@@ -333,7 +333,9 @@ suspend fun getShareList(next: String? = null, limit: Int = 100): Result<PanPage
     val token = AuthManager.getCredentials(context).first().token
     if (token.isEmpty()) throw Exception("Login required")
 
-    val response = apiService.listShares(token, next, limit).getOrThrow()
+    // 确保首次请求时传 "0"
+    val nextParam = if (next.isNullOrEmpty()) "0" else next
+    val response = apiService.listShares(token, nextParam, limit).getOrThrow()
     val data = response.data ?: throw Exception("获取分享列表失败")
     data.toPageResult()
 }
