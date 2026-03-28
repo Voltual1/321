@@ -216,101 +216,91 @@ class ExplorerViewModel(
     }
 
     fun loadFiles(
-        pane: PaneIndex,
-        isNextPage: Boolean = false,
-        highlightIds: List<Long>? = null
-    ) {
-        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+    pane: PaneIndex,
+    isNextPage: Boolean = false,
+    highlightIds: List<Long>? = null
+) {
+    val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
 
-        viewModelScope.launch {
-            if (isNextPage) {
-                if (state.currentPage >= state.totalPages) return@launch
-                state.currentPage++
-            } else {
-                state.isLoading = true
-                state.currentPage = 1
-            }
+    viewModelScope.launch {
+        if (isNextPage) {
+            if (state.currentPage >= state.totalPages) return@launch
+            state.currentPage++
+        } else {
+            state.isLoading = true
+            state.currentPage = 1
+        }
 
-            state.error = null
+        state.error = null
 
-            // 根据模式选择 API
-            val result = when {
-                state.isRecycleBin -> {
-                    repository.getRecycleBinFiles(state.currentPage)
-                }
-                state.isSearchMode -> {
-                    // 获取搜索范围的父目录 ID
-                    val searchParentId = if (state.pathStack.size > 1) {
-                        state.pathStack[state.pathStack.size - 2].id
-                    } else 0L
-                    
-                    repository.searchFiles(
-                        keyword = state.searchKeyword,
-                        page = state.currentPage,
-                        parentId = searchParentId
-                    )
-                }
-                else -> {
-                    repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
-                }
-            }
-
-            if (result.isSuccess) {
-    if (!isNextPage) {
-        recentlyModifiedIds.clear()
-    }
-
-    val pageResult = result.getOrThrow() as PanPageResult
-    val total = pageResult.totalCount
-    val newList = pageResult.files
-
-    state.totalCount = total
-
-    // 处理虚拟项目 ("..")
-    val processedList = if (state.currentPage == 1) {
-        when {
+        // 统一请求接口，现在所有的 Repository 方法都返回 Result<PanPageResult>
+        val result: Result<PanPageResult> = when {
             state.isRecycleBin -> {
-                listOf(PanFile(id = -2, name = ".. [trash]", isDirectory = true, size = 0, updateTime = "")) + newList
+                repository.getRecycleBinFiles(state.currentPage)
             }
             state.isSearchMode -> {
-                listOf(PanFile(id = -3, name = ".. [search_results]", isDirectory = true, size = 0, updateTime = "")) + newList
+                // 获取搜索范围的父目录 ID
+                val searchParentId = if (state.pathStack.size > 1) {
+                    state.pathStack[state.pathStack.size - 2].id
+                } else 0L
+                
+                repository.searchFiles(
+                    keyword = state.searchKeyword,
+                    page = state.currentPage,
+                    parentId = searchParentId
+                )
             }
-            state.pathStack.size > 1 -> {
-                listOf(PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")) + newList
+            else -> {
+                repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
             }
-            else -> newList
         }
-    } else {
-        newList
-    }
 
-    if (isNextPage) {
-        state.fileList = state.fileList + processedList
-    } else {
-        state.fileList = processedList
-    }
-
-    highlightIds?.let { recentlyModifiedIds.addAll(it) }
-
-} else {
-                    newList
-                }
-
-                if (isNextPage) {
-                    state.fileList = state.fileList + processedList
-                } else {
-                    state.fileList = processedList
-                }
-
-                highlightIds?.let { recentlyModifiedIds.addAll(it) }
-
-            } else {
-                state.error = result.exceptionOrNull()?.message ?: "加载失败"
-                if (isNextPage) state.currentPage--
+        result.onSuccess { pageResult ->
+            // 1. 重置/累加列表前的处理
+            if (!isNextPage) {
+                recentlyModifiedIds.clear()
             }
+
+            // 2. 从统一结果中提取数据
+            state.totalCount = pageResult.totalCount
+            val newList = pageResult.files
+
+            // 3. 处理返回上一级的虚拟项目（只在第一页添加）
+            val processedList = if (state.currentPage == 1) {
+                when {
+                    state.isRecycleBin -> {
+                        listOf(PanFile(id = -2, name = ".. [trash]", isDirectory = true, size = 0, updateTime = "")) + newList
+                    }
+                    state.isSearchMode -> {
+                        listOf(PanFile(id = -3, name = ".. [search_results]", isDirectory = true, size = 0, updateTime = "")) + newList
+                    }
+                    state.pathStack.size > 1 -> {
+                        listOf(PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")) + newList
+                    }
+                    else -> newList
+                }
+            } else {
+                newList
+            }
+
+            // 4. 更新 UI 状态
+            if (isNextPage) {
+                state.fileList = state.fileList + processedList
+            } else {
+                state.fileList = processedList
+            }
+
+            highlightIds?.let { recentlyModifiedIds.addAll(it) }
+            state.isLoading = false
+
+        }.onFailure { exception ->
+            // 5. 错误处理
+            state.error = exception.message ?: "加载失败"
+            if (isNextPage) state.currentPage--
             state.isLoading = false
         }
     }
+}
 
     // 新增：切换搜索模式
     fun toggleSearch(pane: PaneIndex, keyword: String) {
