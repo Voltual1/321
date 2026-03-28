@@ -86,7 +86,6 @@ fun ExplorerScreen(
         }
     }
 
-    // 更新 BackHandler，增加对分享列表模式的检测
     BackHandler(enabled = viewModel.leftPane.pathStack.size > 1 || 
                 viewModel.rightPane.pathStack.size > 1 ||
                 viewModel.leftPane.isShareListMode ||
@@ -97,7 +96,6 @@ fun ExplorerScreen(
         }
     }
 
-    // 文件选择器：在对话框点击“文件”后触发
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -121,27 +119,23 @@ fun ExplorerScreen(
                 TopAppBar(
                     title = { Text("A321") },
                     actions = {
-                        // 搜索按钮
                         BBQIconButton(
                             onClick = { viewModel.showSearchDialog() },
                             icon = Icons.Default.Search,
                             contentDescription = "搜索"
                         )
-                        // 新增：分享列表按钮
                         BBQIconButton(
                             onClick = { viewModel.toggleShareList(viewModel.activePane) },
                             icon = Icons.Default.Share,
                             contentDescription = "已分享",
                             tint = if (activeState.isShareListMode) MaterialTheme.colorScheme.primary else LocalContentColor.current
                         )
-                        // 回收站按钮
                         BBQIconButton(
                             onClick = { viewModel.toggleRecycleBin(viewModel.activePane) },
                             icon = if (activeState.isRecycleBin) Icons.Default.CloudQueue else Icons.Default.DeleteSweep,
                             contentDescription = "回收站",
                             tint = if (activeState.isRecycleBin) MaterialTheme.colorScheme.primary else LocalContentColor.current
                         )
-                        // 刷新按钮
                         BBQIconButton(
                             onClick = {
                                 viewModel.loadFiles(PaneIndex.LEFT)
@@ -231,7 +225,6 @@ fun ExplorerScreen(
             }
         }
 
-        // 对话框区域，传入文件选择器回调
         ExplorerDialogs(
             viewModel = viewModel,
             activePaneState = activeState,
@@ -285,6 +278,7 @@ fun ExplorerDialogs(
         selectedCount = selectedCount,
         activePaneIndex = activePaneIndex,
         isRecycleBin = activePaneState.isRecycleBin,
+        isShareListMode = activePaneState.isShareListMode,  // 传递分享模式状态
         onDismiss = { viewModel.hideActionMenu() },
         onAction = { action -> viewModel.performAction(action, activePaneIndex) }
     )
@@ -306,7 +300,6 @@ fun ExplorerDialogs(
         }
     }
 
-    // 新增搜索对话框
     if (viewModel.isSearchDialogVisible) {
         Dialog(onDismissRequest = { viewModel.hideSearchDialog() }) {
             StringInputPrefDialogUI(

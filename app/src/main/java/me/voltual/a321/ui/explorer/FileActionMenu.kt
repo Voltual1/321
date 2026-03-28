@@ -25,13 +25,13 @@ fun FileActionMenu(
     isVisible: Boolean,
     file: PanFile?,
     selectedCount: Int,
-    activePaneIndex: PaneIndex, 
+    activePaneIndex: PaneIndex,
     isRecycleBin: Boolean,
+    isShareListMode: Boolean,  // 新增参数
     onDismiss: () -> Unit,
     onAction: (String) -> Unit
 ) {
     val isBatch = selectedCount > 1
-    // 如果是右侧面板，图标需要水平镜像翻转（因为默认是指向右的）
     val moveIconModifier = if (activePaneIndex == PaneIndex.RIGHT) {
         Modifier.graphicsLayer(scaleX = -1f)
     } else {
@@ -81,51 +81,58 @@ fun FileActionMenu(
                         color = MaterialTheme.colorScheme.outlineVariant
                     )
 
-                    if (isRecycleBin) {
-                        ActionMenuItem(
-                            icon = Icons.Default.Restore, 
-                            label = if (isBatch) "批量恢复" else "恢复并回到原处"
-                        ) { onAction("restore") }
-                        
-                        if (!isBatch) {
-                            // 恢复相关的移动，同样应用翻转逻辑
-                            @Suppress("Deprecation")
+                    when {
+                        isRecycleBin -> {
+                            ActionMenuItem(
+                                icon = Icons.Default.Restore, 
+                                label = if (isBatch) "批量恢复" else "恢复并回到原处"
+                            ) { onAction("restore") }
+                            
+                            if (!isBatch) {
+                                ActionMenuItem(
+                                    icon = Icons.Default.DriveFileMove, 
+                                    label = "移动并恢复",
+                                    iconModifier = moveIconModifier
+                                ) { onAction("move") }
+                                
+                                ActionMenuItem(Icons.Default.Edit, "重命名并恢复") { onAction("rename") }
+                            }
+                            
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp))
+                            
+                            ActionMenuItem(
+                                icon = Icons.Default.DeleteForever, 
+                                label = if (isBatch) "批量彻底删除" else "彻底删除", 
+                                textColor = MaterialTheme.colorScheme.error
+                            ) { onAction("delete") }
+                        }
+                        isShareListMode -> {
+                            // 分享列表特有菜单：取消分享
+                            ActionMenuItem(
+                                icon = Icons.Default.LinkOff,
+                                label = if (isBatch) "批量取消分享" else "取消分享",
+                                textColor = MaterialTheme.colorScheme.error
+                            ) { onAction("cancel_share") }
+                        }
+                        else -> {
+                            ActionMenuItem(Icons.Default.Share, if (isBatch) "批量分享" else "分享") { onAction("share") }
+                            
                             ActionMenuItem(
                                 icon = Icons.Default.DriveFileMove, 
-                                label = "移动并恢复",
+                                label = if (isBatch) "批量移动" else "移动",
                                 iconModifier = moveIconModifier
                             ) { onAction("move") }
                             
-                            ActionMenuItem(Icons.Default.Edit, "重命名并恢复") { onAction("rename") }
-                        }
-                        
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp))
-                        
-                        ActionMenuItem(
-                            icon = Icons.Default.DeleteForever, 
-                            label = if (isBatch) "批量彻底删除" else "彻底删除", 
-                            textColor = MaterialTheme.colorScheme.error
-                        ) { onAction("delete") }
-                    } else {
-                        ActionMenuItem(Icons.Default.Share, if (isBatch) "批量分享" else "分享") { onAction("share") }
-                        
-                        // 普通移动操作
-                        @Suppress("Deprecation")
-                        ActionMenuItem(
-                            icon = Icons.Default.DriveFileMove, 
-                            label = if (isBatch) "批量移动" else "移动",
-                            iconModifier = moveIconModifier
-                        ) { onAction("move") }
-                        
-                        if (!isBatch) {
-                            ActionMenuItem(Icons.Default.Edit, "重命名") { onAction("rename") }
-                        }
+                            if (!isBatch) {
+                                ActionMenuItem(Icons.Default.Edit, "重命名") { onAction("rename") }
+                            }
 
-                        ActionMenuItem(
-                            icon = Icons.Default.Delete, 
-                            label = if (isBatch) "批量删除" else "删除", 
-                            textColor = MaterialTheme.colorScheme.error
-                        ) { onAction("delete") }
+                            ActionMenuItem(
+                                icon = Icons.Default.Delete, 
+                                label = if (isBatch) "批量删除" else "删除", 
+                                textColor = MaterialTheme.colorScheme.error
+                            ) { onAction("delete") }
+                        }
                     }
 
                     if (!isBatch) {
@@ -159,7 +166,6 @@ private fun ActionMenuItem(
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                // 组合原始 Size 和 传入的变换 Modifier
                 modifier = Modifier.size(22.dp).then(iconModifier),
                 tint = if (textColor == MaterialTheme.colorScheme.error) 
                     textColor else MaterialTheme.colorScheme.onSurfaceVariant

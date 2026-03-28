@@ -35,11 +35,9 @@ class ExplorerViewModel(
         val currentPath: PanPath get() = pathStack.last()
         var isRecycleBin by mutableStateOf(false)
         
-        // 搜索相关状态
         var isSearchMode by mutableStateOf(false)
         var searchKeyword by mutableStateOf("")
         
-        // 新增：分享列表模式状态
         var isShareListMode by mutableStateOf(false)
         var shareNextMarker by mutableStateOf<String?>(null)
 
@@ -48,11 +46,8 @@ class ExplorerViewModel(
         val pageSize = 100
         val totalPages: Int get() = ceil(totalCount.toDouble() / pageSize).toInt().coerceAtLeast(1)
 
-        // 多选状态
         val selectedIds = mutableStateListOf<Long>()
-        
         val isSelectionMode: Boolean get() = selectedIds.size > 1
-        
         var lastSelectedIndex by mutableIntStateOf(-1)
 
         fun clearSelection() {
@@ -79,14 +74,12 @@ class ExplorerViewModel(
     var selectedFileForAction by mutableStateOf<PanFile?>(null); private set
     var isBatchActionMenu by mutableStateOf(false); private set
     
-    // 新增：批量分享专用
     var sharingFileIds by mutableStateOf<List<Long>>(emptyList())
     var sharingDisplayName by mutableStateOf("")
     
     var isCreateFileDialogVisible by mutableStateOf(false); private set
     var pendingUploadName by mutableStateOf("")
     
-    // 新增：搜索对话框状态
     var isSearchDialogVisible by mutableStateOf(false); private set
 
     private val _events = Channel<ExplorerEvent>(Channel.BUFFERED)
@@ -130,6 +123,9 @@ class ExplorerViewModel(
         viewModelScope.launch {
             when (action) {
                 "info" -> showPropertyDialog()
+                "cancel_share" -> {
+                    executeCancelShare(targetIds, paneIndex)
+                }
                 "share" -> {
                     if (state.isRecycleBin) {
                         _events.send(ExplorerEvent.ShowSnackbar("回收站文件需恢复后分享"))
@@ -156,6 +152,22 @@ class ExplorerViewModel(
                     executeRestore(targetIds, paneIndex)
                 }
             }
+        }
+    }
+
+    private suspend fun executeCancelShare(ids: List<Long>, paneIndex: PaneIndex) {
+        val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
+        var successCount = 0
+        ids.forEach { id ->
+            val result = repository.deleteShare(id)
+            if (result is PanActionResult.Success) successCount++
+        }
+        if (successCount > 0) {
+            _events.send(ExplorerEvent.ShowSnackbar("已取消 $successCount 个分享"))
+            state.clearSelection()
+            loadFiles(paneIndex)
+        } else {
+            _events.send(ExplorerEvent.ShowSnackbar("取消分享失败"))
         }
     }
 
@@ -229,7 +241,6 @@ class ExplorerViewModel(
 
         viewModelScope.launch {
             if (isNextPage) {
-                // 分享列表使用 marker 分页，其他使用 page 偏移
                 if (state.isShareListMode) {
                     if (state.shareNextMarker == null) return@launch
                 } else {
@@ -273,7 +284,7 @@ class ExplorerViewModel(
                 }
 
                 state.totalCount = pageResult.totalCount
-                state.shareNextMarker = pageResult.nextMarker // 保存 marker 用于下次分页
+                state.shareNextMarker = pageResult.nextMarker
                 val newList = pageResult.files
 
                 val processedList = if (!isNextPage) {
@@ -313,11 +324,9 @@ class ExplorerViewModel(
         }
     }
 
-    // 新增：切换分享列表模式
     fun toggleShareList(pane: PaneIndex) {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
         if (!state.isShareListMode) {
-            // 进入分享列表前，清除其他特殊模式
             state.isRecycleBin = false
             state.isSearchMode = false
             state.isShareListMode = true
@@ -329,7 +338,6 @@ class ExplorerViewModel(
         loadFiles(pane)
     }
 
-    // 修改：切换搜索模式时确保分享模式退出
     fun toggleSearch(pane: PaneIndex, keyword: String) {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
         if (keyword.isNotBlank()) {
@@ -352,7 +360,6 @@ class ExplorerViewModel(
         }
     }
 
-    // 修改：切换回收站模式时确保分享模式退出
     fun toggleRecycleBin(pane: PaneIndex) {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
         if (!state.isRecycleBin) {
@@ -588,7 +595,6 @@ class ExplorerViewModel(
     fun showDeleteDialog() { isDeleteDialogVisible = true }
     fun hideDeleteDialog() { isDeleteDialogVisible = false }
     
-    // 新增：搜索对话框控制
     fun showSearchDialog() { isSearchDialogVisible = true }
     fun hideSearchDialog() { isSearchDialogVisible = false }
 

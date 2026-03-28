@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import me.voltual.a321.core.utils.extension.text.formatSize  
+import me.voltual.a321.core.utils.extension.text.formatSize
 import me.voltual.a321.data.unified.PanFile
 
 @Composable
@@ -27,7 +27,7 @@ fun FilePropertyDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier
-                .width(300.dp)
+                .width(320.dp)
                 .wrapContentHeight(),
             shape = RoundedCornerShape(12.dp),
             color = MaterialTheme.colorScheme.surface,
@@ -39,7 +39,7 @@ fun FilePropertyDialog(
                     .verticalScroll(rememberScrollState())
             ) {
                 Text(
-                    text = "文件属性",
+                    text = if (file.category == 10) "分享详情" else "文件属性",
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface
@@ -51,19 +51,27 @@ fun FilePropertyDialog(
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
 
-                PropertyItem("文件名", file.name)
-                PropertyItem("大小", file.size.formatSize())  // 使用扩展函数
-                PropertyItem("类型", if (file.isDirectory) "文件夹" else "${file.extension.uppercase()} 文件")
-                PropertyItem("修改时间", file.updateTime)
+                PropertyItem("名称", file.name)
                 
-                PropertyItem("文件 ID", file.id.toString(), isMonospace = true)
-                
-                if (file.etag != null) {
-                    PropertyItem("Etag (Hash)", file.etag, isMonospace = true)
-                }
-
-                if (file.rawDownloadUrl != null) {
-                    PropertyItem("DownloadUrl", file.rawDownloadUrl, isMonospace = true, canWrap = true)
+                if (file.category == 10) {
+                    // 分享专属信息
+                    PropertyItem("分享状态", if (file.isAbnormal) "违规/失效" else "正常")
+                    PropertyItem("分享链接", file.shareUrl ?: "无", isMonospace = true, canWrap = true)
+                    PropertyItem("提取码", if (file.sharePwd.isNullOrBlank()) "无" else file.sharePwd, isMonospace = true)
+                    PropertyItem("过期时间", file.expiration ?: "永久有效")
+                    PropertyItem("分享 ID", file.id.toString(), isMonospace = true)
+                } else {
+                    // 普通文件信息
+                    PropertyItem("大小", file.size.formatSize())
+                    PropertyItem("类型", if (file.isDirectory) "文件夹" else "${file.extension.uppercase()} 文件")
+                    PropertyItem("修改时间", file.updateTime)
+                    PropertyItem("文件 ID", file.id.toString(), isMonospace = true)
+                    if (file.etag != null) {
+                        PropertyItem("Etag (Hash)", file.etag, isMonospace = true)
+                    }
+                    if (file.rawDownloadUrl != null) {
+                        PropertyItem("下载链接", file.rawDownloadUrl, isMonospace = true, canWrap = true)
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

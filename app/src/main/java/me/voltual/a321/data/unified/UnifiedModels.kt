@@ -9,13 +9,17 @@ data class PanFile(
     val size: Long,
     val isDirectory: Boolean,
     val updateTime: String,
-    // 以下参数提供默认值
-    val category: Int = 0,
+    val category: Int = 0, // 0:普通, 1:文件夹, 10:分享项
     val isAbnormal: Boolean = false,
     val etag: String? = null,
     val s3KeyFlag: String? = null,
     val rawDownloadUrl: String? = null,
-    val extension: String = name.substringAfterLast(".", "")
+    val extension: String = name.substringAfterLast(".", ""),
+    // --- 分享相关字段 ---
+    val shareKey: String? = null,
+    val sharePwd: String? = null,
+    val expiration: String? = null,
+    val shareUrl: String? = null
 )
 
 data class PanPath(
@@ -31,7 +35,6 @@ data class PanPageResult(
     val nextMarker: String? = null // 适配 OSS 或其他网盘的流式分页
 )
 
-@Immutable
 data class PanUserQuota(
     val userId: String,
     val nickname: String,
@@ -41,7 +44,6 @@ data class PanUserQuota(
     val isVip: Boolean = false,
     val expireTime: String? = null
 ) {
-    // 辅助属性：计算百分比 (180°C... 没用上，用常规数值)
     val usageRatio: Float get() = if (totalBytes > 0) usedBytes.toFloat() / totalBytes else 0f
     val remainingBytes: Long get() = (totalBytes - usedBytes).coerceAtLeast(0L)
 }
@@ -50,7 +52,6 @@ enum class PanTaskStatus {
     IDLE, WAITING, RUNNING, PAUSED, SUCCESS, FAILED, VERIFYING
 }
 
-@Immutable
 data class PanTransferTask(
     val taskId: String,
     val fileId: String?,
