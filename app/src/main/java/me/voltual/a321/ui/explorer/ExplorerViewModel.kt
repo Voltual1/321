@@ -228,32 +228,78 @@ class ExplorerViewModel(
         }
     }
 
-    fun performAction(action: String, pane: PaneIndex) {
-        val file = selectedFileForAction ?: return
-        hideActionMenu()
+    fun performAction(action: String, paneIndex: PaneIndex) {
+    val file = selectedFileForAction ?: return
+    val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
+    hideActionMenu()
 
-        viewModelScope.launch {
-            when (action) {
-                "delete" -> showDeleteDialog()
-                "share"  -> showShareSheet()
-                "rename" -> showRenameDialog()
-                "info"   -> showPropertyDialog()
-                "move"   -> {
-                    val targetPane = if (pane == PaneIndex.LEFT) rightPane else leftPane
-                    val result = repository.moveFiles(listOf(file.id), targetPane.currentPath.id)
-
-                    if (result is PanActionResult.Success) {
-                        loadFiles(PaneIndex.LEFT)
-                        loadFiles(PaneIndex.RIGHT)
-                        _events.send(ExplorerEvent.ShowSnackbar("已移动至 ${targetPane.currentPath.name}"))
-                    } else if (result is PanActionResult.Error) {
-                        _events.send(ExplorerEvent.ShowSnackbar("移动失败: ${result.message}"))
-                    }
-                    selectedFileForAction = null
+    viewModelScope.launch {
+        when (action) {
+            "info" -> showPropertyDialog()
+            "share" -> {
+                if (state.isRecycleBin) {
+                    _events.send(ExplorerEvent.ShowSnackbar("回收站文件需恢复后分享"))
+                } else {
+                    showShareSheet()
                 }
+            }
+            "rename" -> showRenameDialog()
+            "move" -> {
+                // 这里的逻辑就是你说的：在另一个面板执行移动操作
+                val targetPaneIndex = if (paneIndex == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
+                val targetPathId = (if (targetPaneIndex == PaneIndex.LEFT) leftPane else rightPane).currentPath.id
+                
+                executeMoveWorkflow(file, paneIndex, targetPathId)
+            }
+            "delete" -> {
+                if (state.isRecycleBin) {
+                    // 如果在回收站点删除，直接走彻底删除流程
+                    confirmDeletePermanently(paneIndex)
+                } else {
+                    showDeleteDialog()
+                }
+            }
+            "restore" -> {
+                executeRestore(file, paneIndex)
             }
         }
     }
+}
+
+/**
+ * 移动工作流
+ */
+private suspend fun executeMoveWorkflow(file: PanFile, sourcePane: PaneIndex, targetPathId: Long) {
+    val state = if (sourcePane == PaneIndex.LEFT) leftPane else rightPane
+    
+    // 1. 执行移动
+    val moveResult = repository.moveFiles(listOf(file.id), targetPathId)
+    
+    if (moveResult is PanActionResult.Success) {
+        // 2. 如果是回收站，则顺便执行恢复
+        if (state.isRecycleBin) {
+            repository.restoreFiles(listOf(file.id))
+            _events.send(ExplorerEvent.ShowSnackbar("已从回收站移出并恢复"))
+        } else {
+            _events.send(ExplorerEvent.ShowSnackbar("移动成功"))
+        }
+        // 3. 刷新受影响的两个面板
+        loadFiles(PaneIndex.LEFT)
+        loadFiles(PaneIndex.RIGHT)
+    } else if (moveResult is PanActionResult.Error) {
+        _events.send(ExplorerEvent.ShowSnackbar("移动失败: ${moveResult.message}"))
+    }
+    selectedFileForAction = null
+}
+
+/**
+ * 基础恢复逻辑
+ */
+private suspend fun executeRestore(file: PanFile, paneIndex: PaneIndex) {
+    repository.restoreFiles(listOf(file.id))
+    _events.send(ExplorerEvent.ShowSnackbar("文件已恢复至原位置"))
+    loadFiles(paneIndex)
+}
     
     fun confirmDeletePermanently(paneIndex: PaneIndex) {
     val file = selectedFileForAction ?: return

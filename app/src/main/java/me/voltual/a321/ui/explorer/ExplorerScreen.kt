@@ -251,6 +251,7 @@ fun ExplorerDialogs(viewModel: ExplorerViewModel) {
     FileActionMenu(
         isVisible = viewModel.isActionMenuVisible,
         file = selectedFile,
+        isRecycleBin = activeState.isRecycleBin,
         onDismiss = { viewModel.hideActionMenu() },
         onAction = { action ->
             viewModel.performAction(action, viewModel.activePane)
