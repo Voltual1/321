@@ -255,7 +255,7 @@ fun ExplorerDialogs(
     val selectedFile = viewModel.selectedFileForAction
     val activePaneIndex = viewModel.activePane
 
-    // 1. 操作菜单：传入 isRecycleBin
+    // 操作菜单：传入 isRecycleBin
     FileActionMenu(
         isVisible = viewModel.isActionMenuVisible,
         file = selectedFile,
@@ -266,7 +266,7 @@ fun ExplorerDialogs(
         }
     )
 
-    // 2. 分享逻辑
+    // 分享逻辑
     if (viewModel.isShareSheetVisible && selectedFile != null) {
         ShareFileSheet(
             fileName = selectedFile.name,
@@ -277,7 +277,7 @@ fun ExplorerDialogs(
         )
     }
 
-    // 3. 重命名逻辑：confirmRename 需要知道在哪个 Pane 操作
+    // 重命名逻辑：confirmRename 需要知道在哪个 Pane 操作
     if (viewModel.isRenameDialogVisible && selectedFile != null) {
         Dialog(onDismissRequest = { viewModel.hideRenameDialog() }) {
             StringInputPrefDialogUI(
@@ -295,7 +295,7 @@ fun ExplorerDialogs(
         }
     }
 
-    // 4. 删除逻辑：根据是否在回收站显示不同的文本
+    // 删除逻辑：根据是否在回收站显示不同的文本
     if (viewModel.isDeleteDialogVisible && selectedFile != null) {
         val isRecycle = activePaneState.isRecycleBin
         Dialog(onDismissRequest = { viewModel.hideDeleteDialog() }) {
@@ -314,6 +314,13 @@ fun ExplorerDialogs(
                 onDismiss = { viewModel.hideDeleteDialog() }
             )
         }
+    }
+    
+    if (viewModel.isPropertyDialogVisible && selectedFile != null) {
+        FilePropertyDialog(
+            file = selectedFile,
+            onDismiss = { viewModel.hidePropertyDialog() }
+        )
     }    
 }
 
