@@ -53,7 +53,6 @@ fun ExplorerScreen(
     val context = LocalContext.current
     val activity = context as? android.app.Activity
 
-    // 阴影动画：激活时 6dp 产生明显的投影，未激活时 0dp
     val leftElevation by animateDpAsState(
         targetValue = if (viewModel.activePane == PaneIndex.LEFT) 6.dp else 0.dp,
         label = "LeftPaneElevation"
@@ -63,7 +62,6 @@ fun ExplorerScreen(
         label = "RightPaneElevation"
     )
 
-    // 监听 ViewModel 事件
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
@@ -73,11 +71,9 @@ fun ExplorerScreen(
                         actionLabel = event.actionLabel,
                         duration = SnackbarDuration.Short
                     )
-                    // 如果用户点击了“复制”按钮
                     if (result == SnackbarResult.ActionPerformed && event.actionLabel == "复制") {
                         val url = event.message.substringAfter("：")
-                        val clipboard =
-                            context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         val clip = ClipData.newPlainText("123Pan Share", url)
                         clipboard.setPrimaryClip(clip)
                     }
@@ -88,8 +84,7 @@ fun ExplorerScreen(
 
     BackHandler(enabled = viewModel.leftPane.pathStack.size > 1 || viewModel.rightPane.pathStack.size > 1) {
         if (!viewModel.navigateBack(viewModel.activePane)) {
-            val otherPane =
-                if (viewModel.activePane == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
+            val otherPane = if (viewModel.activePane == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
             viewModel.navigateBack(otherPane)
         }
     }
@@ -106,21 +101,18 @@ fun ExplorerScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-    val activeState = if (viewModel.activePane == PaneIndex.LEFT) viewModel.leftPane else viewModel.rightPane
+        val activeState = if (viewModel.activePane == PaneIndex.LEFT) viewModel.leftPane else viewModel.rightPane
         Scaffold(
             topBar = {
                 TopAppBar(
                     title = { Text("A321") },
                     actions = {
-                    // 回收站按钮                        
                         BBQIconButton(
-                            onClick = {
-                            viewModel.toggleRecycleBin(viewModel.activePane)
-                            },
+                            onClick = { viewModel.toggleRecycleBin(viewModel.activePane) },
                             icon = if (activeState.isRecycleBin) Icons.Default.CloudQueue else Icons.Default.DeleteSweep,
                             contentDescription = "回收站",
                             tint = if (activeState.isRecycleBin) MaterialTheme.colorScheme.primary else LocalContentColor.current
-                            )
+                        )
                         BBQIconButton(
                             onClick = {
                                 viewModel.loadFiles(PaneIndex.LEFT)
@@ -145,7 +137,6 @@ fun ExplorerScreen(
                     message = viewModel.uploadMessage
                 )
                 Row(modifier = Modifier.fillMaxSize()) {
-                    // 左侧窗口
                     PaneContainer(
                         modifier = Modifier.weight(1f),
                         elevation = leftElevation,
@@ -176,7 +167,6 @@ fun ExplorerScreen(
                         )
                     }
 
-                    // 右侧窗口
                     PaneContainer(
                         modifier = Modifier.weight(1f),
                         elevation = rightElevation,
@@ -210,11 +200,7 @@ fun ExplorerScreen(
             }
         }
 
-        // 弹窗管理部分
-        ExplorerDialogs(
-        viewModel = viewModel,
-        activePaneState = activeState
-    )
+        ExplorerDialogs(viewModel = viewModel, activePaneState = activeState)
     }
 }
 
@@ -255,29 +241,22 @@ fun ExplorerDialogs(
     val selectedFile = viewModel.selectedFileForAction
     val activePaneIndex = viewModel.activePane
 
-    // 操作菜单：传入 isRecycleBin
     FileActionMenu(
         isVisible = viewModel.isActionMenuVisible,
         file = selectedFile,
         isRecycleBin = activePaneState.isRecycleBin, 
         onDismiss = { viewModel.hideActionMenu() },
-        onAction = { action ->
-            viewModel.performAction(action, activePaneIndex)
-        }
+        onAction = { action -> viewModel.performAction(action, activePaneIndex) }
     )
 
-    // 分享逻辑
     if (viewModel.isShareSheetVisible && selectedFile != null) {
         ShareFileSheet(
             fileName = selectedFile.name,
             onDismiss = { viewModel.hideShareSheet() },
-            onConfirm = { password, expiration ->
-                viewModel.confirmShare(password, expiration)
-            }
+            onConfirm = { password, expiration -> viewModel.confirmShare(password, expiration) }
         )
     }
 
-    // 重命名逻辑：confirmRename 需要知道在哪个 Pane 操作
     if (viewModel.isRenameDialogVisible && selectedFile != null) {
         Dialog(onDismissRequest = { viewModel.hideRenameDialog() }) {
             StringInputPrefDialogUI(
@@ -295,7 +274,6 @@ fun ExplorerDialogs(
         }
     }
 
-    // 删除逻辑：根据是否在回收站显示不同的文本
     if (viewModel.isDeleteDialogVisible && selectedFile != null) {
         val isRecycle = activePaneState.isRecycleBin
         Dialog(onDismissRequest = { viewModel.hideDeleteDialog() }) {
@@ -317,10 +295,7 @@ fun ExplorerDialogs(
     }
     
     if (viewModel.isPropertyDialogVisible && selectedFile != null) {
-        FilePropertyDialog(
-            file = selectedFile,
-            onDismiss = { viewModel.hidePropertyDialog() }
-        )
+        FilePropertyDialog(file = selectedFile, onDismiss = { viewModel.hidePropertyDialog() })
     }    
 }
 
@@ -335,10 +310,7 @@ fun FilePane(
     onRetry: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        BreadcrumbsBar(
-            pathStack = state.pathStack,
-            onPathClick = onBreadcrumbClick
-        )
+        BreadcrumbsBar(pathStack = state.pathStack, onPathClick = onBreadcrumbClick)
 
         BaseListScreen(
             items = state.fileList,
@@ -354,8 +326,11 @@ fun FilePane(
             },
             emptyMessage = "无文件",
             itemContent = { file ->
+                // 检查是否需要高亮
+                val isHighlighted = viewModel.recentlyModifiedIds.contains(file.id)
                 FileListItem(
                     file = file,
+                    isHighlighted = isHighlighted,
                     onClick = { onFileClick(file) },
                     onLongClick = { onFileLongClick(file) }
                 )
@@ -365,14 +340,9 @@ fun FilePane(
 }
 
 @Composable
-fun BreadcrumbsBar(
-    pathStack: List<PanPath>,
-    onPathClick: (PanPath) -> Unit
-) {
+fun BreadcrumbsBar(pathStack: List<PanPath>, onPathClick: (PanPath) -> Unit) {
     LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         items(pathStack) { path ->
@@ -399,6 +369,7 @@ fun BreadcrumbsBar(
 @Composable
 fun FileListItem(
     file: PanFile,
+    isHighlighted: Boolean = false, // 新增参数
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -413,11 +384,10 @@ fun FileListItem(
             Text(
                 text = file.name,
                 maxLines = 1,
-                fontWeight = if (isUpFolder) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.basicMarquee(
-                    iterations = Int.MAX_VALUE,
-                    repeatDelayMillis = 2000
-                )
+                // 如果高亮，使用 Primary 颜色并加粗
+                color = if (isHighlighted) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                fontWeight = if (isUpFolder || isHighlighted) FontWeight.Bold else FontWeight.Normal,
+                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE, repeatDelayMillis = 2000)
             )
         },
         supportingContent = {
@@ -428,18 +398,17 @@ fun FileListItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .basicMarquee(iterations = Int.MAX_VALUE)
+                    modifier = Modifier.fillMaxWidth().basicMarquee(iterations = Int.MAX_VALUE)
                 )
             }
         },
         leadingContent = {
             Icon(
-                imageVector = if (file.isDirectory) Icons.Default.Folder 
-                              else Icons.AutoMirrored.Filled.InsertDriveFile,
+                imageVector = if (file.isDirectory) Icons.Default.Folder else Icons.AutoMirrored.Filled.InsertDriveFile,
                 contentDescription = null,
-                tint = if (file.isDirectory) MaterialTheme.colorScheme.primary 
+                // 图标也可以同步高亮颜色
+                tint = if (isHighlighted) MaterialTheme.colorScheme.primary 
+                       else if (file.isDirectory) MaterialTheme.colorScheme.primary 
                        else MaterialTheme.colorScheme.outline
             )
         }
@@ -447,33 +416,16 @@ fun FileListItem(
 }
 
 @Composable
-fun UploadProgressBanner(
-    isUploading: Boolean,
-    progress: Float,
-    message: String
-) {
+fun UploadProgressBanner(isUploading: Boolean, progress: Float, message: String) {
     AnimatedVisibility(visible = isUploading) {
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        message,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        "${(progress * 100).toInt()}%",
-                        style = MaterialTheme.typography.labelSmall
-                    )
+                    Text(message, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                    Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
                 }
                 Spacer(Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
             }
         }
     }
