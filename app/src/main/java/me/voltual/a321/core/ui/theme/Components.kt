@@ -338,12 +338,14 @@ fun BBQSnackbarHost(
         }
     }
 ) {
-    SnackbarHost(
-        hostState = hostState,
-        modifier = Modifier.align(Alignment.TopCenter),
-        //这个修饰符可以顶部居中
-        snackbar = snackbar
-    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 在 BoxScope 内部调用 SnackbarHost
+        SnackbarHost(
+            hostState = hostState,
+            modifier = modifier.align(Alignment.TopCenter), 
+            snackbar = snackbar
+        )
+    }
 }
 
 /**
