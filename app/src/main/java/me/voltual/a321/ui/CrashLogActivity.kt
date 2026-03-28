@@ -122,7 +122,6 @@ fun CrashLogScreen(crashReport: String) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 使用 BBQCard 组件
         BBQCard(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(16.dp),
