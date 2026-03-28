@@ -17,14 +17,13 @@ import kotlinx.datetime.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShareFileSheet(
-    fileName: String,
+    displayTitle: String, // 支持批量显示
     onDismiss: () -> Unit,
     onConfirm: (password: String, expiration: String) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()
     val password = remember { mutableStateOf("") }
     
-    // 默认过期时间：2099-12-12
     var selectedDate by remember { mutableStateOf(LocalDate(2099, 12, 12)) }
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -41,16 +40,15 @@ fun ShareFileSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "分享文件",
+                text = "创建分享链接",
                 style = MaterialTheme.typography.headlineSmall
             )
             Text(
-                text = fileName,
+                text = displayTitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // 1. 提取码输入
             OutlinedTextField(
                 value = password.value,
                 onValueChange = { password.value = it },
@@ -61,7 +59,6 @@ fun ShareFileSheet(
                 singleLine = true
             )
 
-            // 2. 有效期选择
             OutlinedCard(
                 onClick = { showDatePicker = true },
                 modifier = Modifier.fillMaxWidth()
@@ -81,37 +78,32 @@ fun ShareFileSheet(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 3. 确认按钮
             Button(
                 onClick = {
-    // 1. 获取当前时间或指定时间的 LocalDateTime
-    val time = LocalTime(8, 0, 0, 0) // 这里的最后一个参数是纳秒 (nanoseconds)
-    val dateTime = LocalDateTime(selectedDate, time)
-    
-    // 2. 手动构建满足服务器要求的 ISO 8601 格式
-    // 使用 format 确保补全 0
-    val isoString = "${dateTime.year}-" +
-            "${dateTime.monthNumber.toString().padStart(2, '0')}-" +
-            "${dateTime.dayOfMonth.toString().padStart(2, '0')}T" +
-            "${dateTime.hour.toString().padStart(2, '0')}:" +
-            "${dateTime.minute.toString().padStart(2, '0')}:" +
-            "${dateTime.second.toString().padStart(2, '0')}." +
-            "${(dateTime.nanosecond / 1_000_000).toString().padStart(3, '0')}" +
-            "+08:00"
+                    val time = LocalTime(8, 0, 0, 0)
+                    val dateTime = LocalDateTime(selectedDate, time)
+                    
+                    val isoString = "${dateTime.year}-" +
+                            "${dateTime.monthNumber.toString().padStart(2, '0')}-" +
+                            "${dateTime.dayOfMonth.toString().padStart(2, '0')}T" +
+                            "${dateTime.hour.toString().padStart(2, '0')}:" +
+                            "${dateTime.minute.toString().padStart(2, '0')}:" +
+                            "${dateTime.second.toString().padStart(2, '0')}." +
+                            "${(dateTime.nanosecond / 1_000_000).toString().padStart(3, '0')}" +
+                            "+08:00"
 
-    onConfirm(password.value, isoString)
-},
+                    onConfirm(password.value, isoString)
+                },
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(16.dp)
             ) {
                 Icon(Icons.Default.Share, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("创建分享链接")
+                Text("立即创建")
             }
         }
     }
 
-    // MD3 日期选择器弹窗
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = selectedDate.atStartOfDayIn(TimeZone.currentSystemDefault()).toEpochMilliseconds()
@@ -136,6 +128,6 @@ fun ShareFileSheet(
 data class ShareUiState(
     val password: MutableState<String> = mutableStateOf(""),
     val expiration: MutableState<LocalDateTime> = mutableStateOf(
-        LocalDateTime(2099, 12, 12, 8, 0, 0) // 默认原型中的 2099 年
+        LocalDateTime(2099, 12, 12, 8, 0, 0)
     )
 )

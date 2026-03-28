@@ -269,7 +269,6 @@ fun ExplorerDialogs(
         onAction = { action -> viewModel.performAction(action, activePaneIndex) }
     )
 
-    // --- 新建/上传混合对话框 ---
     if (viewModel.isCreateFileDialogVisible) {
         Dialog(onDismissRequest = { viewModel.hideCreateFileDialog() }) {
             CreateFileDialogUI(
@@ -280,18 +279,16 @@ fun ExplorerDialogs(
                     viewModel.confirmCreateFolder(folderName, activePaneIndex)
                 },
                 onConfirmFile = { fileName ->
-                    // 1. 暂存文件名并关闭对话框
                     viewModel.prepareUpload(fileName)
-                    // 2. 触发系统文件选择器
                     onTriggerFilePicker()
                 }
             )
         }
     }
 
-    if (viewModel.isShareSheetVisible && selectedFile != null) {
+    if (viewModel.isShareSheetVisible) {
         ShareFileSheet(
-            fileName = selectedFile.name,
+            displayTitle = viewModel.sharingDisplayName,
             onDismiss = { viewModel.hideShareSheet() },
             onConfirm = { password, expiration -> viewModel.confirmShare(password, expiration) }
         )

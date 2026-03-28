@@ -69,10 +69,12 @@ class ExplorerViewModel(
     var isDeleteDialogVisible by mutableStateOf(false); private set
     var selectedFileForAction by mutableStateOf<PanFile?>(null); private set
     var isBatchActionMenu by mutableStateOf(false); private set
-    // 修改：将原来的 isCreateFolderDialogVisible 改为通用的新建/上传对话框状态
-    var isCreateFileDialogVisible by mutableStateOf(false); private set
     
-    // 暂存用户想要重命名的上传文件名
+    // 新增：批量分享专用
+    var sharingFileIds by mutableStateOf<List<Long>>(emptyList())
+    var sharingDisplayName by mutableStateOf("")
+    
+    var isCreateFileDialogVisible by mutableStateOf(false); private set
     var pendingUploadName by mutableStateOf("")
 
     private val _events = Channel<ExplorerEvent>(Channel.BUFFERED)
@@ -87,15 +89,12 @@ class ExplorerViewModel(
         if (activePane != pane) activePane = pane
     }
 
-    // --- 菜单触发逻辑（MT 风格）---
     fun showActionMenu(file: PanFile, paneIndex: PaneIndex) {
         val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
         if (state.selectedIds.contains(file.id)) {
-            // 长按已选中的项 -> 批量模式
             isBatchActionMenu = state.selectedIds.size > 1
             selectedFileForAction = file
         } else {
-            // 长按未选中的项 -> 单选模式，清除旧选择
             state.clearSelection()
             state.selectedIds.add(file.id)
             isBatchActionMenu = false
@@ -106,10 +105,8 @@ class ExplorerViewModel(
 
     fun hideActionMenu() {
         isActionMenuVisible = false
-        // 不清除 selectedFileForAction，因为后续对话框可能还需要它
     }
 
-    // --- 动作执行（支持批量）---
     fun performAction(action: String, paneIndex: PaneIndex) {
         val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
         val file = selectedFileForAction ?: return
@@ -124,10 +121,10 @@ class ExplorerViewModel(
                 "share" -> {
                     if (state.isRecycleBin) {
                         _events.send(ExplorerEvent.ShowSnackbar("回收站文件需恢复后分享"))
-                    } else if (isBatch) {
-                        // TODO: 批量分享
-                        _events.send(ExplorerEvent.ShowSnackbar("批量分享暂未实现"))
                     } else {
+                        // 设置分享数据
+                        sharingFileIds = targetIds
+                        sharingDisplayName = if (isBatch) "已选择 ${targetIds.size} 个项目" else file.name
                         showShareSheet()
                     }
                 }
@@ -212,7 +209,6 @@ class ExplorerViewModel(
         }
     }
 
-    // --- 文件加载和导航 ---
     fun loadFiles(
         pane: PaneIndex,
         isNextPage: Boolean = false,
@@ -305,9 +301,8 @@ class ExplorerViewModel(
         }
     }
     
-    // --- 创建/上传对话框 ---
     fun showCreateFileDialog() {
-        pendingUploadName = "" // 重置
+        pendingUploadName = ""
         isCreateFileDialogVisible = true
     }
 
@@ -315,18 +310,11 @@ class ExplorerViewModel(
         isCreateFileDialogVisible = false
     }
 
-    /**
-     * 当用户在对话框点击“文件”时触发，暂存自定义文件名
-     */
     fun prepareUpload(customName: String) {
         pendingUploadName = customName
         hideCreateFileDialog()
-        // 不直接调用上传，由 UI 层触发文件选择器
     }
 
-    /**
-     * 执行创建文件夹操作
-     */
     fun confirmCreateFolder(name: String, paneIndex: PaneIndex) {
         if (name.isBlank()) return
         
@@ -367,11 +355,10 @@ class ExplorerViewModel(
         }
     }
 
-    // --- 多选核心逻辑 ---
     fun toggleSelection(pane: PaneIndex, index: Int) {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
         val file = state.fileList.getOrNull(index) ?: return
-        if (file.id <= 0) return // 排除 ".." 和回收站退出项
+        if (file.id <= 0) return
 
         val fileId = file.id
 
@@ -402,7 +389,6 @@ class ExplorerViewModel(
         }
     }
 
-    // --- 重命名 ---
     fun confirmRename(newName: String, paneIndex: PaneIndex) {
         val file = selectedFileForAction ?: return
         val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
@@ -425,16 +411,19 @@ class ExplorerViewModel(
         }
     }
 
-    // --- 分享 ---
     fun confirmShare(password: String, expiration: String) {
-        val file = selectedFileForAction ?: return
+        val ids = sharingFileIds
+        if (ids.isEmpty()) return
+        
         hideShareSheet()
 
         viewModelScope.launch {
-            repository.shareFiles(listOf(file.id), password, expiration)
+            repository.shareFiles(ids, password, expiration)
                 .onSuccess { shareKey ->
                     val fullUrl = "https://www.123pan.com/s/$shareKey"
                     _events.send(ExplorerEvent.ShowSnackbar("分享成功：$fullUrl", "复制"))
+                    leftPane.clearSelection()
+                    rightPane.clearSelection()
                 }
                 .onFailure {
                     _events.send(ExplorerEvent.ShowSnackbar("分享失败：${it.message}"))
@@ -442,11 +431,9 @@ class ExplorerViewModel(
         }
     }
 
-    // --- 上传（支持自定义文件名）---
     fun uploadFile(uri: Uri, defaultName: String, size: Long, targetPane: PaneIndex) {
         val state = if (targetPane == PaneIndex.LEFT) leftPane else rightPane
         
-        // 逻辑：如果 pendingUploadName 不为空，则使用它；否则使用原始文件名
         val finalName = if (pendingUploadName.isNotBlank()) {
             pendingUploadName
         } else {
@@ -472,11 +459,10 @@ class ExplorerViewModel(
             }
             delay(2000)
             isUploading = false
-            pendingUploadName = "" // 清除暂存
+            pendingUploadName = ""
         }
     }
 
-    // --- 下载 ---
     fun downloadFile(activity: android.app.Activity, file: PanFile) {
         if (file.id == -1L) return
         viewModelScope.launch {
@@ -490,7 +476,6 @@ class ExplorerViewModel(
         }
     }
 
-    // --- 对话框控制 ---
     fun hideRenameDialog() { isRenameDialogVisible = false }
     fun showRenameDialog() { isRenameDialogVisible = true }
     fun showPropertyDialog() { isPropertyDialogVisible = true }
