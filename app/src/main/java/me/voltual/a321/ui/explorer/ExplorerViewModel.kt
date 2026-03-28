@@ -349,7 +349,6 @@ class ExplorerViewModel(
         }
     }
 
-    // 以下为原有方法保持兼容
     private suspend fun executeMoveWorkflow(file: PanFile, sourcePane: PaneIndex, targetPathId: Long) {
         val state = if (sourcePane == PaneIndex.LEFT) leftPane else rightPane
         val moveResult = repository.moveFiles(listOf(file.id), targetPathId)
