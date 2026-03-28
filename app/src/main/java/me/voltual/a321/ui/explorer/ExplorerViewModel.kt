@@ -254,6 +254,18 @@ class ExplorerViewModel(
             }
         }
     }
+    
+    fun confirmDeletePermanently(paneIndex: PaneIndex) {
+    val file = selectedFileForAction ?: return
+    viewModelScope.launch {
+        val result = repository.deleteFilesPermanently(listOf(file.id))
+        if (result is PanActionResult.Success) {
+            loadFiles(paneIndex)
+            _events.send(ExplorerEvent.ShowSnackbar("文件已永久删除"))
+        }
+        hideDeleteDialog()
+    }
+}
 
     // --- 弹窗控制逻辑 ---
 
@@ -268,21 +280,29 @@ class ExplorerViewModel(
 
     fun hideRenameDialog() { isRenameDialogVisible = false }
 
-    fun confirmRename(newName: String, pane: PaneIndex) {
-        val file = selectedFileForAction ?: return
-        hideRenameDialog()
+    fun confirmRename(newName: String, paneIndex: PaneIndex) {
+    val file = selectedFileForAction ?: return
+    val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
+    hideRenameDialog()
 
-        viewModelScope.launch {
-            val result = repository.renameFile(file.id, newName)
-            if (result is PanActionResult.Success) {
-                loadFiles(pane)
+    viewModelScope.launch {
+        // 1. 执行重命名
+        val renameRes = repository.renameFile(file.id, newName)
+        
+        if (renameRes is PanActionResult.Success) {
+            // 2. 如果在回收站，则自动执行恢复
+            if (state.isRecycleBin) {
+                repository.restoreFiles(listOf(file.id))
+                _events.send(ExplorerEvent.ShowSnackbar("已重命名并恢复文件"))
+            } else {
                 _events.send(ExplorerEvent.ShowSnackbar("重命名成功"))
-            } else if (result is PanActionResult.Error) {
-                _events.send(ExplorerEvent.ShowSnackbar("重命名失败: ${result.message}"))
             }
-            selectedFileForAction = null
+            loadFiles(paneIndex)
+        } else {
+            _events.send(ExplorerEvent.ShowSnackbar("操作失败"))
         }
     }
+}
 
     fun showPropertyDialog() { isPropertyDialogVisible = true }
 
@@ -290,6 +310,28 @@ class ExplorerViewModel(
         isPropertyDialogVisible = false
         selectedFileForAction = null
     }
+
+fun performMove(file: PanFile, paneIndex: PaneIndex) {
+    val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
+    val targetPane = if (paneIndex == PaneIndex.LEFT) rightPane else leftPane
+
+    viewModelScope.launch {
+        // 1. 执行移动
+        val moveRes = repository.moveFiles(listOf(file.id), targetPane.currentPath.id)
+        
+        if (moveRes is PanActionResult.Success) {
+            // 2. 如果是从回收站发起的移动，自动恢复
+            if (state.isRecycleBin) {
+                repository.restoreFiles(listOf(file.id))
+                _events.send(ExplorerEvent.ShowSnackbar("已移动至 ${targetPane.currentPath.name} 并恢复"))
+            } else {
+                _events.send(ExplorerEvent.ShowSnackbar("已移动"))
+            }
+            loadFiles(PaneIndex.LEFT)
+            loadFiles(PaneIndex.RIGHT)
+        }
+    }
+}
 
     fun showShareSheet() { isShareSheetVisible = true }
 

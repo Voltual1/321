@@ -23,6 +23,7 @@ import me.voltual.a321.data.unified.PanFile
 fun FileActionMenu(
     isVisible: Boolean,
     file: PanFile?,
+    isRecycleBin: Boolean, // 新增参数：识别当前面板是否在回收站
     onDismiss: () -> Unit,
     onAction: (String) -> Unit
 ) {
@@ -70,14 +71,30 @@ fun FileActionMenu(
                         color = MaterialTheme.colorScheme.outlineVariant
                     )
 
-                    ActionMenuItem(Icons.Default.Share, "分享") { onAction("share") }
-                    ActionMenuItem(Icons.Default.DriveFileMove, "移动") { onAction("move") }
-                    ActionMenuItem(Icons.Default.Edit, "重命名") { onAction("rename") }
-                    ActionMenuItem(
-                        icon = Icons.Default.Delete, 
-                        label = "删除", 
-                        textColor = MaterialTheme.colorScheme.error
-                    ) { onAction("delete") }
+                    if (isRecycleBin) {
+            // 回收站特有操作
+            ActionMenuItem(Icons.Default.Restore, "恢复并回到原处") { onAction("restore") }
+            ActionMenuItem(Icons.Default.DriveFileMove, "移动并恢复") { onAction("move") }
+            ActionMenuItem(Icons.Default.Edit, "重命名并恢复") { onAction("rename") }
+            
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp))
+            
+            ActionMenuItem(
+                icon = Icons.Default.DeleteForever, 
+                label = "彻底删除", 
+                textColor = MaterialTheme.colorScheme.error
+            ) { onAction("delete_permanently") }
+        } else {
+            // 常规操作
+            ActionMenuItem(Icons.Default.Share, "分享") { onAction("share") }
+            ActionMenuItem(Icons.Default.DriveFileMove, "移动") { onAction("move") }
+            ActionMenuItem(Icons.Default.Edit, "重命名") { onAction("rename") }
+            ActionMenuItem(
+                icon = Icons.Default.Delete, 
+                label = "删除", 
+                textColor = MaterialTheme.colorScheme.error
+            ) { onAction("delete") }
+        }
                     ActionMenuItem(Icons.Default.Info, "属性") { onAction("info") }
                 }
             }
