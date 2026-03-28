@@ -40,6 +40,7 @@ fun KtorClient.FolderDetailsData.toUnifiedModel(): PanFile {
         size = this.Size ?: 0L,
         isDirectory = true,
         updateTime = "",
+        ,rawDownloadUrl = "",
         category = 1
     )
 }
@@ -79,7 +80,7 @@ fun KtorClient.ShareInfo.toUnifiedModel(): PanFile {
         isAbnormal = this.isViolation == 1,
         etag = null,
         s3KeyFlag = null,
-        rawDownloadUrl = this.shareLinkList.list.firstOrNull(),
+        rawDownloadUrl = this.shareLinkList.list.first,
         extension = "",
         shareKey = this.ShareKey,
         sharePwd = this.SharePwd,
