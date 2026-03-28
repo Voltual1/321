@@ -276,10 +276,10 @@ class ExplorerViewModel(
                 val processedList = if (state.currentPage == 1) {
                     when {
                         state.isRecycleBin -> {
-                            listOf(PanFile(id = -2, name = ".. [退出回收站]", isDirectory = true, size = 0, updateTime = "")) + newList
+                            listOf(PanFile(id = -2, name = ".. [trash]", isDirectory = true, size = 0, updateTime = "")) + newList
                         }
                         state.isSearchMode -> {
-                            listOf(PanFile(id = -3, name = ".. [退出搜索]", isDirectory = true, size = 0, updateTime = "")) + newList
+                            listOf(PanFile(id = -3, name = ".. [search_results]", isDirectory = true, size = 0, updateTime = "")) + newList
                         }
                         state.pathStack.size > 1 -> {
                             listOf(PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")) + newList

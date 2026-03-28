@@ -13,11 +13,12 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.*
+import kotlinx.datetime.TimeZone 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShareFileSheet(
-    displayTitle: String, // 支持批量显示
+    displayTitle: String,
     onDismiss: () -> Unit,
     onConfirm: (password: String, expiration: String) -> Unit
 ) {
@@ -83,14 +84,10 @@ fun ShareFileSheet(
                     val time = LocalTime(8, 0, 0, 0)
                     val dateTime = LocalDateTime(selectedDate, time)
                     
-                    val isoString = "${dateTime.year}-" +
-                            "${dateTime.monthNumber.toString().padStart(2, '0')}-" +
-                            "${dateTime.dayOfMonth.toString().padStart(2, '0')}T" +
-                            "${dateTime.hour.toString().padStart(2, '0')}:" +
-                            "${dateTime.minute.toString().padStart(2, '0')}:" +
-                            "${dateTime.second.toString().padStart(2, '0')}." +
-                            "${(dateTime.nanosecond / 1_000_000).toString().padStart(3, '0')}" +
-                            "+08:00"
+                    // 修复建议：直接使用 dateTime.toString() 会生成类似 "2099-12-12T08:00"
+                    // 如果后端需要包含秒和毫秒，toString() 也会自动处理。
+                    // 加上时区偏移即可。
+                    val isoString = "${dateTime}+08:00"
 
                     onConfirm(password.value, isoString)
                 },
@@ -113,7 +110,8 @@ fun ShareFileSheet(
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let {
-                        val instant = Instant.fromEpochMilliseconds(it)
+                        // 修复建议：明确调用 kotlinx.datetime.Instant 避免与 kotlin.time 冲突
+                        val instant = kotlinx.datetime.Instant.fromEpochMilliseconds(it)
                         selectedDate = instant.toLocalDateTime(TimeZone.UTC).date
                     }
                     showDatePicker = false

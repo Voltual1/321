@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,12 +24,19 @@ import me.voltual.a321.data.unified.PanFile
 fun FileActionMenu(
     isVisible: Boolean,
     file: PanFile?,
-    selectedCount: Int, 
+    selectedCount: Int,
+    activePaneIndex: PaneIndex, 
     isRecycleBin: Boolean,
     onDismiss: () -> Unit,
     onAction: (String) -> Unit
 ) {
     val isBatch = selectedCount > 1
+    // 如果是右侧面板，图标需要水平镜像翻转（因为默认是指向右的）
+    val moveIconModifier = if (activePaneIndex == PaneIndex.RIGHT) {
+        Modifier.graphicsLayer(scaleX = -1f)
+    } else {
+        Modifier
+    }
 
     AnimatedVisibility(
         visible = isVisible && (file != null || isBatch),
@@ -74,9 +82,20 @@ fun FileActionMenu(
                     )
 
                     if (isRecycleBin) {
-                        ActionMenuItem(Icons.Default.Restore, if (isBatch) "批量恢复" else "恢复并回到原处") { onAction("restore") }
+                        ActionMenuItem(
+                            icon = Icons.Default.Restore, 
+                            label = if (isBatch) "批量恢复" else "恢复并回到原处"
+                        ) { onAction("restore") }
+                        
                         if (!isBatch) {
-                            ActionMenuItem(Icons.Default.DriveFileMove, "移动并恢复") { onAction("move") }
+                            // 恢复相关的移动，同样应用翻转逻辑
+                            @Suppress("Deprecation")
+                            ActionMenuItem(
+                                icon = Icons.Default.DriveFileMove, 
+                                label = "移动并恢复",
+                                iconModifier = moveIconModifier
+                            ) { onAction("move") }
+                            
                             ActionMenuItem(Icons.Default.Edit, "重命名并恢复") { onAction("rename") }
                         }
                         
@@ -88,10 +107,15 @@ fun FileActionMenu(
                             textColor = MaterialTheme.colorScheme.error
                         ) { onAction("delete") }
                     } else {
-                        // 启用批量分享
                         ActionMenuItem(Icons.Default.Share, if (isBatch) "批量分享" else "分享") { onAction("share") }
                         
-                        ActionMenuItem(Icons.Default.DriveFileMove, if (isBatch) "批量移动" else "移动") { onAction("move") }
+                        // 普通移动操作
+                        @Suppress("Deprecation")
+                        ActionMenuItem(
+                            icon = Icons.Default.DriveFileMove, 
+                            label = if (isBatch) "批量移动" else "移动",
+                            iconModifier = moveIconModifier
+                        ) { onAction("move") }
                         
                         if (!isBatch) {
                             ActionMenuItem(Icons.Default.Edit, "重命名") { onAction("rename") }
@@ -118,6 +142,7 @@ private fun ActionMenuItem(
     icon: ImageVector,
     label: String,
     textColor: Color = MaterialTheme.colorScheme.onSurface,
+    iconModifier: Modifier = Modifier, 
     onClick: () -> Unit
 ) {
     Surface(
@@ -134,8 +159,10 @@ private fun ActionMenuItem(
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                modifier = Modifier.size(22.dp),
-                tint = if (textColor == MaterialTheme.colorScheme.error) textColor else MaterialTheme.colorScheme.onSurfaceVariant
+                // 组合原始 Size 和 传入的变换 Modifier
+                modifier = Modifier.size(22.dp).then(iconModifier),
+                tint = if (textColor == MaterialTheme.colorScheme.error) 
+                    textColor else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
