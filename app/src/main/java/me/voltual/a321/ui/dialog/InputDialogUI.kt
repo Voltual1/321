@@ -275,3 +275,94 @@ fun StringInputDialogUI(
         }
     }
 }
+
+/**
+ * 仿 MT 管理器新建对话框
+ */
+@Composable
+fun CreateFileDialogUI(
+    title: String = "新建", 
+    initialValue: String = "",
+    onDismiss: () -> Unit,
+    onConfirmFolder: (String) -> Unit,
+    onConfirmFile: (String) -> Unit,
+) {
+    val focusManager = LocalFocusManager.current
+    val textFieldFocusRequester = remember { FocusRequester() }
+    var savedValue by remember { mutableStateOf(initialValue) }
+
+    LaunchedEffect(Unit) {
+        delay(100)
+        textFieldFocusRequester.requestFocus()
+    }
+
+    Card(
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.padding(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 16.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(text = title, style = MaterialTheme.typography.titleLarge)
+
+            TextField(
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .shadow(1.dp, MaterialTheme.shapes.large)
+                    .fillMaxWidth()
+                    .focusRequester(textFieldFocusRequester),
+                value = savedValue,
+                colors = TextFieldDefaults.colors(
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+                shape = MaterialTheme.shapes.large,
+                singleLine = true,
+                onValueChange = { savedValue = it },
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Done,
+                    keyboardType = KeyboardType.Text
+                ),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            )
+
+            // 底部按钮区域：水平排列三个按钮
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.End, // 按钮向右对齐
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 取消按钮
+                DialogNegativeButton(
+                    textId = android.R.string.cancel, 
+                    onClick = onDismiss
+                )
+                
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // 文件夹按钮 (使用 Positive 样式)
+                DialogPositiveButton(
+                    textId = R.string.folder,
+                    onClick = {
+                        if (savedValue.isNotEmpty()) onConfirmFolder(savedValue)
+                    }
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // 文件按钮 (使用 Positive 样式)
+                DialogPositiveButton(
+                    textId = R.string.file, 
+                    onClick = {
+                        if (savedValue.isNotEmpty()) onConfirmFile(savedValue)
+                    }
+                )
+            }
+        }
+    }
+}

@@ -137,7 +137,7 @@ fun ExplorerScreen(
         actions = {
             BBQIconButton(
                 onClick = { viewModel.showCreateFolderDialog() },
-                icon = Icons.Default.CreateNewFolder,
+                icon = Icons.Default.Add,//Icons.Default.CreateNewFolder,
                 contentDescription = "新建文件夹"
             )
             // 预留：后退、前进、新建、同步、跳转等按钮
