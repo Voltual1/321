@@ -55,8 +55,9 @@ fun FilePropertyDialog(
                 
                 if (file.category == 10) {
                     // 分享专属信息
-                    PropertyItem("分享状态", if (file.isAbnormal) "违规/失效" else "正常")
-                    PropertyItem("分享链接", file.shareUrl ?: "无", isMonospace = true, canWrap = true)
+                    if (file.rawDownloadUrl != "") {
+                        PropertyItem("分享链接", file.rawDownloadUrl, isMonospace = true, canWrap = true)
+                    }
                     PropertyItem("提取码", if (file.sharePwd.isNullOrBlank()) "无" else file.sharePwd, isMonospace = true)
                     PropertyItem("过期时间", file.expiration ?: "永久有效")
                     PropertyItem("分享 ID", file.id.toString(), isMonospace = true)
@@ -69,8 +70,8 @@ fun FilePropertyDialog(
                     if (file.etag != null) {
                         PropertyItem("Etag (Hash)", file.etag, isMonospace = true)
                     }
-                    if (file.rawDownloadUrl != null) {
-                        PropertyItem("下载链接", file.rawDownloadUrl, isMonospace = true, canWrap = true)
+                    if (file.rawDownloadUrl != "") {
+                        PropertyItem("DownloadUrl", file.rawDownloadUrl, isMonospace = true, canWrap = true)
                     }
                 }
 
