@@ -435,8 +435,7 @@ suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanRe
         searchData: String? = null
     ): Result<PanResponse<ShareListData>>
 }
-    }
-
+    
     object ApiServiceImpl : ApiService {
 
         override suspend fun getLatestRelease(url: String): Result<UpdateInfo> {
