@@ -63,7 +63,7 @@ fun FilePropertyDialog(
                 }
 
                 if (file.rawDownloadUrl != null) {
-                    PropertyItem("原始路径", file.rawDownloadUrl, isMonospace = true, canWrap = true)
+                    PropertyItem("DownloadUrl", file.rawDownloadUrl, isMonospace = true, canWrap = true)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

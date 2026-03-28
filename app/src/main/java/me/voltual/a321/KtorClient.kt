@@ -352,13 +352,19 @@ suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanRe
      * @param token 用户授权 Token
      * @param fileId 文件或文件夹的 ID
      * @param newName 新的文件名（需包含后缀名）
-     * @param authKey 可选：部分 API 要求的 URL 参数 auth-key
      */
     suspend fun renameFile(
         token: String, 
         fileId: Long, 
         newName: String
-    ): Result<PanResponse<Unit>> // 这里的泛型根据返回的 "data" 结构，抓包显示返回的是文件详细信息
+    ): Result<PanResponse<Unit>> 
+    suspend fun searchFiles(
+    token: String,
+    keyword: String,
+    page: Int = 1,
+    limit: Int = 100,
+    parentFileId: Long = 0
+): Result<PanResponse<FileListData>>
     }
 
     object ApiServiceImpl : ApiService {
@@ -593,6 +599,27 @@ override suspend fun renameFile(
             fileName = newName,
             fileId = fileId
         ))
+    }
+}
+override suspend fun searchFiles(
+    token: String,
+    keyword: String,
+    page: Int,
+    limit: Int,
+    parentFileId: Long
+): Result<PanResponse<FileListData>> = safeApiCall {
+    httpClient.get("/api/file/list/new") {
+        bearerAuth(token)
+        url {
+            parameters.append("driveId", "0")
+            parameters.append("limit", limit.toString())
+            parameters.append("Page", page.toString())
+            parameters.append("parentFileId", parentFileId.toString())
+            parameters.append("orderBy", "update_at")      // 按更新时间排序
+            parameters.append("orderDirection", "desc")
+            parameters.append("trashed", "false")
+            parameters.append("SearchData", keyword)      // 搜索关键词
+        }
     }
 }
     }
