@@ -132,11 +132,18 @@ fun ExplorerScreen(
                     Icon(Icons.Default.Add, contentDescription = "上传")
                 }
             },
-            // 移除 bottomBar，模仿 MT 管理器
             bottomBar = {
-                // 预留：后退、前进、新建、同步、跳转等按钮
-                // 目前留空
-            }
+    BottomAppBar(
+        actions = {
+            BBQIconButton(
+                onClick = { viewModel.showCreateFolderDialog() },
+                icon = Icons.Default.CreateNewFolder,
+                contentDescription = "新建文件夹"
+            )
+            // 预留：后退、前进、新建、同步、跳转等按钮
+        }
+    )
+}
         ) { paddingValues ->
             Column(modifier = Modifier.padding(paddingValues)) {
                 UploadProgressBanner(
