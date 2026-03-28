@@ -66,6 +66,7 @@ class ExplorerViewModel(
     var isShareSheetVisible by mutableStateOf(false); private set
     var isDeleteDialogVisible by mutableStateOf(false); private set
     var selectedFileForAction by mutableStateOf<PanFile?>(null); private set
+    var isBatchActionMenu by mutableStateOf(false); private set
 
     private val _events = Channel<ExplorerEvent>(Channel.BUFFERED)
     val events: Flow<ExplorerEvent> = _events.receiveAsFlow()
@@ -79,31 +80,35 @@ class ExplorerViewModel(
         if (activePane != pane) activePane = pane
     }
 
-    fun downloadFile(activity: android.app.Activity, file: PanFile) {
-        if (file.id == -1L) return
-
-        viewModelScope.launch {
-            repository.getDownloadUrl(file).onSuccess { url ->
-                runCatching {
-                    Util1DM.downloadFile(activity, url, false, true)
-                }.onFailure {
-                    updatePaneError(activePane, "1DM 调用失败")
-                }
-            }
+    // --- 菜单触发逻辑（MT 风格）---
+    fun showActionMenu(file: PanFile, paneIndex: PaneIndex) {
+        val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
+        if (state.selectedIds.contains(file.id)) {
+            // 长按已选中的项 -> 批量模式
+            isBatchActionMenu = state.selectedIds.size > 1
+            selectedFileForAction = file
+        } else {
+            // 长按未选中的项 -> 单选模式，清除旧选择
+            state.clearSelection()
+            state.selectedIds.add(file.id)
+            isBatchActionMenu = false
+            selectedFileForAction = file
         }
-    }
-
-    fun showActionMenu(file: PanFile) {
-        selectedFileForAction = file
         isActionMenuVisible = true
     }
 
-    fun hideRenameDialog() { isRenameDialogVisible = false }
-    fun showRenameDialog() { isRenameDialogVisible = true }
+    fun hideActionMenu() {
+        isActionMenuVisible = false
+        // 不清除 selectedFileForAction，因为后续对话框可能还需要它
+    }
 
+    // --- 动作执行（支持批量）---
     fun performAction(action: String, paneIndex: PaneIndex) {
-        val file = selectedFileForAction ?: return
         val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
+        val file = selectedFileForAction ?: return
+        val isBatch = isBatchActionMenu && state.selectedIds.size > 1
+        val targetIds = if (isBatch) state.selectedIds.toList() else listOf(file.id)
+
         hideActionMenu()
 
         viewModelScope.launch {
@@ -112,6 +117,9 @@ class ExplorerViewModel(
                 "share" -> {
                     if (state.isRecycleBin) {
                         _events.send(ExplorerEvent.ShowSnackbar("回收站文件需恢复后分享"))
+                    } else if (isBatch) {
+                        // TODO: 批量分享
+                        _events.send(ExplorerEvent.ShowSnackbar("批量分享暂未实现"))
                     } else {
                         showShareSheet()
                     }
@@ -120,7 +128,7 @@ class ExplorerViewModel(
                 "move" -> {
                     val targetPaneIndex = if (paneIndex == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
                     val targetPathId = (if (targetPaneIndex == PaneIndex.LEFT) leftPane else rightPane).currentPath.id
-                    executeMoveWorkflow(file, paneIndex, targetPathId)
+                    executeMoveWorkflow(targetIds, paneIndex, targetPathId)
                 }
                 "delete" -> {
                     if (state.isRecycleBin) {
@@ -130,26 +138,74 @@ class ExplorerViewModel(
                     }
                 }
                 "restore" -> {
-                    executeRestore(file, paneIndex)
+                    executeRestore(targetIds, paneIndex)
                 }
             }
         }
     }
 
-    fun hideActionMenu() { isActionMenuVisible = false }
+    private suspend fun executeMoveWorkflow(ids: List<Long>, sourcePane: PaneIndex, targetPathId: Long) {
+        val state = if (sourcePane == PaneIndex.LEFT) leftPane else rightPane
+        val moveResult = repository.moveFiles(ids, targetPathId)
 
-    fun confirmDeletePermanently(paneIndex: PaneIndex) {
-        val file = selectedFileForAction ?: return
-        viewModelScope.launch {
-            val result = repository.deleteFilesPermanently(listOf(file.id))
-            if (result is PanActionResult.Success) {
-                loadFiles(paneIndex)
-                _events.send(ExplorerEvent.ShowSnackbar("文件已永久删除"))
+        if (moveResult is PanActionResult.Success) {
+            if (state.isRecycleBin) {
+                repository.restoreFiles(ids)
+                _events.send(ExplorerEvent.ShowSnackbar("已恢复并移动 ${ids.size} 个文件"))
+            } else {
+                _events.send(ExplorerEvent.ShowSnackbar("成功移动 ${ids.size} 个文件"))
             }
-            hideDeleteDialog()
+            state.clearSelection()
+            loadFiles(PaneIndex.LEFT, highlightIds = ids)
+            loadFiles(PaneIndex.RIGHT, highlightIds = ids)
+        } else if (moveResult is PanActionResult.Error) {
+            _events.send(ExplorerEvent.ShowSnackbar("移动失败: ${moveResult.message}"))
         }
     }
 
+    private suspend fun executeRestore(ids: List<Long>, paneIndex: PaneIndex) {
+        val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
+        repository.restoreFiles(ids)
+        _events.send(ExplorerEvent.ShowSnackbar("${ids.size} 个文件已恢复至原位置"))
+        state.clearSelection()
+        loadFiles(paneIndex, highlightIds = ids)
+    }
+
+    fun confirmDelete(paneIndex: PaneIndex) {
+        val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
+        val isBatch = isBatchActionMenu && state.selectedIds.size > 1
+        val ids = if (isBatch) state.selectedIds.toList() else listOfNotNull(selectedFileForAction?.id)
+
+        hideDeleteDialog()
+        viewModelScope.launch {
+            val result = repository.deleteFiles(ids)
+            if (result is PanActionResult.Success) {
+                _events.send(ExplorerEvent.ShowSnackbar("已删除 ${ids.size} 个文件"))
+                state.clearSelection()
+                loadFiles(paneIndex)
+            } else if (result is PanActionResult.Error) {
+                _events.send(ExplorerEvent.ShowSnackbar("删除失败: ${result.message}"))
+            }
+        }
+    }
+
+    fun confirmDeletePermanently(paneIndex: PaneIndex) {
+        val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
+        val isBatch = isBatchActionMenu && state.selectedIds.size > 1
+        val ids = if (isBatch) state.selectedIds.toList() else listOfNotNull(selectedFileForAction?.id)
+
+        hideDeleteDialog()
+        viewModelScope.launch {
+            val result = repository.deleteFilesPermanently(ids)
+            if (result is PanActionResult.Success) {
+                _events.send(ExplorerEvent.ShowSnackbar("已永久删除 ${ids.size} 个文件"))
+                state.clearSelection()
+                loadFiles(paneIndex)
+            }
+        }
+    }
+
+    // --- 文件加载和导航 ---
     fun loadFiles(
         pane: PaneIndex,
         isNextPage: Boolean = false,
@@ -265,7 +321,7 @@ class ExplorerViewModel(
         }
     }
 
-    // 多选核心逻辑
+    // --- 多选核心逻辑 ---
     fun toggleSelection(pane: PaneIndex, index: Int) {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
         val file = state.fileList.getOrNull(index) ?: return
@@ -274,11 +330,9 @@ class ExplorerViewModel(
         val fileId = file.id
 
         if (state.selectedIds.isEmpty()) {
-            // 第一个选中点
             state.selectedIds.add(fileId)
             state.lastSelectedIndex = index
         } else {
-            // 区间选择逻辑
             val start = state.lastSelectedIndex
             val end = index
             if (start != -1 && start != end) {
@@ -291,7 +345,6 @@ class ExplorerViewModel(
                 }
                 state.lastSelectedIndex = end
             } else {
-                // 单点反选
                 if (state.selectedIds.contains(fileId)) {
                     state.selectedIds.remove(fileId)
                     if (state.selectedIds.isEmpty()) state.lastSelectedIndex = -1
@@ -303,77 +356,7 @@ class ExplorerViewModel(
         }
     }
 
-    fun deleteSelectedFiles(pane: PaneIndex) {
-        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
-        val ids = state.selectedIds.toList()
-        if (ids.isEmpty()) return
-
-        viewModelScope.launch {
-            val result = if (state.isRecycleBin) {
-                repository.deleteFilesPermanently(ids)
-            } else {
-                repository.deleteFiles(ids)
-            }
-
-            if (result is PanActionResult.Success) {
-                _events.send(ExplorerEvent.ShowSnackbar("成功操作 ${ids.size} 个文件"))
-                state.clearSelection()
-                loadFiles(pane)
-            } else if (result is PanActionResult.Error) {
-                _events.send(ExplorerEvent.ShowSnackbar("操作失败: ${result.message}"))
-            }
-        }
-    }
-
-    fun moveSelectedFiles(sourcePane: PaneIndex) {
-        val sourceState = if (sourcePane == PaneIndex.LEFT) leftPane else rightPane
-        val targetPane = if (sourcePane == PaneIndex.LEFT) rightPane else leftPane
-        val ids = sourceState.selectedIds.toList()
-        if (ids.isEmpty()) return
-
-        viewModelScope.launch {
-            val result = repository.moveFiles(ids, targetPane.currentPath.id)
-            if (result is PanActionResult.Success) {
-                if (sourceState.isRecycleBin) {
-                    repository.restoreFiles(ids)
-                    _events.send(ExplorerEvent.ShowSnackbar("已从回收站移出并恢复 ${ids.size} 个文件"))
-                } else {
-                    _events.send(ExplorerEvent.ShowSnackbar("已移动 ${ids.size} 个文件"))
-                }
-                sourceState.clearSelection()
-                loadFiles(PaneIndex.LEFT)
-                loadFiles(PaneIndex.RIGHT)
-            } else if (result is PanActionResult.Error) {
-                _events.send(ExplorerEvent.ShowSnackbar("移动失败: ${result.message}"))
-            }
-        }
-    }
-
-    private suspend fun executeMoveWorkflow(file: PanFile, sourcePane: PaneIndex, targetPathId: Long) {
-        val state = if (sourcePane == PaneIndex.LEFT) leftPane else rightPane
-        val moveResult = repository.moveFiles(listOf(file.id), targetPathId)
-
-        if (moveResult is PanActionResult.Success) {
-            if (state.isRecycleBin) {
-                repository.restoreFiles(listOf(file.id))
-                _events.send(ExplorerEvent.ShowSnackbar("已从回收站移出并恢复"))
-            } else {
-                _events.send(ExplorerEvent.ShowSnackbar("移动成功"))
-            }
-            loadFiles(PaneIndex.LEFT, highlightIds = listOf(file.id))
-            loadFiles(PaneIndex.RIGHT, highlightIds = listOf(file.id))
-        } else if (moveResult is PanActionResult.Error) {
-            _events.send(ExplorerEvent.ShowSnackbar("移动失败: ${moveResult.message}"))
-        }
-        selectedFileForAction = null
-    }
-
-    private suspend fun executeRestore(file: PanFile, paneIndex: PaneIndex) {
-        repository.restoreFiles(listOf(file.id))
-        _events.send(ExplorerEvent.ShowSnackbar("文件已恢复至原位置"))
-        loadFiles(paneIndex, highlightIds = listOf(file.id))
-    }
-
+    // --- 重命名 ---
     fun confirmRename(newName: String, paneIndex: PaneIndex) {
         val file = selectedFileForAction ?: return
         val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
@@ -388,6 +371,7 @@ class ExplorerViewModel(
                 } else {
                     _events.send(ExplorerEvent.ShowSnackbar("重命名成功"))
                 }
+                state.clearSelection()
                 loadFiles(paneIndex, highlightIds = listOf(file.id))
             } else {
                 _events.send(ExplorerEvent.ShowSnackbar("操作失败"))
@@ -395,18 +379,7 @@ class ExplorerViewModel(
         }
     }
 
-    fun showPropertyDialog() { isPropertyDialogVisible = true }
-    fun hidePropertyDialog() {
-        isPropertyDialogVisible = false
-        selectedFileForAction = null
-    }
-
-    fun showShareSheet() { isShareSheetVisible = true }
-    fun hideShareSheet() {
-        isShareSheetVisible = false
-        selectedFileForAction = null
-    }
-
+    // --- 分享 ---
     fun confirmShare(password: String, expiration: String) {
         val file = selectedFileForAction ?: return
         hideShareSheet()
@@ -423,25 +396,7 @@ class ExplorerViewModel(
         }
     }
 
-    fun showDeleteDialog() { isDeleteDialogVisible = true }
-    fun hideDeleteDialog() { isDeleteDialogVisible = false }
-
-    fun confirmDelete(pane: PaneIndex) {
-        val file = selectedFileForAction ?: return
-        hideDeleteDialog()
-
-        viewModelScope.launch {
-            val result = repository.deleteFiles(listOf(file.id))
-            if (result is PanActionResult.Success) {
-                loadFiles(pane)
-                _events.send(ExplorerEvent.ShowSnackbar("已删除 ${file.name}"))
-            } else if (result is PanActionResult.Error) {
-                _events.send(ExplorerEvent.ShowSnackbar("删除失败: ${result.message}"))
-            }
-            selectedFileForAction = null
-        }
-    }
-
+    // --- 上传 ---
     fun uploadFile(uri: Uri, name: String, size: Long, targetPane: PaneIndex) {
         val state = if (targetPane == PaneIndex.LEFT) leftPane else rightPane
         viewModelScope.launch {
@@ -462,6 +417,30 @@ class ExplorerViewModel(
             isUploading = false
         }
     }
+
+    // --- 下载 ---
+    fun downloadFile(activity: android.app.Activity, file: PanFile) {
+        if (file.id == -1L) return
+        viewModelScope.launch {
+            repository.getDownloadUrl(file).onSuccess { url ->
+                runCatching {
+                    Util1DM.downloadFile(activity, url, false, true)
+                }.onFailure {
+                    updatePaneError(activePane, "1DM 调用失败")
+                }
+            }
+        }
+    }
+
+    // --- 对话框控制 ---
+    fun hideRenameDialog() { isRenameDialogVisible = false }
+    fun showRenameDialog() { isRenameDialogVisible = true }
+    fun showPropertyDialog() { isPropertyDialogVisible = true }
+    fun hidePropertyDialog() { isPropertyDialogVisible = false }
+    fun showShareSheet() { isShareSheetVisible = true }
+    fun hideShareSheet() { isShareSheetVisible = false }
+    fun showDeleteDialog() { isDeleteDialogVisible = true }
+    fun hideDeleteDialog() { isDeleteDialogVisible = false }
 
     private fun updatePaneError(pane: PaneIndex, message: String) {
         if (pane == PaneIndex.LEFT) leftPane.error = message else rightPane.error = message

@@ -23,13 +23,15 @@ import me.voltual.a321.data.unified.PanFile
 fun FileActionMenu(
     isVisible: Boolean,
     file: PanFile?,
-    isRecycleBin: Boolean, // 新增参数：识别当前面板是否在回收站
+    selectedCount: Int, 
+    isRecycleBin: Boolean,
     onDismiss: () -> Unit,
     onAction: (String) -> Unit
 ) {
+    val isBatch = selectedCount > 1
+
     AnimatedVisibility(
-        visible = isVisible && file != null,
-        // 修正参数名，使用默认或更兼容的写法
+        visible = isVisible && (file != null || isBatch),
         enter = fadeIn(animationSpec = tween(200)) + scaleIn(transformOrigin = androidx.compose.ui.graphics.TransformOrigin.Center),
         exit = fadeOut(animationSpec = tween(150)) + scaleOut(transformOrigin = androidx.compose.ui.graphics.TransformOrigin.Center),
         modifier = Modifier.fillMaxSize()
@@ -55,8 +57,9 @@ fun FileActionMenu(
                 Column(
                     modifier = Modifier.padding(vertical = 8.dp)
                 ) {
+                    // 标题栏：如果是批量则显示数量，否则显示文件名
                     Text(
-                        text = file?.name ?: "",
+                        text = if (isBatch) "已选择 $selectedCount 项" else (file?.name ?: ""),
                         modifier = Modifier
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         style = MaterialTheme.typography.titleMedium,
@@ -72,30 +75,45 @@ fun FileActionMenu(
                     )
 
                     if (isRecycleBin) {
-            // 回收站特有操作
-            ActionMenuItem(Icons.Default.Restore, "恢复并回到原处") { onAction("restore") }
-            ActionMenuItem(Icons.Default.DriveFileMove, "移动并恢复") { onAction("move") }
-            ActionMenuItem(Icons.Default.Edit, "重命名并恢复") { onAction("rename") }
-            
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp))
-            
-            ActionMenuItem(
-                icon = Icons.Default.DeleteForever, 
-                label = "彻底删除", 
-                textColor = MaterialTheme.colorScheme.error
-            ) { onAction("delete_permanently") }
-        } else {
-            // 常规操作
-            ActionMenuItem(Icons.Default.Share, "分享") { onAction("share") }
-            ActionMenuItem(Icons.Default.DriveFileMove, "移动") { onAction("move") }
-            ActionMenuItem(Icons.Default.Edit, "重命名") { onAction("rename") }
-            ActionMenuItem(
-                icon = Icons.Default.Delete, 
-                label = "删除", 
-                textColor = MaterialTheme.colorScheme.error
-            ) { onAction("delete") }
-        }
-                    ActionMenuItem(Icons.Default.Info, "属性") { onAction("info") }
+                        // 回收站批量/单项操作
+                        ActionMenuItem(Icons.Default.Restore, if (isBatch) "批量恢复" else "恢复并回到原处") { onAction("restore") }
+                        if (!isBatch) {
+                            ActionMenuItem(Icons.Default.DriveFileMove, "移动并恢复") { onAction("move") }
+                            ActionMenuItem(Icons.Default.Edit, "重命名并恢复") { onAction("rename") }
+                        }
+                        
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp))
+                        
+                        ActionMenuItem(
+                            icon = Icons.Default.DeleteForever, 
+                            label = if (isBatch) "批量彻底删除" else "彻底删除", 
+                            textColor = MaterialTheme.colorScheme.error
+                        ) { onAction("delete_permanently") }
+                    } else {
+                        // 常规批量/单项操作
+                        if (!isBatch) {
+                            ActionMenuItem(Icons.Default.Share, "分享") { onAction("share") }
+                        } else {
+                            // TODO: 批量分享逻辑
+                            ActionMenuItem(Icons.Default.Share, "批量分享 (未实现)") { /* TODO */ }
+                        }
+                        
+                        ActionMenuItem(Icons.Default.DriveFileMove, if (isBatch) "批量移动" else "移动") { onAction("move") }
+                        
+                        if (!isBatch) {
+                            ActionMenuItem(Icons.Default.Edit, "重命名") { onAction("rename") }
+                        }
+
+                        ActionMenuItem(
+                            icon = Icons.Default.Delete, 
+                            label = if (isBatch) "批量删除" else "删除", 
+                            textColor = MaterialTheme.colorScheme.error
+                        ) { onAction("delete") }
+                    }
+
+                    if (!isBatch) {
+                        ActionMenuItem(Icons.Default.Info, "属性") { onAction("info") }
+                    }
                 }
             }
         }

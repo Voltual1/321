@@ -132,35 +132,10 @@ fun ExplorerScreen(
                     Icon(Icons.Default.Add, contentDescription = "上传")
                 }
             },
+            // 移除 bottomBar，模仿 MT 管理器
             bottomBar = {
-                val leftSelected = viewModel.leftPane.isSelectionMode
-                val rightSelected = viewModel.rightPane.isSelectionMode
-                AnimatedVisibility(
-                    visible = leftSelected || rightSelected,
-                    enter = expandVertically(),
-                    exit = shrinkVertically()
-                ) {
-                    val activeSelectionPane = if (leftSelected) PaneIndex.LEFT else PaneIndex.RIGHT
-                    BottomAppBar(
-                        actions = {
-                            IconButton(onClick = { viewModel.moveSelectedFiles(activeSelectionPane) }) {
-                                Icon(Icons.Default.DriveFileMove, contentDescription = "批量移动")
-                            }
-                            IconButton(onClick = { /* 批量分享可选实现 */ }) {
-                                Icon(Icons.Default.Share, contentDescription = "批量分享")
-                            }
-                        },
-                        floatingActionButton = {
-                            FloatingActionButton(
-                                onClick = { viewModel.deleteSelectedFiles(activeSelectionPane) },
-                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                contentColor = MaterialTheme.colorScheme.error
-                            ) {
-                                Icon(Icons.Default.Delete, contentDescription = "批量删除")
-                            }
-                        }
-                    )
-                }
+                // 预留：后退、前进、新建、同步、跳转等按钮
+                // 目前留空
             }
         ) { paddingValues ->
             Column(modifier = Modifier.padding(paddingValues)) {
@@ -188,7 +163,7 @@ fun ExplorerScreen(
                             },
                             onFileLongClick = { file ->
                                 viewModel.setActive(PaneIndex.LEFT)
-                                viewModel.showActionMenu(file)
+                                viewModel.showActionMenu(file, PaneIndex.LEFT)
                             },
                             onBreadcrumbClick = {
                                 viewModel.setActive(PaneIndex.LEFT)
@@ -219,7 +194,7 @@ fun ExplorerScreen(
                             },
                             onFileLongClick = { file ->
                                 viewModel.setActive(PaneIndex.RIGHT)
-                                viewModel.showActionMenu(file)
+                                viewModel.showActionMenu(file, PaneIndex.RIGHT)
                             },
                             onBreadcrumbClick = {
                                 viewModel.setActive(PaneIndex.RIGHT)
@@ -275,10 +250,12 @@ fun ExplorerDialogs(
 ) {
     val selectedFile = viewModel.selectedFileForAction
     val activePaneIndex = viewModel.activePane
+    val selectedCount = if (viewModel.isBatchActionMenu) activePaneState.selectedIds.size else 1
 
     FileActionMenu(
         isVisible = viewModel.isActionMenuVisible,
         file = selectedFile,
+        selectedCount = selectedCount,
         isRecycleBin = activePaneState.isRecycleBin,
         onDismiss = { viewModel.hideActionMenu() },
         onAction = { action -> viewModel.performAction(action, activePaneIndex) }
@@ -309,12 +286,18 @@ fun ExplorerDialogs(
         }
     }
 
-    if (viewModel.isDeleteDialogVisible && selectedFile != null) {
+    if (viewModel.isDeleteDialogVisible) {
         val isRecycle = activePaneState.isRecycleBin
+        val isBatch = viewModel.isBatchActionMenu && activePaneState.selectedIds.size > 1
+
         Dialog(onDismissRequest = { viewModel.hideDeleteDialog() }) {
             ActionsDialogUI(
                 titleText = if (isRecycle) "彻底删除" else "删除",
-                messageText = if (isRecycle) "文件将从回收站永久移除，不可恢复！" else "是否将 ${selectedFile.name} 移入回收站？",
+                messageText = when {
+                    isBatch -> "确定要操作这 ${activePaneState.selectedIds.size} 个文件吗？"
+                    isRecycle -> "文件将从回收站永久移除，不可恢复！"
+                    else -> "是否将 ${selectedFile?.name} 移入回收站？"
+                },
                 primaryText = if (isRecycle) "永久删除" else "放入回收站",
                 primaryIcon = if (isRecycle) Icons.Default.DeleteForever else Icons.Default.Delete,
                 primaryAction = {
@@ -349,7 +332,6 @@ fun FilePane(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(listState, state.fileList) {
-        // 滚动到底部自动加载更多
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .collect { lastVisibleIndex ->
                 if (lastVisibleIndex != null && lastVisibleIndex >= state.fileList.size - 2 && !state.isLoading && state.currentPage < state.totalPages) {
