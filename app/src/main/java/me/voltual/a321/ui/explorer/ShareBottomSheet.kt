@@ -13,7 +13,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.*
-import kotlin.datetime.*
+import kotlin.time.*
 import kotlinx.datetime.TimeZone 
 
 @OptIn(ExperimentalMaterial3Api::class)
