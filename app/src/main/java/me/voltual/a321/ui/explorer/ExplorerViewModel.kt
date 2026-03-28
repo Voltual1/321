@@ -256,37 +256,43 @@ class ExplorerViewModel(
             }
 
             if (result.isSuccess) {
-                if (!isNextPage) {
-                    recentlyModifiedIds.clear()
-                }
+    if (!isNextPage) {
+        recentlyModifiedIds.clear()
+    }
 
-                val (total, newList) = when {
-                    state.isRecycleBin -> {
-                        val res = result.getOrThrow() as me.voltual.a321.data.unified.PanPageResult
-                        res.totalCount to res.files
-                    }
-                    else -> {
-                        result.getOrThrow() as Pair<Int, List<PanFile>>
-                    }
-                }
+    val pageResult = result.getOrThrow() as PanPageResult
+    val total = pageResult.totalCount
+    val newList = pageResult.files
 
-                state.totalCount = total
+    state.totalCount = total
 
-                // 处理返回上一级的虚拟项目
-                val processedList = if (state.currentPage == 1) {
-                    when {
-                        state.isRecycleBin -> {
-                            listOf(PanFile(id = -2, name = ".. [trash]", isDirectory = true, size = 0, updateTime = "")) + newList
-                        }
-                        state.isSearchMode -> {
-                            listOf(PanFile(id = -3, name = ".. [search_results]", isDirectory = true, size = 0, updateTime = "")) + newList
-                        }
-                        state.pathStack.size > 1 -> {
-                            listOf(PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")) + newList
-                        }
-                        else -> newList
-                    }
-                } else {
+    // 处理虚拟项目 ("..")
+    val processedList = if (state.currentPage == 1) {
+        when {
+            state.isRecycleBin -> {
+                listOf(PanFile(id = -2, name = ".. [trash]", isDirectory = true, size = 0, updateTime = "")) + newList
+            }
+            state.isSearchMode -> {
+                listOf(PanFile(id = -3, name = ".. [search_results]", isDirectory = true, size = 0, updateTime = "")) + newList
+            }
+            state.pathStack.size > 1 -> {
+                listOf(PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")) + newList
+            }
+            else -> newList
+        }
+    } else {
+        newList
+    }
+
+    if (isNextPage) {
+        state.fileList = state.fileList + processedList
+    } else {
+        state.fileList = processedList
+    }
+
+    highlightIds?.let { recentlyModifiedIds.addAll(it) }
+
+} else {
                     newList
                 }
 

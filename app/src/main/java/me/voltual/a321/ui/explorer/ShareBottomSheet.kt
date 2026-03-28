@@ -114,7 +114,7 @@ fun ShareFileSheet(
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let {
-                        val instant = kotlinx.datetime.Instant.fromEpochMilliseconds(it)
+                        val instant = kotlin.datetime.Instant.fromEpochMilliseconds(it)
                         selectedDate = instant.toLocalDateTime(TimeZone.UTC).date
                     }
                     showDatePicker = false

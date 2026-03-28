@@ -107,7 +107,7 @@ class PanRepository(private val context: Context) {
 /**
  * 获取文件列表及总条数
  */
-suspend fun getFilesWithTotal(parentId: Long = 0, page: Int = 1): Result<Pair<Int, List<PanFile>>> = runCatching {
+suspend fun getFilesWithTotal(parentId: Long = 0, page: Int = 1): Result<PanPageResult> = runCatching {
     val credentials = AuthManager.getCredentials(context).first()
     val token = credentials.token
     if (token.isEmpty()) throw Exception("Login required")
@@ -116,7 +116,12 @@ suspend fun getFilesWithTotal(parentId: Long = 0, page: Int = 1): Result<Pair<In
     val total = response.data?.Total ?: 0
     val files = response.data?.InfoList?.toUnifiedList() ?: emptyList()
     
-    total to files
+    // 统一封装成 PanPageResult
+    PanPageResult(
+        files = files,
+        totalCount = total,
+        hasMore = files.size >= 100 // 对应 pageSize
+    )
 }
     
     /**
@@ -294,12 +299,15 @@ suspend fun restoreFiles(fileIds: List<Long>): PanActionResult {
  * @param limit 每页数量，默认100
  * @return 搜索结果，包含文件列表和总数
  */
+/**
+ * 搜索文件
+ */
 suspend fun searchFiles(
     keyword: String,
     page: Int = 1,
     parentId: Long = 0,
     limit: Int = 100
-): Result<Pair<Int, List<PanFile>>> = runCatching {
+): Result<PanPageResult> = runCatching {
     val credentials = AuthManager.getCredentials(context).first()
     val token = credentials.token
     if (token.isEmpty()) throw Exception("Login required")
@@ -308,7 +316,11 @@ suspend fun searchFiles(
     val total = response.data?.Total ?: 0
     val files = response.data?.InfoList?.toUnifiedList() ?: emptyList()
     
-    total to files
+    PanPageResult(
+        files = files,
+        totalCount = total,
+        hasMore = files.size >= limit
+    )
 }
 
 /**
