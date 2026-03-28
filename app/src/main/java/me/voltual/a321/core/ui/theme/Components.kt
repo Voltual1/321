@@ -249,7 +249,15 @@ fun BBQSnackbar(
         containerColor = containerColor,
         contentColor = contentColor,
         actionColor = actionColor,
-        dismissActionContentColor = dismissActionContentColor
+        dismissActionContentColor = dismissActionContentColor,
+        dismissAction = {
+            IconButton(onClick = { snackbarData.dismiss() }) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "关闭"
+                )
+            }
+        }
     )
 }
 
