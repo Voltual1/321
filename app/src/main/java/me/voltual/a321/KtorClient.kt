@@ -342,6 +342,36 @@ data class DeleteFileItem(
     val fileId: Long
 )
 
+// 获取分享信息响应的 data 部分
+@Serializable
+data class ShareGetResponseData(
+    val Next: String?,
+    val Len: Int,
+    val IsFirst: Boolean,
+    val Expired: Boolean,
+    val IsPaidPreview: Boolean,
+    val InfoList: List<FileInfo>
+)
+
+// 取消分享的请求体
+@Serializable
+data class ShareDeleteItem(val shareid: Long)
+
+@Serializable
+data class ShareDeleteRequest(
+    val driveId: Int = 0,
+    val shareInfoList: List<ShareDeleteItem>
+)
+
+// 取消分享响应的 data 部分
+@Serializable
+data class ShareDeleteResponseData(
+    val InfoList: List<ShareDeleteItemResult>
+)
+
+@Serializable
+data class ShareDeleteItemResult(val ShareId: Long)
+
 
     // ===== API 接口定义 =====
 
@@ -435,6 +465,32 @@ suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanRe
         orderDirection: String = "desc",
         searchData: String? = null
     ): Result<PanResponse<ShareListData>>
+    
+    /**
+     * 获取分享链接中的文件列表
+     * @param shareKey 分享标识
+     * @param page 页码（从1开始）
+     * @param limit 每页数量
+     * @param parentFileId 文件夹ID（0表示根目录）
+     * @param sharePwd 提取码（可选）
+     */
+    suspend fun getShareInfo(
+        token: String,
+        shareKey: String,
+        page: Int = 1,
+        limit: Int = 200,
+        parentFileId: Long = 0,
+        sharePwd: String? = null
+    ): Result<PanResponse<ShareGetResponseData>>
+
+    /**
+     * 删除分享（取消分享）
+     * @param shareIds 要删除的分享ID列表
+     */
+    suspend fun deleteShare(
+        token: String,
+        shareIds: List<Long>
+    ): Result<PanResponse<ShareDeleteResponseData>>
 }
     
     object ApiServiceImpl : ApiService {
@@ -713,6 +769,44 @@ override suspend fun listShares(
         }
     }
 }
+
+    override suspend fun getShareInfo(
+        token: String,
+        shareKey: String,
+        page: Int,
+        limit: Int,
+        parentFileId: Long,
+        sharePwd: String?
+    ): Result<PanResponse<ShareGetResponseData>> = safeApiCall {
+        httpClient.get("/api/share/get") {
+            bearerAuth(token)
+            url {
+                parameters.append("shareKey", shareKey)
+                parameters.append("Page", page.toString())
+                parameters.append("limit", limit.toString())
+                parameters.append("ParentFileId", parentFileId.toString())
+                if (sharePwd != null) {
+                    parameters.append("SharePwd", sharePwd)
+                }
+                // 可选排序，可根据需要调整
+                parameters.append("orderBy", "file_id")
+                parameters.append("orderDirection", "desc")
+            }
+        }
+    }
+
+    override suspend fun deleteShare(
+        token: String,
+        shareIds: List<Long>
+    ): Result<PanResponse<ShareDeleteResponseData>> = safeApiCall {
+        httpClient.post("/api/share/delete") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody(ShareDeleteRequest(
+                shareInfoList = shareIds.map { ShareDeleteItem(it) }
+            ))
+        }
+    }
     }
 
 
