@@ -326,16 +326,12 @@ fun confirmCreateFolder(name: String, paneIndex: PaneIndex) {
         // 调用 Repository 层的创建方法
         val result = repository.createFolder(name, state.currentPath.id)
         
-        when (result) {
-            is PanActionResult.Success -> {
-                _events.send(ExplorerEvent.ShowSnackbar("文件夹 '$name' 创建成功"))
-                // 刷新当前面板列表
-                loadFiles(paneIndex)
-            }
-            is PanActionResult.Error -> {
-                _events.send(ExplorerEvent.ShowSnackbar("创建失败: ${result.message}"))
-            }
-        }
+        if (result is PanActionResult.Success) {
+    _events.send(ExplorerEvent.ShowSnackbar("文件夹 '$name' 创建成功"))
+    loadFiles(paneIndex)
+} else if (result is PanActionResult.Error) {
+    _events.send(ExplorerEvent.ShowSnackbar("创建失败: ${result.message}"))
+}
     }
 }
 
