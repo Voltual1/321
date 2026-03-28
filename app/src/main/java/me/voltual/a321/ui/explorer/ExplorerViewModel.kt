@@ -65,6 +65,81 @@ class ExplorerViewModel(
         loadFiles(PaneIndex.LEFT)
         loadFiles(PaneIndex.RIGHT)
     }
+    
+    fun setActive(pane: PaneIndex) {
+        if (activePane != pane) activePane = pane
+    }
+    
+    fun downloadFile(activity: android.app.Activity, file: PanFile) {
+        if (file.id == -1L) return
+
+        viewModelScope.launch {
+            repository.getDownloadUrl(file).onSuccess { url ->
+                runCatching {
+                    Util1DM.downloadFile(activity, url, false, true)
+                }.onFailure {
+                    updatePaneError(activePane, "1DM 调用失败")
+                }
+            }
+        }
+    }
+    
+    fun showActionMenu(file: PanFile) {
+        selectedFileForAction = file
+        isActionMenuVisible = true
+    }
+    
+    fun hideRenameDialog() { isRenameDialogVisible = false }
+    
+    fun performAction(action: String, paneIndex: PaneIndex) {
+        val file = selectedFileForAction ?: return
+        val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
+        hideActionMenu()
+
+        viewModelScope.launch {
+            when (action) {
+                "info" -> showPropertyDialog()
+                "share" -> {
+                    if (state.isRecycleBin) {
+                        _events.send(ExplorerEvent.ShowSnackbar("回收站文件需恢复后分享"))
+                    } else {
+                        showShareSheet()
+                    }
+                }
+                "rename" -> showRenameDialog()
+                "move" -> {
+                    val targetPaneIndex = if (paneIndex == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
+                    val targetPathId = (if (targetPaneIndex == PaneIndex.LEFT) leftPane else rightPane).currentPath.id
+                    executeMoveWorkflow(file, paneIndex, targetPathId)
+                }
+                "delete" -> {
+                    if (state.isRecycleBin) {
+                        confirmDeletePermanently(paneIndex)
+                    } else {
+                        showDeleteDialog()
+                    }
+                }
+                "restore" -> {
+                    executeRestore(file, paneIndex)
+                }
+            }
+        }
+    }
+    
+    fun hideActionMenu() { isActionMenuVisible = false }
+    
+    fun confirmDeletePermanently(paneIndex: PaneIndex) {
+        val file = selectedFileForAction ?: return
+        viewModelScope.launch {
+            val result = repository.deleteFilesPermanently(listOf(file.id))
+            if (result is PanActionResult.Success) {
+                // 删除操作不需要标记高亮，因为文件已经没了
+                loadFiles(paneIndex)
+                _events.send(ExplorerEvent.ShowSnackbar("文件已永久删除"))
+            }
+            hideDeleteDialog()
+        }
+    }
 
     /**
      * 核心加载函数
