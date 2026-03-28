@@ -267,7 +267,8 @@ data class ShareListData(
     val Next: String,
     val Len: Int,
     val IsFirst: Boolean,
-    val InfoList: List<ShareInfo>
+    val InfoList: List<ShareInfo>,
+    val Total: Int  
 )
 
 @Serializable

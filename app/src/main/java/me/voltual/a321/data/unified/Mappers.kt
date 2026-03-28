@@ -81,3 +81,34 @@ fun <T> Result<KtorClient.PanResponse<T>>.toActionResult(): PanActionResult {
         }
     )
 }
+
+/**
+ * 将分享信息转换为统一的文件模型，以便在文件列表中显示
+ */
+fun KtorClient.ShareInfo.toUnifiedModel(): PanFile {
+    return PanFile(
+        id = this.ShareId,
+        name = this.ShareName,
+        size = this.bytesTotal,               // 分享文件总大小
+        isDirectory = false,                  // 分享视为文件项
+        updateTime = this.UpdateAt,
+        category = 10,                        // 自定义分类，表示分享
+        isAbnormal = false,
+        etag = null,
+        s3KeyFlag = null,
+        rawDownloadUrl = this.shareLinkList.list.firstOrNull(), // 取第一个分享链接作为原始 URL
+        extension = ""                        // 无扩展名
+    )
+}
+
+/**
+ * 将分享列表响应转换为统一的分页结果
+ */
+fun KtorClient.ShareListData.toPageResult(): PanPageResult {
+    return PanPageResult(
+        files = this.InfoList.map { it.toUnifiedModel() },
+        totalCount = this.Total,
+        hasMore = this.Next != "-1",           // Next 为 "-1" 表示没有更多数据
+        nextMarker = if (this.Next != "-1") this.Next else null
+    )
+}
