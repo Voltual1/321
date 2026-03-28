@@ -20,4 +20,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "A321"
 include(":app")
-include(":DanmakuFlameMaster")
+//include(":DanmakuFlameMaster")
