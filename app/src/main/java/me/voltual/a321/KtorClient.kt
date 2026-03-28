@@ -75,7 +75,7 @@ object KtorClient {
     // ===== 请求模型定义 (用于 POST Body) =====
 
     @Serializable
-data class LoginRequest(
+    data class LoginRequest(
     val type: Int = 1,
     val passport: String,
     val password: String
