@@ -164,13 +164,29 @@ suspend fun deleteFiles(fileIds: List<Long>): PanActionResult {
 }
 
 /**
- * 创建文件夹
+ * 在指定目录下创建新文件夹
+ * @param name 文件夹名称
+ * @param parentId 父目录 ID（根目录为 0）
  */
 suspend fun createFolder(name: String, parentId: Long): PanActionResult {
-    val token = AuthManager.getCredentials(context).first().token
-    if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
-    
-    return apiService.createFolder(token, name, parentId).toActionResult()
+    return runCatching {
+        val credentials = AuthManager.getCredentials(context).first()
+        val token = credentials.token
+        
+        if (token.isEmpty()) {
+            return PanActionResult.Error(-1, "登录已失效，请重新登录")
+        }
+        val response = apiService.createFolder(token, name, parentId).getOrThrow()
+        
+        if (response.isSuccess) {
+            PanActionResult.Success
+        } else {
+            // 处理常见的错误码，例如 4000 可能是文件夹已存在
+            PanActionResult.Error(response.code, response.message)
+        }
+    }.getOrElse { throwable ->
+        PanActionResult.Error(-1, throwable.message ?: "网络请求失败，请稍后重试")
+    }
 }
 
 /**

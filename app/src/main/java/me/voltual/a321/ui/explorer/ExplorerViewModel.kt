@@ -69,6 +69,7 @@ class ExplorerViewModel(
     var isDeleteDialogVisible by mutableStateOf(false); private set
     var selectedFileForAction by mutableStateOf<PanFile?>(null); private set
     var isBatchActionMenu by mutableStateOf(false); private set
+    var isCreateFolderDialogVisible by mutableStateOf(false); private set
 
     private val _events = Channel<ExplorerEvent>(Channel.BUFFERED)
     val events: Flow<ExplorerEvent> = _events.receiveAsFlow()
@@ -299,6 +300,44 @@ class ExplorerViewModel(
             loadFiles(pane)
         }
     }
+    
+    // --- 创建文件夹 ---
+
+    fun showCreateFolderDialog() {
+        isCreateFolderDialogVisible = true
+    }   
+
+    fun hideCreateFolderDialog() {
+        isCreateFolderDialogVisible = false
+    }
+
+/**
+ * 执行创建文件夹操作
+ * @param name 文件夹名称
+ * @param paneIndex 当前操作的面板
+ */
+fun confirmCreateFolder(name: String, paneIndex: PaneIndex) {
+    if (name.isBlank()) return
+    
+    val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
+    hideCreateFolderDialog()
+
+    viewModelScope.launch {
+        // 调用 Repository 层的创建方法
+        val result = repository.createFolder(name, state.currentPath.id)
+        
+        when (result) {
+            is PanActionResult.Success -> {
+                _events.send(ExplorerEvent.ShowSnackbar("文件夹 '$name' 创建成功"))
+                // 刷新当前面板列表
+                loadFiles(paneIndex)
+            }
+            is PanActionResult.Error -> {
+                _events.send(ExplorerEvent.ShowSnackbar("创建失败: ${result.message}"))
+            }
+        }
+    }
+}
 
     fun navigateBack(pane: PaneIndex): Boolean {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane

@@ -268,6 +268,24 @@ fun ExplorerDialogs(
             onConfirm = { password, expiration -> viewModel.confirmShare(password, expiration) }
         )
     }
+    
+    // --- 新建文件夹对话框 ---
+    if (viewModel.isCreateFolderDialogVisible) {
+        Dialog(onDismissRequest = { viewModel.hideCreateFolderDialog() }) {
+            StringInputPrefDialogUI(
+                title = "新建文件夹",
+                initialValue = "", // 初始名称为空
+                onDismiss = { viewModel.hideCreateFolderDialog() },
+                onConfirm = { folderName ->
+                    if (folderName.isNotBlank()) {
+                        viewModel.confirmCreateFolder(folderName, activePaneIndex)
+                    } else {
+                        viewModel.hideCreateFolderDialog()
+                    }
+                }
+            )
+        }
+    }
 
     if (viewModel.isRenameDialogVisible && selectedFile != null) {
         Dialog(onDismissRequest = { viewModel.hideRenameDialog() }) {
