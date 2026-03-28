@@ -132,7 +132,7 @@ data class CreateFolderRequest(
     val driveId: Int = 0,
     val duplicate: Int = 1,
     val NotReuse: Boolean = true, 
-    val etag: String? = null,
+    val etag: String = "",
     val fileName: String,
     val parentFileId: Long,
     val size: Int = 0,
@@ -180,7 +180,7 @@ data class FileInfo(
     val Category: Int = 0,
     val DownloadUrl: String = "", 
     val Status: Int = 0,
-    val UpdateAt: String = "" // 补全此字段
+    val UpdateAt: String = "" 
 ) {
     val isDirectory: Boolean get() = Type == 1
     // 补全此逻辑：123网盘 Status > 100 通常表示文件异常（被封禁或审核不通过）
