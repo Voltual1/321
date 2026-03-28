@@ -359,7 +359,7 @@ fun CreateFileDialogUI(
                 DialogPositiveButton(
                     textId = R.string.file, 
                     onClick = {
-                        if (savedValue.isNotEmpty()) onConfirmFile(savedValue)
+                         onConfirmFile(savedValue)
                     }
                 )
             }

@@ -134,21 +134,11 @@ fun ExplorerScreen(
                     }
                 )
             },
-            // 移除 FloatingActionButton
-            floatingActionButton = {},
-            bottomBar = {
-                BottomAppBar(
-                    actions = {
-                        // “+” 按钮触发新建/上传对话框
-                        BBQIconButton(
-                            onClick = { viewModel.showCreateFileDialog() },
-                            icon = Icons.Default.Add,
-                            contentDescription = "新建或上传"
-                        )
-                        // 预留其他按钮...
-                    }
-                )
-            }
+            floatingActionButton = {
+                FloatingActionButton(onClick = { viewModel.showCreateFileDialog() }) {
+                    Icon(Icons.Default.Add, contentDescription = "新建或上传")
+                }
+            },
         ) { paddingValues ->
             Column(modifier = Modifier.padding(paddingValues)) {
                 UploadProgressBanner(
