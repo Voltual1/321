@@ -139,7 +139,6 @@ fun ExplorerScreen(
                     Icon(Icons.Default.Add, contentDescription = "新建或上传")
                 }
             },
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         ) { paddingValues ->
             Column(modifier = Modifier.padding(paddingValues)) {
                 UploadProgressBanner(

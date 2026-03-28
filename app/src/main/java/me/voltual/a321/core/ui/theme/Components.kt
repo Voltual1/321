@@ -340,7 +340,8 @@ fun BBQSnackbarHost(
 ) {
     SnackbarHost(
         hostState = hostState,
-        modifier = modifier,
+        modifier = modifier.align(Alignment.TopCenter),
+        //这个修饰符可以顶部居中
         snackbar = snackbar
     )
 }
