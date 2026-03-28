@@ -241,20 +241,35 @@ fun BBQSnackbar(
     actionColor: Color = MaterialTheme.colorScheme.primary,
     dismissActionContentColor: Color = contentColor
 ) {
+    // 使用基础版 Snackbar 重载，它支持 dismissAction
     Snackbar(
-        snackbarData = snackbarData,
-        modifier = modifier,
+        modifier = modifier.padding(12.dp),
         actionOnNewLine = actionOnNewLine,
         shape = shape,
         containerColor = containerColor,
         contentColor = contentColor,
-        actionColor = actionColor,
         dismissActionContentColor = dismissActionContentColor,
+        // 设置中间的文本内容
+        content = {
+            Text(text = snackbarData.visuals.message)
+        },
+        // 设置右侧的动作按钮（如果有的话）
+        action = snackbarData.visuals.actionLabel?.let { label ->
+            {
+                TextButton(
+                    onClick = { snackbarData.performAction() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = actionColor)
+                ) {
+                    Text(label)
+                }
+            }
+        },
         dismissAction = {
             IconButton(onClick = { snackbarData.dismiss() }) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "关闭"
+                    contentDescription = "关闭",
+                    tint = dismissActionContentColor
                 )
             }
         }
