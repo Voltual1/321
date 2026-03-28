@@ -90,6 +90,7 @@ class ExplorerViewModel(
     }
     
     fun hideRenameDialog() { isRenameDialogVisible = false }
+    fun showRenameDialog() { isRenameDialogVisible = true }
     
     fun performAction(action: String, paneIndex: PaneIndex) {
         val file = selectedFileForAction ?: return
