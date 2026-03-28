@@ -33,8 +33,8 @@ object KtorClient {
     private const val RETRY_DELAY = 1000L
 
     // 协议常量 (参考 Python 原型)
-    private const val ANDROID_APP_VERSION = "61"
-    private const val ANDROID_X_APP_VERSION = "2.4.0"
+    private const val ANDROID_APP_VERSION = "313"
+    private const val ANDROID_X_APP_VERSION = "3.1.3"
 
     val httpClient = HttpClient(OkHttp) {
         install(ContentNegotiation) {
@@ -278,6 +278,16 @@ data class RenameRequest(
     val fileId: Long
 )
 
+@Serializable
+data class DeleteFileRequest(
+    val fileIdList: List<DeleteFileItem>
+)
+
+@Serializable
+data class DeleteFileItem(
+    val fileId: Long
+)
+
 
     // ===== API 接口定义 =====
 
@@ -321,6 +331,9 @@ suspend fun listRecycle(token: String, page: Int = 1): Result<PanResponse<FileLi
 
 // 恢复文件（从回收站）
 suspend fun restoreFiles(token: String, fileIds: List<Long>): Result<PanResponse<Unit>>
+
+// 彻底删除文件（不可恢复）
+    suspend fun deleteFilesPermanently(token: String, fileIds: List<Long>): Result<PanResponse<Unit>>
 
 // 获取文件夹详情（支持多个ID）
 suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanResponse<List<FolderDetailsData>>>
@@ -484,6 +497,17 @@ suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanRe
             ))
         }
     }
+    
+    override suspend fun deleteFilesPermanently(token: String, fileIds: List<Long>) = safeApiCall<PanResponse<Unit>> {
+    httpClient.post("/api/file/delete") {
+        bearerAuth(token)
+        contentType(ContentType.Application.Json)
+        //彻底删除！
+        setBody(DeleteFileRequest(
+            fileIdList = fileIds.map { DeleteFileItem(it) }
+        ))
+    }
+}
     
     override suspend fun getUserInfo(token: String) = safeApiCall<PanResponse<UserInfo>> {
     httpClient.get("/b/api/user/info") {
