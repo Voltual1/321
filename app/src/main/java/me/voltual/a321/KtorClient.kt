@@ -31,8 +31,6 @@ object KtorClient {
     const val BASE_URL = "https://www.123pan.com"
     private const val MAX_RETRIES = 3
     private const val RETRY_DELAY = 1000L
-
-    // 协议常量 (参考 Python 原型)
     private const val ANDROID_APP_VERSION = "313"
     private const val ANDROID_X_APP_VERSION = "3.1.3"
 
