@@ -27,28 +27,30 @@ class ExplorerViewModel(
 ) : ViewModel() {
 
     class PaneState {
-        var fileList by mutableStateOf<List<PanFile>>(emptyList())
-        var isLoading by mutableStateOf(false)
-        var error by mutableStateOf<String?>(null)
-        var pathStack by mutableStateOf(listOf(PanPath(0, "/")))
-        val currentPath: PanPath get() = pathStack.last()
-        var isRecycleBin by mutableStateOf(false)
+    var fileList by mutableStateOf<List<PanFile>>(emptyList())
+    var isLoading by mutableStateOf(false)
+    var error by mutableStateOf<String?>(null)
+    var pathStack by mutableStateOf(listOf(PanPath(0, "/")))
+    val currentPath: PanPath get() = pathStack.last()
+    var isRecycleBin by mutableStateOf(false)
 
-        var currentPage by mutableIntStateOf(1)
-        var totalCount by mutableIntStateOf(0)
-        val pageSize = 100
-        val totalPages: Int get() = ceil(totalCount.toDouble() / pageSize).toInt().coerceAtLeast(1)
+    var currentPage by mutableIntStateOf(1)
+    var totalCount by mutableIntStateOf(0)
+    val pageSize = 100
+    val totalPages: Int get() = ceil(totalCount.toDouble() / pageSize).toInt().coerceAtLeast(1)
 
-        // 多选状态
-        val selectedIds = mutableStateListOf<Long>()
-        val isSelectionMode: Boolean get() = selectedIds.isNotEmpty()
-        var lastSelectedIndex by mutableIntStateOf(-1)
+    // 多选状态
+    val selectedIds = mutableStateListOf<Long>()
+    
+    val isSelectionMode: Boolean get() = selectedIds.size > 1
+    
+    var lastSelectedIndex by mutableIntStateOf(-1)
 
-        fun clearSelection() {
-            selectedIds.clear()
-            lastSelectedIndex = -1
-        }
+    fun clearSelection() {
+        selectedIds.clear()
+        lastSelectedIndex = -1
     }
+}
 
     val leftPane = PaneState()
     val rightPane = PaneState()
