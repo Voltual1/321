@@ -27,30 +27,30 @@ class ExplorerViewModel(
 ) : ViewModel() {
 
     class PaneState {
-    var fileList by mutableStateOf<List<PanFile>>(emptyList())
-    var isLoading by mutableStateOf(false)
-    var error by mutableStateOf<String?>(null)
-    var pathStack by mutableStateOf(listOf(PanPath(0, "/")))
-    val currentPath: PanPath get() = pathStack.last()
-    var isRecycleBin by mutableStateOf(false)
+        var fileList by mutableStateOf<List<PanFile>>(emptyList())
+        var isLoading by mutableStateOf(false)
+        var error by mutableStateOf<String?>(null)
+        var pathStack by mutableStateOf(listOf(PanPath(0, "/")))
+        val currentPath: PanPath get() = pathStack.last()
+        var isRecycleBin by mutableStateOf(false)
 
-    var currentPage by mutableIntStateOf(1)
-    var totalCount by mutableIntStateOf(0)
-    val pageSize = 100
-    val totalPages: Int get() = ceil(totalCount.toDouble() / pageSize).toInt().coerceAtLeast(1)
+        var currentPage by mutableIntStateOf(1)
+        var totalCount by mutableIntStateOf(0)
+        val pageSize = 100
+        val totalPages: Int get() = ceil(totalCount.toDouble() / pageSize).toInt().coerceAtLeast(1)
 
-    // 多选状态
-    val selectedIds = mutableStateListOf<Long>()
-    
-    val isSelectionMode: Boolean get() = selectedIds.size > 1
-    
-    var lastSelectedIndex by mutableIntStateOf(-1)
+        // 多选状态
+        val selectedIds = mutableStateListOf<Long>()
+        
+        val isSelectionMode: Boolean get() = selectedIds.size > 1
+        
+        var lastSelectedIndex by mutableIntStateOf(-1)
 
-    fun clearSelection() {
-        selectedIds.clear()
-        lastSelectedIndex = -1
+        fun clearSelection() {
+            selectedIds.clear()
+            lastSelectedIndex = -1
+        }
     }
-}
 
     val leftPane = PaneState()
     val rightPane = PaneState()
@@ -69,7 +69,11 @@ class ExplorerViewModel(
     var isDeleteDialogVisible by mutableStateOf(false); private set
     var selectedFileForAction by mutableStateOf<PanFile?>(null); private set
     var isBatchActionMenu by mutableStateOf(false); private set
-    var isCreateFolderDialogVisible by mutableStateOf(false); private set
+    // 修改：将原来的 isCreateFolderDialogVisible 改为通用的新建/上传对话框状态
+    var isCreateFileDialogVisible by mutableStateOf(false); private set
+    
+    // 暂存用户想要重命名的上传文件名
+    var pendingUploadName by mutableStateOf("")
 
     private val _events = Channel<ExplorerEvent>(Channel.BUFFERED)
     val events: Flow<ExplorerEvent> = _events.receiveAsFlow()
@@ -301,39 +305,44 @@ class ExplorerViewModel(
         }
     }
     
-    // --- 创建文件夹 ---
-
-    fun showCreateFolderDialog() {
-        isCreateFolderDialogVisible = true
-    }   
-
-    fun hideCreateFolderDialog() {
-        isCreateFolderDialogVisible = false
+    // --- 创建/上传对话框 ---
+    fun showCreateFileDialog() {
+        pendingUploadName = "" // 重置
+        isCreateFileDialogVisible = true
     }
 
-/**
- * 执行创建文件夹操作
- * @param name 文件夹名称
- * @param paneIndex 当前操作的面板
- */
-fun confirmCreateFolder(name: String, paneIndex: PaneIndex) {
-    if (name.isBlank()) return
-    
-    val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
-    hideCreateFolderDialog()
+    fun hideCreateFileDialog() {
+        isCreateFileDialogVisible = false
+    }
 
-    viewModelScope.launch {
-        // 调用 Repository 层的创建方法
-        val result = repository.createFolder(name, state.currentPath.id)
+    /**
+     * 当用户在对话框点击“文件”时触发，暂存自定义文件名
+     */
+    fun prepareUpload(customName: String) {
+        pendingUploadName = customName
+        hideCreateFileDialog()
+        // 不直接调用上传，由 UI 层触发文件选择器
+    }
+
+    /**
+     * 执行创建文件夹操作
+     */
+    fun confirmCreateFolder(name: String, paneIndex: PaneIndex) {
+        if (name.isBlank()) return
         
-        if (result is PanActionResult.Success) {
-    _events.send(ExplorerEvent.ShowSnackbar("文件夹 '$name' 创建成功"))
-    loadFiles(paneIndex)
-} else if (result is PanActionResult.Error) {
-    _events.send(ExplorerEvent.ShowSnackbar("创建失败: ${result.message}"))
-}
+        val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
+        hideCreateFileDialog()
+
+        viewModelScope.launch {
+            val result = repository.createFolder(name, state.currentPath.id)
+            if (result is PanActionResult.Success) {
+                _events.send(ExplorerEvent.ShowSnackbar("文件夹 '$name' 创建成功"))
+                loadFiles(paneIndex)
+            } else if (result is PanActionResult.Error) {
+                _events.send(ExplorerEvent.ShowSnackbar("创建失败: ${result.message}"))
+            }
+        }
     }
-}
 
     fun navigateBack(pane: PaneIndex): Boolean {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
@@ -433,25 +442,37 @@ fun confirmCreateFolder(name: String, paneIndex: PaneIndex) {
         }
     }
 
-    // --- 上传 ---
-    fun uploadFile(uri: Uri, name: String, size: Long, targetPane: PaneIndex) {
+    // --- 上传（支持自定义文件名）---
+    fun uploadFile(uri: Uri, defaultName: String, size: Long, targetPane: PaneIndex) {
         val state = if (targetPane == PaneIndex.LEFT) leftPane else rightPane
+        
+        // 逻辑：如果 pendingUploadName 不为空，则使用它；否则使用原始文件名
+        val finalName = if (pendingUploadName.isNotBlank()) {
+            pendingUploadName
+        } else {
+            defaultName
+        }
+
         viewModelScope.launch {
             isUploading = true
             uploadProgress = 0f
-            uploadMessage = "上传至 ${state.currentPath.name}..."
+            uploadMessage = "上传 $finalName 至 ${state.currentPath.name}..."
 
             repository.uploadFile(
                 uri = uri,
-                fileName = name,
+                fileName = finalName,
                 fileSize = size,
                 parentId = state.currentPath.id,
                 onProgress = { uploadProgress = it }
             ).onSuccess {
                 loadFiles(targetPane)
+                _events.send(ExplorerEvent.ShowSnackbar("上传成功: $finalName"))
+            }.onFailure {
+                _events.send(ExplorerEvent.ShowSnackbar("上传失败: ${it.message}"))
             }
             delay(2000)
             isUploading = false
+            pendingUploadName = "" // 清除暂存
         }
     }
 

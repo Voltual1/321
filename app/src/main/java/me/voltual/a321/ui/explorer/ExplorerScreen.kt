@@ -45,6 +45,7 @@ import me.voltual.a321.data.unified.PanFile
 import me.voltual.a321.data.unified.PanPath
 import me.voltual.a321.ui.dialog.ActionsDialogUI
 import me.voltual.a321.ui.dialog.StringInputPrefDialogUI
+import me.voltual.a321.ui.dialog.CreateFileDialogUI
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -92,13 +93,19 @@ fun ExplorerScreen(
         }
     }
 
+    // 文件选择器：在对话框点击“文件”后触发
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
             val file = DocumentFileCompat.fromUri(context, it)
             if (file != null) {
-                viewModel.uploadFile(it, file.name ?: "unknown", file.length(), viewModel.activePane)
+                viewModel.uploadFile(
+                    uri = it,
+                    defaultName = file.name ?: "unknown",
+                    size = file.length(),
+                    targetPane = viewModel.activePane
+                )
             }
         }
     }
@@ -127,23 +134,21 @@ fun ExplorerScreen(
                     }
                 )
             },
-            floatingActionButton = {
-                FloatingActionButton(onClick = { filePickerLauncher.launch("*/*") }) {
-                    Icon(Icons.Default.Add, contentDescription = "上传")
-                }
-            },
+            // 移除 FloatingActionButton
+            floatingActionButton = {},
             bottomBar = {
-    BottomAppBar(
-        actions = {
-            BBQIconButton(
-                onClick = { viewModel.showCreateFolderDialog() },
-                icon = Icons.Default.Add,//Icons.Default.CreateNewFolder,
-                contentDescription = "新建文件夹"
-            )
-            // 预留：后退、前进、新建、同步、跳转等按钮
-        }
-    )
-}
+                BottomAppBar(
+                    actions = {
+                        // “+” 按钮触发新建/上传对话框
+                        BBQIconButton(
+                            onClick = { viewModel.showCreateFileDialog() },
+                            icon = Icons.Default.Add,
+                            contentDescription = "新建或上传"
+                        )
+                        // 预留其他按钮...
+                    }
+                )
+            }
         ) { paddingValues ->
             Column(modifier = Modifier.padding(paddingValues)) {
                 UploadProgressBanner(
@@ -217,7 +222,12 @@ fun ExplorerScreen(
             }
         }
 
-        ExplorerDialogs(viewModel = viewModel, activePaneState = activeState)
+        // 对话框区域，传入文件选择器回调
+        ExplorerDialogs(
+            viewModel = viewModel,
+            activePaneState = activeState,
+            onTriggerFilePicker = { filePickerLauncher.launch("*/*") }
+        )
     }
 }
 
@@ -253,7 +263,8 @@ private fun PaneContainer(
 @Composable
 fun ExplorerDialogs(
     viewModel: ExplorerViewModel,
-    activePaneState: ExplorerViewModel.PaneState
+    activePaneState: ExplorerViewModel.PaneState,
+    onTriggerFilePicker: () -> Unit
 ) {
     val selectedFile = viewModel.selectedFileForAction
     val activePaneIndex = viewModel.activePane
@@ -268,30 +279,32 @@ fun ExplorerDialogs(
         onAction = { action -> viewModel.performAction(action, activePaneIndex) }
     )
 
+    // --- 新建/上传混合对话框 ---
+    if (viewModel.isCreateFileDialogVisible) {
+        Dialog(onDismissRequest = { viewModel.hideCreateFileDialog() }) {
+            CreateFileDialogUI(
+                title = "新建或上传",
+                initialValue = "",
+                onDismiss = { viewModel.hideCreateFileDialog() },
+                onConfirmFolder = { folderName ->
+                    viewModel.confirmCreateFolder(folderName, activePaneIndex)
+                },
+                onConfirmFile = { fileName ->
+                    // 1. 暂存文件名并关闭对话框
+                    viewModel.prepareUpload(fileName)
+                    // 2. 触发系统文件选择器
+                    onTriggerFilePicker()
+                }
+            )
+        }
+    }
+
     if (viewModel.isShareSheetVisible && selectedFile != null) {
         ShareFileSheet(
             fileName = selectedFile.name,
             onDismiss = { viewModel.hideShareSheet() },
             onConfirm = { password, expiration -> viewModel.confirmShare(password, expiration) }
         )
-    }
-    
-    // --- 新建文件夹对话框 ---
-    if (viewModel.isCreateFolderDialogVisible) {
-        Dialog(onDismissRequest = { viewModel.hideCreateFolderDialog() }) {
-            StringInputPrefDialogUI(
-                title = "新建文件夹",
-                initialValue = "", // 初始名称为空
-                onDismiss = { viewModel.hideCreateFolderDialog() },
-                onConfirm = { folderName ->
-                    if (folderName.isNotBlank()) {
-                        viewModel.confirmCreateFolder(folderName, activePaneIndex)
-                    } else {
-                        viewModel.hideCreateFolderDialog()
-                    }
-                }
-            )
-        }
     }
 
     if (viewModel.isRenameDialogVisible && selectedFile != null) {
@@ -369,22 +382,22 @@ fun FilePane(
         BreadcrumbsBar(pathStack = state.pathStack, onPathClick = onBreadcrumbClick)
 
         AnimatedVisibility(visible = state.isSelectionMode && state.selectedIds.size > 1) {
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("已选择 ${state.selectedIds.size} 项", style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = { state.clearSelection() }) {
-                Text("取消")
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("已选择 ${state.selectedIds.size} 项", style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = { state.clearSelection() }) {
+                        Text("取消")
+                    }
+                }
             }
         }
-    }
-}
 
         if (state.isLoading && state.fileList.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
