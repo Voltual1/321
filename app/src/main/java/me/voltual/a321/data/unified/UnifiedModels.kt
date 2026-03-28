@@ -13,7 +13,7 @@ data class PanFile(
     val isAbnormal: Boolean = false,
     val etag: String? = null,
     val s3KeyFlag: String? = null,
-    val rawDownloadUrl: String? = null,
+    val rawDownloadUrl: String,
     val extension: String = name.substringAfterLast(".", ""),
     // --- 分享相关字段 ---
     val shareKey: String? = null,
