@@ -117,6 +117,12 @@ fun ExplorerScreen(
                 TopAppBar(
                     title = { Text("A321") },
                     actions = {
+                        // 新增搜索按钮
+                        BBQIconButton(
+                            onClick = { viewModel.showSearchDialog() },
+                            icon = Icons.Default.Search,
+                            contentDescription = "搜索"
+                        )
                         BBQIconButton(
                             onClick = { viewModel.toggleRecycleBin(viewModel.activePane) },
                             icon = if (activeState.isRecycleBin) Icons.Default.CloudQueue else Icons.Default.DeleteSweep,
@@ -281,6 +287,21 @@ fun ExplorerDialogs(
                 onConfirmFile = { fileName ->
                     viewModel.prepareUpload(fileName)
                     onTriggerFilePicker()
+                }
+            )
+        }
+    }
+
+    // 新增搜索对话框
+    if (viewModel.isSearchDialogVisible) {
+        Dialog(onDismissRequest = { viewModel.hideSearchDialog() }) {
+            StringInputPrefDialogUI(
+                title = "搜索文件",
+                initialValue = "",
+                onDismiss = { viewModel.hideSearchDialog() },
+                onConfirm = { keyword ->
+                    viewModel.hideSearchDialog()
+                    viewModel.toggleSearch(activePaneIndex, keyword)
                 }
             )
         }

@@ -287,6 +287,31 @@ suspend fun restoreFiles(fileIds: List<Long>): PanActionResult {
 }
 
 /**
+ * 搜索文件
+ * @param keyword 搜索关键词
+ * @param page 页码（从1开始）
+ * @param parentId 搜索的目录ID，默认为0（全盘搜索）
+ * @param limit 每页数量，默认100
+ * @return 搜索结果，包含文件列表和总数
+ */
+suspend fun searchFiles(
+    keyword: String,
+    page: Int = 1,
+    parentId: Long = 0,
+    limit: Int = 100
+): Result<Pair<Int, List<PanFile>>> = runCatching {
+    val credentials = AuthManager.getCredentials(context).first()
+    val token = credentials.token
+    if (token.isEmpty()) throw Exception("Login required")
+    
+    val response = apiService.searchFiles(token, keyword, page, limit, parentId).getOrThrow()
+    val total = response.data?.Total ?: 0
+    val files = response.data?.InfoList?.toUnifiedList() ?: emptyList()
+    
+    total to files
+}
+
+/**
  * 重命名文件或文件夹
  * @param fileId 文件/文件夹的唯一 ID
  * @param newName 新的文件名（如果是文件，应包含后缀名）

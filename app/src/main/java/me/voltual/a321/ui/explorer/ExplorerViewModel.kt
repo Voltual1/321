@@ -33,6 +33,10 @@ class ExplorerViewModel(
         var pathStack by mutableStateOf(listOf(PanPath(0, "/")))
         val currentPath: PanPath get() = pathStack.last()
         var isRecycleBin by mutableStateOf(false)
+        
+        // 搜索相关状态
+        var isSearchMode by mutableStateOf(false)
+        var searchKeyword by mutableStateOf("")
 
         var currentPage by mutableIntStateOf(1)
         var totalCount by mutableIntStateOf(0)
@@ -76,6 +80,9 @@ class ExplorerViewModel(
     
     var isCreateFileDialogVisible by mutableStateOf(false); private set
     var pendingUploadName by mutableStateOf("")
+    
+    // 新增：搜索对话框状态
+    var isSearchDialogVisible by mutableStateOf(false); private set
 
     private val _events = Channel<ExplorerEvent>(Channel.BUFFERED)
     val events: Flow<ExplorerEvent> = _events.receiveAsFlow()
@@ -122,7 +129,6 @@ class ExplorerViewModel(
                     if (state.isRecycleBin) {
                         _events.send(ExplorerEvent.ShowSnackbar("回收站文件需恢复后分享"))
                     } else {
-                        // 设置分享数据
                         sharingFileIds = targetIds
                         sharingDisplayName = if (isBatch) "已选择 ${targetIds.size} 个项目" else file.name
                         showShareSheet()
@@ -227,10 +233,26 @@ class ExplorerViewModel(
 
             state.error = null
 
-            val result = if (state.isRecycleBin) {
-                repository.getRecycleBinFiles(state.currentPage)
-            } else {
-                repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
+            // 根据模式选择 API
+            val result = when {
+                state.isRecycleBin -> {
+                    repository.getRecycleBinFiles(state.currentPage)
+                }
+                state.isSearchMode -> {
+                    // 获取搜索范围的父目录 ID
+                    val searchParentId = if (state.pathStack.size > 1) {
+                        state.pathStack[state.pathStack.size - 2].id
+                    } else 0L
+                    
+                    repository.searchFiles(
+                        keyword = state.searchKeyword,
+                        page = state.currentPage,
+                        parentId = searchParentId
+                    )
+                }
+                else -> {
+                    repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
+                }
             }
 
             if (result.isSuccess) {
@@ -238,21 +260,32 @@ class ExplorerViewModel(
                     recentlyModifiedIds.clear()
                 }
 
-                val (total, newList) = if (state.isRecycleBin) {
-                    val res = result.getOrThrow() as me.voltual.a321.data.unified.PanPageResult
-                    res.totalCount to res.files
-                } else {
-                    result.getOrThrow() as Pair<Int, List<PanFile>>
+                val (total, newList) = when {
+                    state.isRecycleBin -> {
+                        val res = result.getOrThrow() as me.voltual.a321.data.unified.PanPageResult
+                        res.totalCount to res.files
+                    }
+                    else -> {
+                        result.getOrThrow() as Pair<Int, List<PanFile>>
+                    }
                 }
 
                 state.totalCount = total
 
-                val processedList = if (!state.isRecycleBin && state.pathStack.size > 1 && state.currentPage == 1) {
-                    val upFolder = PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")
-                    listOf(upFolder) + newList
-                } else if (state.isRecycleBin && state.currentPage == 1) {
-                    val backItem = PanFile(id = -2, name = ".. [退出回收站]", isDirectory = true, size = 0, updateTime = "")
-                    listOf(backItem) + newList
+                // 处理返回上一级的虚拟项目
+                val processedList = if (state.currentPage == 1) {
+                    when {
+                        state.isRecycleBin -> {
+                            listOf(PanFile(id = -2, name = ".. [退出回收站]", isDirectory = true, size = 0, updateTime = "")) + newList
+                        }
+                        state.isSearchMode -> {
+                            listOf(PanFile(id = -3, name = ".. [退出搜索]", isDirectory = true, size = 0, updateTime = "")) + newList
+                        }
+                        state.pathStack.size > 1 -> {
+                            listOf(PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "")) + newList
+                        }
+                        else -> newList
+                    }
                 } else {
                     newList
                 }
@@ -273,6 +306,29 @@ class ExplorerViewModel(
         }
     }
 
+    // 新增：切换搜索模式
+    fun toggleSearch(pane: PaneIndex, keyword: String) {
+        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+        if (keyword.isNotBlank()) {
+            state.isSearchMode = true
+            state.searchKeyword = keyword
+            // 添加特殊路径以显示面包屑
+            state.pathStack = state.pathStack + PanPath(-3, "搜索: $keyword")
+            loadFiles(pane)
+        }
+    }
+
+    // 新增：退出搜索模式
+    fun exitSearch(pane: PaneIndex) {
+        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+        if (state.isSearchMode) {
+            state.isSearchMode = false
+            state.searchKeyword = ""
+            state.pathStack = state.pathStack.dropLast(1)
+            loadFiles(pane)
+        }
+    }
+
     fun toggleRecycleBin(pane: PaneIndex) {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
         if (!state.isRecycleBin) {
@@ -287,16 +343,35 @@ class ExplorerViewModel(
 
     fun enterFolder(pane: PaneIndex, folder: PanFile) {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+        // 退出回收站
         if (state.isRecycleBin && folder.id == -2L) {
             toggleRecycleBin(pane)
             return
         }
+        // 退出搜索
+        if (state.isSearchMode && folder.id == -3L) {
+            exitSearch(pane)
+            return
+        }
+        // 返回上级
         if (folder.name == ".." && folder.id == -1L) {
             navigateBack(pane)
             return
         }
+        // 进入文件夹
         if (folder.isDirectory) {
             state.pathStack = state.pathStack + PanPath(folder.id, folder.name)
+            // 如果是在搜索结果中点击文件夹，退出搜索模式
+            if (state.isSearchMode) {
+                state.isSearchMode = false
+                state.searchKeyword = ""
+                // 移除搜索路径节点，保留新进入的文件夹节点
+                val newStack = state.pathStack.toMutableList()
+                if (newStack.size >= 2 && newStack[newStack.size - 2].id == -3L) {
+                    newStack.removeAt(newStack.size - 2)
+                    state.pathStack = newStack
+                }
+            }
             loadFiles(pane)
         }
     }
@@ -334,6 +409,10 @@ class ExplorerViewModel(
 
     fun navigateBack(pane: PaneIndex): Boolean {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+        if (state.isSearchMode) {
+            exitSearch(pane)
+            return true
+        }
         if (state.isRecycleBin) {
             toggleRecycleBin(pane)
             return true
@@ -484,6 +563,10 @@ class ExplorerViewModel(
     fun hideShareSheet() { isShareSheetVisible = false }
     fun showDeleteDialog() { isDeleteDialogVisible = true }
     fun hideDeleteDialog() { isDeleteDialogVisible = false }
+    
+    // 新增：搜索对话框控制
+    fun showSearchDialog() { isSearchDialogVisible = true }
+    fun hideSearchDialog() { isSearchDialogVisible = false }
 
     private fun updatePaneError(pane: PaneIndex, message: String) {
         if (pane == PaneIndex.LEFT) leftPane.error = message else rightPane.error = message
