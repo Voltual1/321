@@ -263,6 +263,57 @@ data class FolderDetailsData(
 )
 
 @Serializable
+data class ShareListData(
+    val Next: String,
+    val Len: Int,
+    val IsFirst: Boolean,
+    val InfoList: List<ShareInfo>
+)
+
+@Serializable
+data class ShareInfo(
+    val ShareId: Long,
+    val ShareKey: String,
+    val DriveId: Int,
+    val FileIdList: String,
+    val DownloadCount: Int,
+    val PreviewCount: Int,
+    val SaveCount: Int,
+    val ShareName: String,
+    val Expiration: String,
+    val Expired: Boolean,
+    val SharePwd: String,
+    val Status: Int,
+    val CreateAt: String,
+    val UpdateAt: String,
+    val bytesCharge: Long,
+    val bytesTotal: Long,
+    val isPayShare: Int,
+    val isReward: Int,
+    val auditStatus: Int,
+    val amount: Int,
+    val ShareUrl: String,
+    val shareLinkList: ShareLinkList,
+    val trafficSwitch: Int,
+    val trafficLimitSwitch: Int,
+    val trafficLimit: Int,
+    val noLoginStdAmount: Int,
+    val noLoginStdAmountDesc: String,
+    val fillPwdSwitch: Int,
+    val payAmount: Int,
+    val shareMessage: String,
+    val createStatus: Int,
+    val createMsg: String,
+    val isViolation: Int
+)
+
+@Serializable
+data class ShareLinkList(
+    val list: List<String>,
+    val standBy: String
+)
+
+@Serializable
 data class MoveFileRequest(
     val fileIdList: List<MoveFileItem>,
     val parentFileId: Long
@@ -365,6 +416,25 @@ suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanRe
     limit: Int = 100,
     parentFileId: Long = 0
 ): Result<PanResponse<FileListData>>
+
+    /**
+     * 获取分享列表
+     * @param token 用户授权 Token
+     * @param next 分页标识，首次请求传 null，后续使用响应中的 Next 字段
+     * @param limit 每页数量，默认 100
+     * @param orderBy 排序字段，默认 "fileId"
+     * @param orderDirection 排序方向，默认 "desc"
+     * @param searchData 搜索关键词，可选
+     */
+    suspend fun listShares(
+        token: String,
+        next: String? = null,
+        limit: Int = 100,
+        orderBy: String = "fileId",
+        orderDirection: String = "desc",
+        searchData: String? = null
+    ): Result<PanResponse<ShareListData>>
+}
     }
 
     object ApiServiceImpl : ApiService {
@@ -622,6 +692,27 @@ override suspend fun searchFiles(
         }
     }
 }
+
+override suspend fun listShares(
+        token: String,
+        next: String?,
+        limit: Int,
+        orderBy: String,
+        orderDirection: String,
+        searchData: String?
+    ): Result<PanResponse<ShareListData>> = safeApiCall {
+        httpClient.get("/api/share/list") {
+            bearerAuth(token)
+            url {
+                parameters.append("driveId", "0")
+                parameters.append("limit", limit.toString())
+                if (next != null) parameters.append("next", next)
+                parameters.append("orderBy", orderBy)
+                parameters.append("orderDirection", orderDirection)
+                if (searchData != null) parameters.append("SearchData", searchData)
+            }
+        }
+    }
     }
 
 
