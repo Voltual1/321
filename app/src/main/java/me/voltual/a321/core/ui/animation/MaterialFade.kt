@@ -13,28 +13,14 @@ import androidx.compose.animation.scaleIn
 private const val DefaultFadeEndThresholdEnter = 0.3f
 
 private val Int.ForFade: Int
-    get() = (this * DefaultFadeEndThresholdEnter).toInt()
+  get() = (this * DefaultFadeEndThresholdEnter).toInt()
 
-fun materialFadeIn(
-    durationMillis: Int = DefaultFadeInDuration,
-): EnterTransition = fadeIn(
-    animationSpec = tween(
-        durationMillis = durationMillis.ForFade,
-        easing = LinearEasing,
-    ),
-) + scaleIn(
-    animationSpec = tween(
-        durationMillis = durationMillis,
-        easing = FastOutSlowInEasing,
-    ),
-    initialScale = 0.8f,
-)
+fun materialFadeIn(durationMillis: Int = DefaultFadeInDuration): EnterTransition =
+  fadeIn(animationSpec = tween(durationMillis = durationMillis.ForFade, easing = LinearEasing)) +
+    scaleIn(
+      animationSpec = tween(durationMillis = durationMillis, easing = FastOutSlowInEasing),
+      initialScale = 0.8f,
+    )
 
-fun materialFadeOut(
-    durationMillis: Int = DefaultFadeOutDuration,
-): ExitTransition = fadeOut(
-    animationSpec = tween(
-        durationMillis = durationMillis,
-        easing = LinearEasing,
-    ),
-)
+fun materialFadeOut(durationMillis: Int = DefaultFadeOutDuration): ExitTransition =
+  fadeOut(animationSpec = tween(durationMillis = durationMillis, easing = LinearEasing))

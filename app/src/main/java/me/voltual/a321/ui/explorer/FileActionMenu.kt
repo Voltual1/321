@@ -1,4 +1,5 @@
 @file:Suppress("DEPRECATION")
+
 package me.voltual.a321.ui.explorer
 
 import androidx.compose.animation.*
@@ -23,168 +24,176 @@ import me.voltual.a321.data.unified.PanFile
 
 @Composable
 fun FileActionMenu(
-    isVisible: Boolean,
-    file: PanFile?,
-    selectedCount: Int,
-    activePaneIndex: PaneIndex,
-    isRecycleBin: Boolean,
-    isShareListMode: Boolean,
-    isExternalShareMode: Boolean, // 新增：是否为外部分享模式
-    onDismiss: () -> Unit,
-    onAction: (String) -> Unit
+  isVisible: Boolean,
+  file: PanFile?,
+  selectedCount: Int,
+  activePaneIndex: PaneIndex,
+  isRecycleBin: Boolean,
+  isShareListMode: Boolean,
+  isExternalShareMode: Boolean, // 新增：是否为外部分享模式
+  onDismiss: () -> Unit,
+  onAction: (String) -> Unit,
 ) {
-    val isBatch = selectedCount > 1
-    val moveIconModifier = if (activePaneIndex == PaneIndex.RIGHT) {
-        Modifier.graphicsLayer(scaleX = -1f)
+  val isBatch = selectedCount > 1
+  val moveIconModifier =
+    if (activePaneIndex == PaneIndex.RIGHT) {
+      Modifier.graphicsLayer(scaleX = -1f)
     } else {
-        Modifier
+      Modifier
     }
 
-    AnimatedVisibility(
-        visible = isVisible && (file != null || isBatch),
-        enter = fadeIn(animationSpec = tween(200)) + scaleIn(transformOrigin = androidx.compose.ui.graphics.TransformOrigin.Center),
-        exit = fadeOut(animationSpec = tween(150)) + scaleOut(transformOrigin = androidx.compose.ui.graphics.TransformOrigin.Center),
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { onDismiss() },
-            contentAlignment = Alignment.Center
+  AnimatedVisibility(
+    visible = isVisible && (file != null || isBatch),
+    enter =
+      fadeIn(animationSpec = tween(200)) +
+        scaleIn(transformOrigin = androidx.compose.ui.graphics.TransformOrigin.Center),
+    exit =
+      fadeOut(animationSpec = tween(150)) +
+        scaleOut(transformOrigin = androidx.compose.ui.graphics.TransformOrigin.Center),
+    modifier = Modifier.fillMaxSize(),
+  ) {
+    Box(
+      modifier =
+        Modifier.fillMaxSize().clickable(
+          interactionSource = remember { MutableInteractionSource() },
+          indication = null,
         ) {
-            Surface(
-                modifier = Modifier
-                    .width(280.dp)
-                    .padding(16.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 3.dp,
-                shadowElevation = 8.dp
-            ) {
-                Column(
-                    modifier = Modifier.padding(vertical = 8.dp)
-                ) {
-                    Text(
-                        text = if (isBatch) "已选择 $selectedCount 项" else (file?.name ?: ""),
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1
-                    )
-                    
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
+          onDismiss()
+        },
+      contentAlignment = Alignment.Center,
+    ) {
+      Surface(
+        modifier = Modifier.width(280.dp).padding(16.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 3.dp,
+        shadowElevation = 8.dp,
+      ) {
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+          Text(
+            text = if (isBatch) "已选择 $selectedCount 项" else (file?.name ?: ""),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+          )
 
-                    when {
-                        isExternalShareMode -> {
-                            // 外部分享模式：仅支持保存到另一侧
-                            ActionMenuItem(
-                                icon = Icons.Default.ContentCopy,
-                                label = if (isBatch) "批量保存到另一侧" else "保存到另一侧",
-                                iconModifier = moveIconModifier
-                            ) { onAction("save_to_other") }
-                        }
-                        isRecycleBin -> {
-                            ActionMenuItem(
-                                icon = Icons.Default.Restore, 
-                                label = if (isBatch) "批量恢复" else "恢复并回到原处"
-                            ) { onAction("restore") }
-                            
-                            if (!isBatch) {
-                                ActionMenuItem(
-                                    icon = Icons.Default.DriveFileMove, 
-                                    label = "移动并恢复",
-                                    iconModifier = moveIconModifier
-                                ) { onAction("move") }
-                                
-                                ActionMenuItem(Icons.Default.Edit, "重命名并恢复") { onAction("rename") }
-                            }
-                            
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp))
-                            
-                            ActionMenuItem(
-                                icon = Icons.Default.DeleteForever, 
-                                label = if (isBatch) "批量彻底删除" else "彻底删除", 
-                                textColor = MaterialTheme.colorScheme.error
-                            ) { onAction("delete") }
-                        }
-                        isShareListMode -> {
-                            ActionMenuItem(
-                                icon = Icons.Default.LinkOff,
-                                label = if (isBatch) "批量取消分享" else "取消分享",
-                                textColor = MaterialTheme.colorScheme.error
-                            ) { onAction("cancel_share") }
-                        }
-                        else -> {
-                            ActionMenuItem(Icons.Default.Share, if (isBatch) "批量分享" else "分享") { onAction("share") }
-                            
-                            ActionMenuItem(
-                                icon = Icons.Default.DriveFileMove, 
-                                label = if (isBatch) "批量移动" else "移动",
-                                iconModifier = moveIconModifier
-                            ) { onAction("move") }
-                            
-                            if (!isBatch) {
-                                ActionMenuItem(Icons.Default.Edit, "重命名") { onAction("rename") }
-                            }
+          HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            thickness = 0.5.dp,
+            color = MaterialTheme.colorScheme.outlineVariant,
+          )
 
-                            ActionMenuItem(
-                                icon = Icons.Default.Delete, 
-                                label = if (isBatch) "批量删除" else "删除", 
-                                textColor = MaterialTheme.colorScheme.error
-                            ) { onAction("delete") }
-                        }
-                    }
-
-                    if (!isBatch) {
-                        ActionMenuItem(Icons.Default.Info, "属性") { onAction("info") }
-                    }
-                }
+          when {
+            isExternalShareMode -> {
+              // 外部分享模式：仅支持保存到另一侧
+              ActionMenuItem(
+                icon = Icons.Default.ContentCopy,
+                label = if (isBatch) "批量保存到另一侧" else "保存到另一侧",
+                iconModifier = moveIconModifier,
+              ) {
+                onAction("save_to_other")
+              }
             }
+            isRecycleBin -> {
+              ActionMenuItem(
+                icon = Icons.Default.Restore,
+                label = if (isBatch) "批量恢复" else "恢复并回到原处",
+              ) {
+                onAction("restore")
+              }
+
+              if (!isBatch) {
+                ActionMenuItem(
+                  icon = Icons.Default.DriveFileMove,
+                  label = "移动并恢复",
+                  iconModifier = moveIconModifier,
+                ) {
+                  onAction("move")
+                }
+
+                ActionMenuItem(Icons.Default.Edit, "重命名并恢复") { onAction("rename") }
+              }
+
+              HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp))
+
+              ActionMenuItem(
+                icon = Icons.Default.DeleteForever,
+                label = if (isBatch) "批量彻底删除" else "彻底删除",
+                textColor = MaterialTheme.colorScheme.error,
+              ) {
+                onAction("delete")
+              }
+            }
+            isShareListMode -> {
+              ActionMenuItem(
+                icon = Icons.Default.LinkOff,
+                label = if (isBatch) "批量取消分享" else "取消分享",
+                textColor = MaterialTheme.colorScheme.error,
+              ) {
+                onAction("cancel_share")
+              }
+            }
+            else -> {
+              ActionMenuItem(Icons.Default.Share, if (isBatch) "批量分享" else "分享") {
+                onAction("share")
+              }
+
+              ActionMenuItem(
+                icon = Icons.Default.DriveFileMove,
+                label = if (isBatch) "批量移动" else "移动",
+                iconModifier = moveIconModifier,
+              ) {
+                onAction("move")
+              }
+
+              if (!isBatch) {
+                ActionMenuItem(Icons.Default.Edit, "重命名") { onAction("rename") }
+              }
+
+              ActionMenuItem(
+                icon = Icons.Default.Delete,
+                label = if (isBatch) "批量删除" else "删除",
+                textColor = MaterialTheme.colorScheme.error,
+              ) {
+                onAction("delete")
+              }
+            }
+          }
+
+          if (!isBatch) {
+            ActionMenuItem(Icons.Default.Info, "属性") { onAction("info") }
+          }
         }
+      }
     }
+  }
 }
 
 @Composable
 private fun ActionMenuItem(
-    icon: ImageVector,
-    label: String,
-    textColor: Color = MaterialTheme.colorScheme.onSurface,
-    iconModifier: Modifier = Modifier, 
-    onClick: () -> Unit
+  icon: ImageVector,
+  label: String,
+  textColor: Color = MaterialTheme.colorScheme.onSurface,
+  iconModifier: Modifier = Modifier,
+  onClick: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        color = Color.Transparent
+  Surface(modifier = Modifier.fillMaxWidth().clickable { onClick() }, color = Color.Transparent) {
+    Row(
+      modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+      verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                modifier = Modifier.size(22.dp).then(iconModifier),
-                tint = if (textColor == MaterialTheme.colorScheme.error) 
-                    textColor else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-                color = textColor
-            )
-        }
+      Icon(
+        imageVector = icon,
+        contentDescription = label,
+        modifier = Modifier.size(22.dp).then(iconModifier),
+        tint =
+          if (textColor == MaterialTheme.colorScheme.error) textColor
+          else MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      Spacer(modifier = Modifier.width(16.dp))
+      Text(text = label, style = MaterialTheme.typography.bodyLarge, color = textColor)
     }
+  }
 }

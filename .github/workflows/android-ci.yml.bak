@@ -29,17 +29,17 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         
       # 格式化代码
-#      - name: Apply Code Format
-#        run: ./gradlew spotlessApply
+      - name: Apply Code Format
+        run: ./gradlew spotlessApply
 
-#      - name: Decode Keystore
-#        env:
-#          ENCODED_STRING: ${{ secrets.SIGNING_KEY }}
-#        run: |
-#          echo $ENCODED_STRING | base64 -d > app/tag_keystore.p12
+      - name: Decode Keystore
+        env:
+          ENCODED_STRING: ${{ secrets.SIGNING_KEY }}
+        run: |
+          echo $ENCODED_STRING | base64 -d > app/tag_keystore.p12
 
       - name: Build with Gradle
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleDebug
         env:
           KEYSTORE_PATH: tag_keystore.p12
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -47,9 +47,9 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}          
 
       # 2. 新增：将源码打包成 ZIP
-#      - name: Archive Source Code
-#        run: |
-#          zip -r source-code.zip . -x "*.git*" "*/build/*" ".gradle/*" "*.iml" ".idea/*" "app/tag_keystore.p12"
+      - name: Archive Source Code
+        run: |
+          zip -r source-code.zip . -x "*.git*" "*/build/*" ".gradle/*" "*.iml" ".idea/*" "app/tag_keystore.p12"
 
       - name: Get version info
         id: version
@@ -77,6 +77,6 @@ jobs:
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/release/*.apk
             app/build/outputs/mapping/release/mapping.txt
-#            source-code.zip
+            source-code.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

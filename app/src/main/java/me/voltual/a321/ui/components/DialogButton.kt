@@ -21,42 +21,39 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun DialogPositiveButton(
-    modifier: Modifier = Modifier,
-    textId: Int = android.R.string.ok,
-    onClick: () -> Unit = {}
+  modifier: Modifier = Modifier,
+  textId: Int = android.R.string.ok,
+  onClick: () -> Unit = {},
 ) {
-    TextButton(
-        shape = MaterialTheme.shapes.large,
-        onClick = onClick,
-        modifier = modifier,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
-        )
-    ) {
-        Text(
-            text = stringResource(id = textId),
-            fontWeight = FontWeight.ExtraBold,
-            modifier = Modifier.padding(top = 5.dp, bottom = 5.dp)
-        )
-    }
+  TextButton(
+    shape = MaterialTheme.shapes.large,
+    onClick = onClick,
+    modifier = modifier,
+    colors =
+      ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+      ),
+  ) {
+    Text(
+      text = stringResource(id = textId),
+      fontWeight = FontWeight.ExtraBold,
+      modifier = Modifier.padding(top = 5.dp, bottom = 5.dp),
+    )
+  }
 }
 
 @Composable
 fun DialogNegativeButton(
-    modifier: Modifier = Modifier,
-    textId: Int = android.R.string.cancel,
-    onClick: () -> Unit = {}
+  modifier: Modifier = Modifier,
+  textId: Int = android.R.string.cancel,
+  onClick: () -> Unit = {},
 ) {
-    TextButton(
-        shape = MaterialTheme.shapes.large,
-        onClick = onClick,
-        modifier = modifier
-    ) {
-        Text(
-            text = stringResource(id = textId),
-            fontWeight = FontWeight.ExtraBold,
-            modifier = Modifier.padding(vertical = 5.dp, horizontal = 8.dp)
-        )
-    }
+  TextButton(shape = MaterialTheme.shapes.large, onClick = onClick, modifier = modifier) {
+    Text(
+      text = stringResource(id = textId),
+      fontWeight = FontWeight.ExtraBold,
+      modifier = Modifier.padding(vertical = 5.dp, horizontal = 8.dp),
+    )
+  }
 }

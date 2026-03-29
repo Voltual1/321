@@ -1,7 +1,7 @@
-//Copyright (C) 2025 Voltual
+// Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
-//（或任意更新的版本）的条款重新分发和/或修改它。
-//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// （或任意更新的版本）的条款重新分发和/或修改它。
+// 本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
@@ -10,27 +10,14 @@ package me.voltual.a321.ui
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.compositionLocalOf
-import androidx.navigation3.runtime.NavKey
-import me.voltual.a321.ui.Navigator
-import me.voltual.a321.ui.NavigationState
 
-/**
- * 当前 Navigator 实例，供任何 Composable 发起类型安全导航。
- */
-val LocalNavigator = compositionLocalOf<Navigator> {
-    error("No Navigator provided")
-}
+/** 当前 Navigator 实例，供任何 Composable 发起类型安全导航。 */
+val LocalNavigator = compositionLocalOf<Navigator> { error("No Navigator provided") }
 
-/**
- * 当前 NavigationState 实例，供需要读取状态的 Composable 使用。
- */
-val LocalNavigationState = compositionLocalOf<NavigationState> {
-    error("No NavigationState provided")
-}
+/** 当前 NavigationState 实例，供需要读取状态的 Composable 使用。 */
+val LocalNavigationState =
+  compositionLocalOf<NavigationState> { error("No NavigationState provided") }
 
-/**
- * 全局 SnackbarHostState，避免层层传递。
- */
-val LocalSnackbarHostState = compositionLocalOf<SnackbarHostState> {
-    error("No SnackbarHostState provided")
-}
+/** 全局 SnackbarHostState，避免层层传递。 */
+val LocalSnackbarHostState =
+  compositionLocalOf<SnackbarHostState> { error("No SnackbarHostState provided") }

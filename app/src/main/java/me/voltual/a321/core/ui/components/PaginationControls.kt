@@ -1,7 +1,7 @@
-//Copyright (C) 2025 Voltual
+// Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
-//（或任意更新的版本）的条款重新分发和/或修改它。
-//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// （或任意更新的版本）的条款重新分发和/或修改它。
+// 本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
@@ -56,69 +56,63 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun PaginationControls(
-    modifier: Modifier = Modifier,
-    currentPage: Int,
-    totalPages: Int,
-    onPrevClick: () -> Unit,
-    onNextClick: () -> Unit,
-    onPageClick: () -> Unit,
-    isPrevEnabled: Boolean,
-    isNextEnabled: Boolean,
-    showTotalPages: Boolean = true,
-    extraControls: @Composable RowScope.() -> Unit = {}
+  modifier: Modifier = Modifier,
+  currentPage: Int,
+  totalPages: Int,
+  onPrevClick: () -> Unit,
+  onNextClick: () -> Unit,
+  onPageClick: () -> Unit,
+  isPrevEnabled: Boolean,
+  isNextEnabled: Boolean,
+  showTotalPages: Boolean = true,
+  extraControls: @Composable RowScope.() -> Unit = {},
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        // 将上一页/下一页和页码组合在一起
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(
-                onClick = onPrevClick,
-                enabled = isPrevEnabled
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "上一页",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+  Row(
+    modifier =
+      modifier
+        .fillMaxWidth()
+        .background(MaterialTheme.colorScheme.surfaceVariant)
+        .padding(horizontal = 8.dp, vertical = 4.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.SpaceBetween,
+  ) {
+    // 将上一页/下一页和页码组合在一起
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      IconButton(onClick = onPrevClick, enabled = isPrevEnabled) {
+        Icon(
+          imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+          contentDescription = "上一页",
+          tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
 
-            // 根据 showTotalPages 参数决定显示内容
-            val pageText = if (showTotalPages) {
-                "第 $currentPage 页 / 共 $totalPages 页"
-            } else {
-                "第 $currentPage 页"
-            }
-            
-            Text(
-                text = pageText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .clickable(onClick = onPageClick)
-            )
-
-            IconButton(
-                onClick = onNextClick,
-                enabled = isNextEnabled
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "下一页",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+      // 根据 showTotalPages 参数决定显示内容
+      val pageText =
+        if (showTotalPages) {
+          "第 $currentPage 页 / 共 $totalPages 页"
+        } else {
+          "第 $currentPage 页"
         }
 
-        // 额外的控制组件
-        extraControls()
+      Text(
+        text = pageText,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 8.dp).clickable(onClick = onPageClick),
+      )
+
+      IconButton(onClick = onNextClick, enabled = isNextEnabled) {
+        Icon(
+          imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+          contentDescription = "下一页",
+          tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
     }
+
+    // 额外的控制组件
+    extraControls()
+  }
 }
 
 /**
@@ -132,59 +126,54 @@ fun PaginationControls(
  */
 @Composable
 fun PageJumpDialog(
-    currentPage: Int,
-    totalPages: Int,
-    onDismiss: () -> Unit,
-    onConfirm: (Int) -> Unit,
-    shape: Shape = MaterialTheme.shapes.medium
+  currentPage: Int,
+  totalPages: Int,
+  onDismiss: () -> Unit,
+  onConfirm: (Int) -> Unit,
+  shape: Shape = MaterialTheme.shapes.medium,
 ) {
-    var pageInput by remember { mutableStateOf(currentPage.toString()) }
+  var pageInput by remember { mutableStateOf(currentPage.toString()) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = shape,
-        title = { Text("跳转页面") },
-        text = {
-            Column {
-                Text("请输入页码 (1-$totalPages)", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                OutlinedTextField(
-                    value = pageInput,
-                    onValueChange = { pageInput = it },
-                    modifier = Modifier.padding(top = 8.dp),
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        keyboardType = KeyboardType.Number
-                    ),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val page = pageInput.toIntOrNull()
-                    if (page != null && page in 1..totalPages) {
-                        onConfirm(page)
-                    }
-                }
-            ) {
-                Text("跳转")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-    )
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    shape = shape,
+    title = { Text("跳转页面") },
+    text = {
+      Column {
+        Text("请输入页码 (1-$totalPages)", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedTextField(
+          value = pageInput,
+          onValueChange = { pageInput = it },
+          modifier = Modifier.padding(top = 8.dp),
+          keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+          singleLine = true,
+          colors =
+            OutlinedTextFieldDefaults.colors(
+              focusedBorderColor = MaterialTheme.colorScheme.primary,
+              unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+              focusedLabelColor = MaterialTheme.colorScheme.primary,
+              cursorColor = MaterialTheme.colorScheme.primary,
+              focusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+              unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+        )
+      }
+    },
+    confirmButton = {
+      Button(
+        onClick = {
+          val page = pageInput.toIntOrNull()
+          if (page != null && page in 1..totalPages) {
+            onConfirm(page)
+          }
+        }
+      ) {
+        Text("跳转")
+      }
+    },
+    dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+    titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+  )
 }

@@ -1,7 +1,7 @@
-//Copyright (C) 2025 Voltual
+// Copyright (C) 2025 Voltual
 // 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
-//（或任意更新的版本）的条款重新分发和/或修改它。
-//本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// （或任意更新的版本）的条款重新分发和/或修改它。
+// 本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
@@ -10,39 +10,34 @@ package me.voltual.a321.core.database
 
 import android.content.Context
 import androidx.room.Database
-import me.voltual.a321.core.database.entity.*
-import me.voltual.a321.core.database.dao.*
-import me.voltual.a321.core.database.repository.*
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
+import me.voltual.a321.core.database.dao.*
+import me.voltual.a321.core.database.entity.*
+import me.voltual.a321.core.database.repository.*
 
-@Database(
-    entities = [LogEntry::class],
-    version = 1,
-    exportSchema = false
-)
+@Database(entities = [LogEntry::class], version = 1, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun logDao(): LogDao
+  abstract fun logDao(): LogDao
 
-    companion object {
-        @Volatile
-        private var INSTANCE: AppDatabase? = null        
+  companion object {
+    @Volatile private var INSTANCE: AppDatabase? = null
 
-        fun getDatabase(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "app_database"
-                )
-/*                    .addMigrations(
-                    )*/
-                    .build()
-                INSTANCE = instance
-                instance
-            }
+    fun getDatabase(context: Context): AppDatabase {
+      return INSTANCE
+        ?: synchronized(this) {
+          val instance =
+            Room.databaseBuilder(
+                context.applicationContext,
+                AppDatabase::class.java,
+                "app_database",
+              )
+              /*                    .addMigrations(
+              )*/
+              .build()
+          INSTANCE = instance
+          instance
         }
     }
+  }
 }

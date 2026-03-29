@@ -1,4 +1,5 @@
 package me.voltual.a321.core.ui.animation
+
 // 动画效果来源自 https://github.com/10miaomiao/bilimiao
 
 import androidx.compose.animation.ContentTransform
@@ -15,23 +16,19 @@ import androidx.compose.animation.togetherWith
 private const val ProgressThreshold = 0.35f
 
 private val Int.ForOutgoing: Int
-    get() = (this * ProgressThreshold).toInt()
+  get() = (this * ProgressThreshold).toInt()
 
 private val Int.ForIncoming: Int
-    get() = this - this.ForOutgoing
+  get() = this - this.ForOutgoing
 
 /**
  * [materialFadeThrough] allows to switch a layout with a fade through animation.
  *
  * @param durationMillis the duration of transition.
  */
-fun materialFadeThrough(
-    durationMillis: Int = DefaultMotionDuration,
-): ContentTransform = materialFadeThroughIn(
-    durationMillis = durationMillis,
-) togetherWith materialFadeThroughOut(
-    durationMillis = durationMillis,
-)
+fun materialFadeThrough(durationMillis: Int = DefaultMotionDuration): ContentTransform =
+  materialFadeThroughIn(durationMillis = durationMillis) togetherWith
+    materialFadeThroughOut(durationMillis = durationMillis)
 
 /**
  * [materialFadeThroughIn] allows to switch a layout with fade through enter transition.
@@ -40,34 +37,38 @@ fun materialFadeThrough(
  * @param durationMillis the duration of the enter transition.
  */
 fun materialFadeThroughIn(
-    initialScale: Float = 0.92f,
-    durationMillis: Int = DefaultMotionDuration,
-): EnterTransition = fadeIn(
-    animationSpec = tween(
+  initialScale: Float = 0.92f,
+  durationMillis: Int = DefaultMotionDuration,
+): EnterTransition =
+  fadeIn(
+    animationSpec =
+      tween(
         durationMillis = durationMillis.ForIncoming,
         delayMillis = durationMillis.ForOutgoing,
         easing = LinearOutSlowInEasing,
-    ),
-) + scaleIn(
-    animationSpec = tween(
-        durationMillis = durationMillis.ForIncoming,
-        delayMillis = durationMillis.ForOutgoing,
-        easing = LinearOutSlowInEasing,
-    ),
-    initialScale = initialScale,
-)
+      )
+  ) +
+    scaleIn(
+      animationSpec =
+        tween(
+          durationMillis = durationMillis.ForIncoming,
+          delayMillis = durationMillis.ForOutgoing,
+          easing = LinearOutSlowInEasing,
+        ),
+      initialScale = initialScale,
+    )
 
 /**
  * [materialFadeThroughOut] allows to switch a layout with fade through exit transition.
  *
  * @param durationMillis the duration of the exit transition.
  */
-fun materialFadeThroughOut(
-    durationMillis: Int = DefaultMotionDuration,
-): ExitTransition = fadeOut(
-    animationSpec = tween(
+fun materialFadeThroughOut(durationMillis: Int = DefaultMotionDuration): ExitTransition =
+  fadeOut(
+    animationSpec =
+      tween(
         durationMillis = durationMillis.ForOutgoing,
         delayMillis = 0,
         easing = FastOutLinearInEasing,
-    ),
-)
+      )
+  )

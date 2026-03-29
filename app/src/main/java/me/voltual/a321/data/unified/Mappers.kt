@@ -3,124 +3,125 @@ package me.voltual.a321.data.unified
 import me.voltual.a321.KtorClient
 
 fun KtorClient.FileInfo.toUnifiedModel(): PanFile {
-    return PanFile(
-        id = this.FileId,
-        name = this.FileName,
-        size = this.Size,
-        isDirectory = this.isDirectory,
-        updateTime = this.UpdateAt,
-        category = this.Category,
-        isAbnormal = this.isAbnormal,
-        etag = this.Etag,
-        s3KeyFlag = this.S3KeyFlag,
-        rawDownloadUrl = this.DownloadUrl
-    )
+  return PanFile(
+    id = this.FileId,
+    name = this.FileName,
+    size = this.Size,
+    isDirectory = this.isDirectory,
+    updateTime = this.UpdateAt,
+    category = this.Category,
+    isAbnormal = this.isAbnormal,
+    etag = this.Etag,
+    s3KeyFlag = this.S3KeyFlag,
+    rawDownloadUrl = this.DownloadUrl,
+  )
 }
 
 fun List<KtorClient.FileInfo>.toUnifiedList(): List<PanFile> {
-    return this.map { it.toUnifiedModel() }
+  return this.map { it.toUnifiedModel() }
 }
 
 fun KtorClient.UserInfo.toUnifiedQuota(): PanUserQuota {
-    return PanUserQuota(
-        userId = this.UID.toString(),
-        nickname = this.Nickname,
-        avatarUrl = this.HeadImage.takeIf { it.isNotBlank() },
-        usedBytes = this.SpaceUsed,
-        totalBytes = this.SpacePermanent + this.SpaceTemp,
-        isVip = false,
-        expireTime = this.SpaceTempExpr.takeIf { it.isNotBlank() }
-    )
+  return PanUserQuota(
+    userId = this.UID.toString(),
+    nickname = this.Nickname,
+    avatarUrl = this.HeadImage.takeIf { it.isNotBlank() },
+    usedBytes = this.SpaceUsed,
+    totalBytes = this.SpacePermanent + this.SpaceTemp,
+    isVip = false,
+    expireTime = this.SpaceTempExpr.takeIf { it.isNotBlank() },
+  )
 }
 
 fun KtorClient.FolderDetailsData.toUnifiedModel(): PanFile {
-    return PanFile(
-        id = this.FileId,
-        name = this.FileName,
-        size = this.Size ?: 0L,
-        isDirectory = true,
-        updateTime = "",
-        rawDownloadUrl = "",
-        etag = "",
-        category = 1
-    )
+  return PanFile(
+    id = this.FileId,
+    name = this.FileName,
+    size = this.Size ?: 0L,
+    isDirectory = true,
+    updateTime = "",
+    rawDownloadUrl = "",
+    etag = "",
+    category = 1,
+  )
 }
 
 fun KtorClient.FileListData.toPageResult(): PanPageResult {
-    return PanPageResult(
-        files = this.InfoList.toUnifiedList(),
-        totalCount = this.Total,
-        hasMore = this.InfoList.isNotEmpty()
-    )
+  return PanPageResult(
+    files = this.InfoList.toUnifiedList(),
+    totalCount = this.Total,
+    hasMore = this.InfoList.isNotEmpty(),
+  )
 }
 
 fun <T> Result<KtorClient.PanResponse<T>>.toActionResult(): PanActionResult {
-    return this.fold(
-        onSuccess = { response ->
-            if (response.isSuccess) {
-                PanActionResult.Success
-            } else {
-                PanActionResult.Error(response.code, response.message)
-            }
-        },
-        onFailure = { throwable ->
-            PanActionResult.Error(-1, throwable.message ?: "Unknown Network Error")
-        }
-    )
+  return this.fold(
+    onSuccess = { response ->
+      if (response.isSuccess) {
+        PanActionResult.Success
+      } else {
+        PanActionResult.Error(response.code, response.message)
+      }
+    },
+    onFailure = { throwable ->
+      PanActionResult.Error(-1, throwable.message ?: "Unknown Network Error")
+    },
+  )
 }
 
 // 更新分享模型映射，填充新增字段
 fun KtorClient.ShareInfo.toUnifiedModel(): PanFile {
-    return PanFile(
-        id = this.ShareId,
-        name = this.ShareName,
-        size = this.bytesTotal,
-        isDirectory = false,
-        updateTime = this.UpdateAt,
-        category = 10,
-        isAbnormal = this.isViolation == 1,
-        etag = "",
-        s3KeyFlag = null,
-        rawDownloadUrl = this.shareLinkList.list.first(),
-        extension = "",
-        shareKey = this.ShareKey,
-        sharePwd = this.SharePwd,
-        expiration = this.Expiration,
-        shareUrl = this.ShareUrl
-    )
+  return PanFile(
+    id = this.ShareId,
+    name = this.ShareName,
+    size = this.bytesTotal,
+    isDirectory = false,
+    updateTime = this.UpdateAt,
+    category = 10,
+    isAbnormal = this.isViolation == 1,
+    etag = "",
+    s3KeyFlag = null,
+    rawDownloadUrl = this.shareLinkList.list.first(),
+    extension = "",
+    shareKey = this.ShareKey,
+    sharePwd = this.SharePwd,
+    expiration = this.Expiration,
+    shareUrl = this.ShareUrl,
+  )
 }
 
 fun KtorClient.ShareListData.toPageResult(): PanPageResult {
-    return PanPageResult(
-        files = this.InfoList.map { it.toUnifiedModel() },
-        totalCount = this.Total,
-        hasMore = this.Next != "-1" && this.Next.toIntOrNull() != -1,
-        nextMarker = if (this.Next != "-1" && this.Next != "0") this.Next else null
-    )
+  return PanPageResult(
+    files = this.InfoList.map { it.toUnifiedModel() },
+    totalCount = this.Total,
+    hasMore = this.Next != "-1" && this.Next.toIntOrNull() != -1,
+    nextMarker = if (this.Next != "-1" && this.Next != "0") this.Next else null,
+  )
 }
 
 fun KtorClient.ShareGetResponseData.toPageResult(): PanPageResult {
-    return PanPageResult(
-        files = this.InfoList.toUnifiedList(),
-        totalCount = this.Len,
-        hasMore = this.Next != "-1" && this.Len > 0,
-        nextMarker = if (this.Next != "-1") this.Next else null
-    )
+  return PanPageResult(
+    files = this.InfoList.toUnifiedList(),
+    totalCount = this.Len,
+    hasMore = this.Next != "-1" && this.Len > 0,
+    nextMarker = if (this.Next != "-1") this.Next else null,
+  )
 }
 
 /**
  * 将统一文件模型转换为复制分享所需的数据模型
+ *
  * @param targetParentId 目标文件夹 ID（实际调用时会被覆盖，此参数可选）
  */
 fun PanFile.toCopyFileInfo(targetParentId: Long = 0L): KtorClient.CopyFileInfo {
-    return KtorClient.CopyFileInfo(
-        driveId = 0,
-        duplicate = 2, // duplicate = 2 表示若目标已存在同名文件，则自动重命名
-        etag = this.etag,
-        fileId = this.id,
-        fileName = this.name,
-        parentFileId = targetParentId,
-        size = this.size,
-        type = if (this.isDirectory) 1 else 0
-    )
+  return KtorClient.CopyFileInfo(
+    driveId = 0,
+    duplicate = 2, // duplicate = 2 表示若目标已存在同名文件，则自动重命名
+    etag = this.etag,
+    fileId = this.id,
+    fileName = this.name,
+    parentFileId = targetParentId,
+    size = this.size,
+    type = if (this.isDirectory) 1 else 0,
+  )
 }
