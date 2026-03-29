@@ -366,11 +366,12 @@ suspend fun renameFile(fileId: Long, newName: String): PanActionResult {
  * 获取分享链接中的文件列表
  * @param shareKey 分享标识
  * @param parentId 文件夹 ID（0 表示根目录）
- * @param page 页码（从 1 开始）
+ * @param next 分页游标，初始通常为 "1"
  * @param sharePwd 提取码（可选）
  */
 suspend fun getShareInfo(
     shareKey: String,
+    next: String? = "1",
     parentId: Long = 0,
     page: Int = 1,
     sharePwd: String? = null
@@ -378,7 +379,9 @@ suspend fun getShareInfo(
     val token = AuthManager.getCredentials(context).first().token
     if (token.isEmpty()) throw Exception("Login required")
 
-    val response = apiService.getShareInfo(token, shareKey, page, 200, parentId, sharePwd).getOrThrow()
+    // 调用时传入 nextParam
+    val nextParam = if (next.isNullOrEmpty()) "1" else next
+    val response = apiService.getShareInfo(token, shareKey, nextParam, page, 200, parentId, sharePwd).getOrThrow()
     val data = response.data ?: throw Exception("获取分享信息失败")
     data.toPageResult() 
 }

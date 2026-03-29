@@ -270,110 +270,124 @@ class ExplorerViewModel(
     }
 
     fun loadFiles(
-        pane: PaneIndex,
-        isNextPage: Boolean = false,
-        highlightIds: List<Long>? = null
-    ) {
-        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+    pane: PaneIndex,
+    isNextPage: Boolean = false,
+    highlightIds: List<Long>? = null
+) {
+    val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
 
-        viewModelScope.launch {
-            if (isNextPage) {
-                if (state.isShareListMode || state.isExternalShareMode) {
-                    // 123网盘分享列表目前通常不返回 nextMarker 用于流式分页，或者逻辑不同
-                    // 这里简化处理，如果是外部分享且 Page 模式
-                    state.currentPage++
-                } else {
-                    if (state.currentPage >= state.totalPages) return@launch
-                    state.currentPage++
-                }
+    viewModelScope.launch {
+        // ----- 分页前状态准备 -----
+        if (isNextPage) {
+            // 对于使用游标分页的模式（我的分享 & 外部分享），若 nextMarker 为 "-1" 则无更多数据
+            if (state.isShareListMode || state.isExternalShareMode) {
+                if (state.shareNextMarker == "-1") return@launch
             } else {
-                state.isLoading = true
-                state.currentPage = 1
-                state.shareNextMarker = null
+                // 普通目录模式：基于页码判断
+                if (state.currentPage >= state.totalPages) return@launch
+                state.currentPage++
             }
-
-            state.error = null
-
-            val result: Result<PanPageResult> = when {
-                state.isExternalShareMode -> {
-                    repository.getShareInfo(
-                        shareKey = state.externalShareKey,
-                        parentId = state.currentPath.id,
-                        page = state.currentPage,
-                        sharePwd = state.externalSharePwd.takeIf { it.isNotBlank() }
-                    )
-                }
-                state.isRecycleBin -> {
-                    repository.getRecycleBinFiles(state.currentPage)
-                }
-                state.isSearchMode -> {
-                    val searchParentId = if (state.pathStack.size > 1) {
-                        state.pathStack[state.pathStack.size - 2].id
-                    } else 0L
-                    
-                    repository.searchFiles(
-                        keyword = state.searchKeyword,
-                        page = state.currentPage,
-                        parentId = searchParentId
-                    )
-                }
-                state.isShareListMode -> {
-                    repository.getShareList(next = if (isNextPage) state.shareNextMarker else null)
-                }
-                else -> {
-                    repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
-                }
-            }
-
-            result.onSuccess { pageResult ->
-                if (!isNextPage) {
-                    recentlyModifiedIds.clear()
-                }
-
-                state.totalCount = pageResult.totalCount
-                state.shareNextMarker = pageResult.nextMarker
-                val newList = pageResult.files
-
-                val processedList = if (!isNextPage) {
-                    when {
-                        state.isExternalShareMode -> {
-                           val prefix = if (state.pathStack.size > 1) ".. [share]" else ".. [exit_share]"
-                           listOf(PanFile(id = -5, name = prefix, isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
-                        }
-                        state.isRecycleBin -> {
-                            listOf(PanFile(id = -2, name = ".. [trash]", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
-                        }
-                        state.isSearchMode -> {
-                            listOf(PanFile(id = -3, name = ".. [search_results]", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
-                        }
-                        state.isShareListMode -> {
-                            listOf(PanFile(id = -4, name = ".. [shares]", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
-                        }
-                        state.pathStack.size > 1 -> {
-                            listOf(PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
-                        }
-                        else -> newList
-                    }
-                } else {
-                    newList
-                }
-
-                if (isNextPage) {
-                    state.fileList = state.fileList + processedList
-                } else {
-                    state.fileList = processedList
-                }
-
-                highlightIds?.let { recentlyModifiedIds.addAll(it) }
-                state.isLoading = false
-
-            }.onFailure { exception ->
-                state.error = exception.message ?: "加载失败"
-                if (isNextPage) state.currentPage--
-                state.isLoading = false
+        } else {
+            state.isLoading = true
+            state.currentPage = 1
+            // 重置游标：外部分享起始值为 "1"，我的分享起始值为 "0"（由 API 决定）
+            state.shareNextMarker = when {
+                state.isExternalShareMode -> "1"
+                state.isShareListMode -> "0"
+                else -> null
             }
         }
+
+        state.error = null
+
+        // ----- 根据当前模式调用不同 API -----
+        val result: Result<PanPageResult> = when {
+            state.isExternalShareMode -> {
+                repository.getShareInfo(
+                    shareKey = state.externalShareKey,
+                    next = if (isNextPage) state.shareNextMarker else "1",
+                    parentId = state.currentPath.id,
+                    page = state.currentPage,
+                    sharePwd = state.externalSharePwd.takeIf { it.isNotBlank() }
+                )
+            }
+            state.isRecycleBin -> {
+                repository.getRecycleBinFiles(state.currentPage)
+            }
+            state.isSearchMode -> {
+                val searchParentId = if (state.pathStack.size > 1) {
+                    state.pathStack[state.pathStack.size - 2].id
+                } else 0L
+                repository.searchFiles(
+                    keyword = state.searchKeyword,
+                    page = state.currentPage,
+                    parentId = searchParentId
+                )
+            }
+            state.isShareListMode -> {
+                repository.getShareList(next = if (isNextPage) state.shareNextMarker else null)
+            }
+            else -> {
+                repository.getFilesWithTotal(state.currentPath.id, state.currentPage)
+            }
+        }
+
+        // ----- 处理返回结果 -----
+        result.onSuccess { pageResult ->
+            if (!isNextPage) {
+                recentlyModifiedIds.clear()
+            }
+
+            // 更新总数与游标
+            state.totalCount = pageResult.totalCount
+            state.shareNextMarker = pageResult.nextMarker  // 对于普通目录，nextMarker 可能为 null
+
+            val newList = pageResult.files
+
+            // 构建显示的列表（添加“..”或特殊返回项）
+            val processedList = if (!isNextPage) {
+                when {
+                    state.isExternalShareMode -> {
+                        val prefix = if (state.pathStack.size > 1) ".. [share]" else ".. [exit_share]"
+                        listOf(PanFile(id = -5, name = prefix, isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
+                    }
+                    state.isRecycleBin -> {
+                        listOf(PanFile(id = -2, name = ".. [trash]", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
+                    }
+                    state.isSearchMode -> {
+                        listOf(PanFile(id = -3, name = ".. [search_results]", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
+                    }
+                    state.isShareListMode -> {
+                        listOf(PanFile(id = -4, name = ".. [shares]", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
+                    }
+                    state.pathStack.size > 1 -> {
+                        listOf(PanFile(id = -1, name = "..", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
+                    }
+                    else -> newList
+                }
+            } else {
+                newList
+            }
+
+            if (isNextPage) {
+                state.fileList = state.fileList + processedList
+            } else {
+                state.fileList = processedList
+            }
+
+            highlightIds?.let { recentlyModifiedIds.addAll(it) }
+            state.isLoading = false
+
+        }.onFailure { exception ->
+            state.error = exception.message ?: "加载失败"
+            // 如果加载失败且是下一页，回滚页码（普通目录模式）
+            if (isNextPage && !state.isShareListMode && !state.isExternalShareMode) {
+                state.currentPage--
+            }
+            state.isLoading = false
+        }
     }
+}
 
     fun openExternalShare(url: String, pwd: String, pane: PaneIndex) {
         val key = url.substringAfterLast("/s/").substringBefore("?").substringBefore("/")

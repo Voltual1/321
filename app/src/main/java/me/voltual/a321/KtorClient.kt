@@ -503,7 +503,7 @@ suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanRe
     /**
      * 获取分享链接中的文件列表
      * @param shareKey 分享标识
-     * @param page 页码（从1开始）
+     * @param next
      * @param limit 每页数量
      * @param parentFileId 文件夹ID（0表示根目录）
      * @param sharePwd 提取码（可选）
@@ -511,6 +511,7 @@ suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanRe
     suspend fun getShareInfo(
         token: String,
         shareKey: String,
+        next: String? = "1", // 新增参数，默认值为 "1"
         page: Int = 1,
         limit: Int = 200,
         parentFileId: Long = 0,
@@ -823,6 +824,7 @@ override suspend fun listShares(
     override suspend fun getShareInfo(
         token: String,
         shareKey: String,
+        next: String?,
         page: Int,
         limit: Int,
         parentFileId: Long,
@@ -832,14 +834,14 @@ override suspend fun listShares(
             bearerAuth(token)
             url {
                 parameters.append("shareKey", shareKey)
+                parameters.append("next", next ?: "1") 
                 parameters.append("Page", page.toString())
                 parameters.append("limit", limit.toString())
                 parameters.append("ParentFileId", parentFileId.toString())
-                if (sharePwd != null) {
+                if (!sharePwd.isNullOrEmpty()) {
                     parameters.append("SharePwd", sharePwd)
                 }
-                // 可选排序，可根据需要调整
-                parameters.append("orderBy", "file_id")
+                parameters.append("orderBy", "share_id") 
                 parameters.append("orderDirection", "desc")
             }
         }
