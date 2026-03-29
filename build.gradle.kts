@@ -6,9 +6,9 @@ plugins {
     alias(libs.plugins.kotlin.android) apply false
     id("com.diffplug.spotless") version "8.4.0"
 }
-tasks.register<Delete>("clean") {
-    delete(rootProject.layout.buildDirectory)
-}
+//tasks.register<Delete>("clean") {
+//    delete(rootProject.layout.buildDirectory)
+//}
 
 subprojects {
     apply(plugin = "com.diffplug.spotless")
