@@ -1,0 +1,106 @@
+.
+└── me
+    └── voltual
+        └── a321
+            ├── AppModule.kt
+            ├── AuthManager.kt
+            ├── BBQApplication.kt
+            ├── KtorClient.kt
+            ├── MainActivity.kt
+            ├── core
+            │   ├── database
+            │   │   ├── AppDatabase.kt
+            │   │   ├── dao
+            │   │   │   └── LogDao.kt
+            │   │   ├── entity
+            │   │   │   └── LogEntry.kt
+            │   │   └── repository
+            │   │       └── LogRepository.kt
+            │   ├── proto
+            │   │   └── UserCredentialsSerializer.kt
+            │   ├── ui
+            │   │   ├── animation
+            │   │   │   ├── Constants.kt
+            │   │   │   ├── MaterialFade.kt
+            │   │   │   ├── MaterialFadeThrough.kt
+            │   │   │   └── MaterialSharedAxis.kt
+            │   │   ├── components
+            │   │   │   ├── BaseListScreen.kt
+            │   │   │   ├── IDMTransferDialog.kt
+            │   │   │   ├── Markdown.kt
+            │   │   │   ├── PaginationControls.kt
+            │   │   │   ├── UpdateDialog.kt
+            │   │   │   └── UserAgreementDialog.kt
+            │   │   ├── icons
+            │   │   │   ├── __Icon.kt
+            │   │   │   ├── __Phosphor.kt
+            │   │   │   └── phosphor
+            │   │   │       └── X.kt
+            │   │   ├── theme
+            │   │   │   ├── Color.kt
+            │   │   │   ├── ColorUtils.kt
+            │   │   │   ├── Components.kt
+            │   │   │   ├── RoundScreenPadding.kt
+            │   │   │   ├── Shape.kt
+            │   │   │   ├── Theme.kt
+            │   │   │   ├── ThemeColorStore.kt
+            │   │   │   ├── ThemeCustomizeScreen.kt
+            │   │   │   └── ThemeManager.kt
+            │   │   └── utils
+            │   │       └── Animations.kt
+            │   └── utils
+            │       ├── ApkParser.kt
+            │       ├── DateUtil.kt
+            │       ├── DownloadManager.kt
+            │       ├── FileActionUtil.kt
+            │       ├── FileUtil.kt
+            │       ├── PackageManagerExt.kt
+            │       ├── ProgressInputStream.kt
+            │       ├── UpdateChecker.kt
+            │       ├── Util1DM.kt
+            │       └── extension
+            │           └── Text.kt
+            ├── data
+            │   ├── DrawerMenuDataStore.kt
+            │   ├── UpdateInfo.kt
+            │   ├── UpdateSettingsDataStore.kt
+            │   ├── UserAgreementDataStore.kt
+            │   ├── entity
+            │   │   └── Enums.kt
+            │   ├── repository
+            │   │   └── PanRepository.kt
+            │   └── unified
+            │       ├── Mappers.kt
+            │       └── UnifiedModels.kt
+            ├── tree.txt
+            ├── ui
+            │   ├── CompositionLocal.kt
+            │   ├── CrashLogActivity.kt
+            │   ├── Drawer.kt
+            │   ├── Navigation.kt
+            │   ├── NavigationGraph.kt
+            │   ├── NavigationState.kt
+            │   ├── Navigator.kt
+            │   ├── auth
+            │   │   ├── AuthScreen.kt
+            │   │   └── AuthViewModel.kt
+            │   ├── components
+            │   │   ├── ActionButton.kt
+            │   │   └── DialogButton.kt
+            │   ├── dialog
+            │   │   ├── ActionsDialogUI.kt
+            │   │   └── InputDialogUI.kt
+            │   ├── explorer
+            │   │   ├── ExplorerScreen.kt
+            │   │   ├── ExplorerViewModel.kt
+            │   │   ├── FileActionMenu.kt
+            │   │   ├── FilePropertyDialog.kt
+            │   │   └── ShareBottomSheet.kt
+            │   └── settings
+            │       └── update
+            │           ├── UpdateSettingsScreen.kt
+            │           └── UpdateSettingsViewModel.kt
+            └── utils
+                └── PanUtils.kt
+
+31 directories, 73 files
