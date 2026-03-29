@@ -45,6 +45,7 @@ import me.voltual.a321.data.unified.PanFile
 import me.voltual.a321.data.unified.PanPath
 import me.voltual.a321.ui.dialog.ActionsDialogUI
 import me.voltual.a321.ui.dialog.StringInputPrefDialogUI
+import me.voltual.a321.ui.dialog.LinkAndCodeInputDialogUI
 import me.voltual.a321.ui.dialog.CreateFileDialogUI
 import org.koin.androidx.compose.koinViewModel
 
@@ -89,7 +90,9 @@ fun ExplorerScreen(
     BackHandler(enabled = viewModel.leftPane.pathStack.size > 1 || 
                 viewModel.rightPane.pathStack.size > 1 ||
                 viewModel.leftPane.isShareListMode ||
-                viewModel.rightPane.isShareListMode) {
+                viewModel.rightPane.isShareListMode ||
+                viewModel.leftPane.isExternalShareMode ||
+                viewModel.rightPane.isExternalShareMode) { 
         if (!viewModel.navigateBack(viewModel.activePane)) {
             val otherPane = if (viewModel.activePane == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
             viewModel.navigateBack(otherPane)
@@ -119,6 +122,11 @@ fun ExplorerScreen(
                 TopAppBar(
                     title = { Text("A321") },
                     actions = {
+                        BBQIconButton(
+                            onClick = { viewModel.showLinkInputDialog() }, // 新增
+                            icon = Icons.Default.Link,
+                            contentDescription = "打开分享"
+                        )
                         BBQIconButton(
                             onClick = { viewModel.showSearchDialog() },
                             icon = Icons.Default.Search,
@@ -278,10 +286,23 @@ fun ExplorerDialogs(
         selectedCount = selectedCount,
         activePaneIndex = activePaneIndex,
         isRecycleBin = activePaneState.isRecycleBin,
-        isShareListMode = activePaneState.isShareListMode,  // 传递分享模式状态
+        isShareListMode = activePaneState.isShareListMode,
+        isExternalShareMode = activePaneState.isExternalShareMode, // 传递状态
         onDismiss = { viewModel.hideActionMenu() },
         onAction = { action -> viewModel.performAction(action, activePaneIndex) }
     )
+
+    if (viewModel.isLinkInputDialogVisible) {
+        Dialog(onDismissRequest = { viewModel.hideLinkInputDialog() }) {
+            LinkAndCodeInputDialogUI(
+                onDismiss = { viewModel.hideLinkInputDialog() },
+                onConfirm = { link, code ->
+                    viewModel.hideLinkInputDialog()
+                    viewModel.openExternalShare(link, code, activePaneIndex)
+                }
+            )
+        }
+    }
 
     if (viewModel.isCreateFileDialogVisible) {
         Dialog(onDismissRequest = { viewModel.hideCreateFileDialog() }) {

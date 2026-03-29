@@ -401,6 +401,40 @@ suspend fun deleteShare(shareId: Long): PanActionResult = runCatching {
     PanActionResult.Error(-1, throwable.message ?: "取消分享失败")
 }
 
+/**
+ * 从分享链接复制文件/文件夹到自己的网盘
+ * @param shareKey 分享标识
+ * @param sharePwd 提取码（无密码时传空字符串）
+ * @param targetParentId 目标文件夹 ID（自己的网盘中的目录）
+ * @param files 要复制的文件列表（从 getShareInfo 获取的 PanFile 列表）
+ * @return 操作结果
+ */
+suspend fun copyShareFiles(
+    shareKey: String,
+    sharePwd: String,
+    targetParentId: Long,
+    files: List<PanFile>
+): PanActionResult {
+    return runCatching {
+        val token = AuthManager.getCredentials(context).first().token
+        if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+
+        // 将 PanFile 列表转换为 CopyFileInfo 列表
+        val copyInfos = files.map { it.toCopyFileInfo() }
+
+        // 调用 API
+        val response = apiService.copyShareFile(token, shareKey, sharePwd, targetParentId, copyInfos).getOrThrow()
+        
+        if (response.isSuccess) {
+            PanActionResult.Success
+        } else {
+            PanActionResult.Error(response.code, response.message)
+        }
+    }.getOrElse { throwable ->
+        PanActionResult.Error(-1, throwable.message ?: "复制文件失败")
+    }
+}
+
     suspend fun getLatestRelease(url: String): Result<UpdateInfo> {
         return apiService.getLatestRelease(url)
     }

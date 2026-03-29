@@ -33,14 +33,18 @@ class ExplorerViewModel(
         var error by mutableStateOf<String?>(null)
         var pathStack by mutableStateOf(listOf(PanPath(0, "/")))
         val currentPath: PanPath get() = pathStack.last()
-        var isRecycleBin by mutableStateOf(false)
         
+        var isRecycleBin by mutableStateOf(false)
         var isSearchMode by mutableStateOf(false)
         var searchKeyword by mutableStateOf("")
-        
         var isShareListMode by mutableStateOf(false)
-        var shareNextMarker by mutableStateOf<String?>(null)
+        
+        // --- 外部分享链接模式 ---
+        var isExternalShareMode by mutableStateOf(false)
+        var externalShareKey by mutableStateOf("")
+        var externalSharePwd by mutableStateOf("")
 
+        var shareNextMarker by mutableStateOf<String?>(null)
         var currentPage by mutableIntStateOf(1)
         var totalCount by mutableIntStateOf(0)
         val pageSize = 100
@@ -81,6 +85,7 @@ class ExplorerViewModel(
     var pendingUploadName by mutableStateOf("")
     
     var isSearchDialogVisible by mutableStateOf(false); private set
+    var isLinkInputDialogVisible by mutableStateOf(false); private set
 
     private val _events = Channel<ExplorerEvent>(Channel.BUFFERED)
     val events: Flow<ExplorerEvent> = _events.receiveAsFlow()
@@ -123,6 +128,16 @@ class ExplorerViewModel(
         viewModelScope.launch {
             when (action) {
                 "info" -> showPropertyDialog()
+                "save_to_other" -> {
+                    val targetPaneIndex = if (paneIndex == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
+                    val targetPane = if (targetPaneIndex == PaneIndex.LEFT) leftPane else rightPane
+                    
+                    if (targetPane.isExternalShareMode || targetPane.isRecycleBin || targetPane.isShareListMode) {
+                        _events.send(ExplorerEvent.ShowSnackbar("目标窗口必须是常规目录"))
+                    } else {
+                        executeCopyExternalFiles(targetIds, paneIndex, targetPane.currentPath.id)
+                    }
+                }
                 "cancel_share" -> {
                     executeCancelShare(targetIds, paneIndex)
                 }
@@ -152,6 +167,28 @@ class ExplorerViewModel(
                     executeRestore(targetIds, paneIndex)
                 }
             }
+        }
+    }
+
+    private suspend fun executeCopyExternalFiles(ids: List<Long>, sourcePaneIndex: PaneIndex, targetPathId: Long) {
+        val sourceState = if (sourcePaneIndex == PaneIndex.LEFT) leftPane else rightPane
+        val targetPaneIndex = if (sourcePaneIndex == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
+        
+        val selectedFiles = sourceState.fileList.filter { ids.contains(it.id) }
+        
+        val result = repository.copyShareFiles(
+            shareKey = sourceState.externalShareKey,
+            sharePwd = sourceState.externalSharePwd,
+            targetParentId = targetPathId,
+            files = selectedFiles
+        )
+
+        if (result is PanActionResult.Success) {
+            _events.send(ExplorerEvent.ShowSnackbar("成功保存 ${ids.size} 个文件到另一侧"))
+            sourceState.clearSelection()
+            loadFiles(targetPaneIndex)
+        } else if (result is PanActionResult.Error) {
+            _events.send(ExplorerEvent.ShowSnackbar("保存失败: ${result.message}"))
         }
     }
 
@@ -241,8 +278,10 @@ class ExplorerViewModel(
 
         viewModelScope.launch {
             if (isNextPage) {
-                if (state.isShareListMode) {
-                    if (state.shareNextMarker == null) return@launch
+                if (state.isShareListMode || state.isExternalShareMode) {
+                    // 123网盘分享列表目前通常不返回 nextMarker 用于流式分页，或者逻辑不同
+                    // 这里简化处理，如果是外部分享且 Page 模式
+                    state.currentPage++
                 } else {
                     if (state.currentPage >= state.totalPages) return@launch
                     state.currentPage++
@@ -256,6 +295,14 @@ class ExplorerViewModel(
             state.error = null
 
             val result: Result<PanPageResult> = when {
+                state.isExternalShareMode -> {
+                    repository.getShareInfo(
+                        shareKey = state.externalShareKey,
+                        parentId = state.currentPath.id,
+                        page = state.currentPage,
+                        sharePwd = state.externalSharePwd.takeIf { it.isNotBlank() }
+                    )
+                }
                 state.isRecycleBin -> {
                     repository.getRecycleBinFiles(state.currentPage)
                 }
@@ -289,6 +336,10 @@ class ExplorerViewModel(
 
                 val processedList = if (!isNextPage) {
                     when {
+                        state.isExternalShareMode -> {
+                           val prefix = if (state.pathStack.size > 1) ".. [share]" else ".. [exit_share]"
+                           listOf(PanFile(id = -5, name = prefix, isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
+                        }
                         state.isRecycleBin -> {
                             listOf(PanFile(id = -2, name = ".. [trash]", isDirectory = true, size = 0, updateTime = "", rawDownloadUrl = "", etag = "")) + newList
                         }
@@ -318,10 +369,34 @@ class ExplorerViewModel(
 
             }.onFailure { exception ->
                 state.error = exception.message ?: "加载失败"
-                if (isNextPage && !state.isShareListMode) state.currentPage--
+                if (isNextPage) state.currentPage--
                 state.isLoading = false
             }
         }
+    }
+
+    fun openExternalShare(url: String, pwd: String, pane: PaneIndex) {
+        val key = url.substringAfterLast("/s/").substringBefore("?").substringBefore("/")
+        if (key.isBlank()) return
+        
+        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+        state.isRecycleBin = false
+        state.isSearchMode = false
+        state.isShareListMode = false
+        state.isExternalShareMode = true
+        state.externalShareKey = key
+        state.externalSharePwd = pwd
+        state.pathStack = listOf(PanPath(0, "分享: $key"))
+        loadFiles(pane)
+    }
+
+    fun exitExternalShare(pane: PaneIndex) {
+        val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+        state.isExternalShareMode = false
+        state.externalShareKey = ""
+        state.externalSharePwd = ""
+        state.pathStack = listOf(PanPath(0, "/"))
+        loadFiles(pane)
     }
 
     fun toggleShareList(pane: PaneIndex) {
@@ -329,6 +404,7 @@ class ExplorerViewModel(
         if (!state.isShareListMode) {
             state.isRecycleBin = false
             state.isSearchMode = false
+            state.isExternalShareMode = false
             state.isShareListMode = true
             state.pathStack = listOf(PanPath(-4, "我的分享"))
         } else {
@@ -343,6 +419,7 @@ class ExplorerViewModel(
         if (keyword.isNotBlank()) {
             state.isRecycleBin = false
             state.isShareListMode = false
+            state.isExternalShareMode = false
             state.isSearchMode = true
             state.searchKeyword = keyword
             state.pathStack = state.pathStack + PanPath(-3, "搜索: $keyword")
@@ -365,6 +442,7 @@ class ExplorerViewModel(
         if (!state.isRecycleBin) {
             state.isShareListMode = false
             state.isSearchMode = false
+            state.isExternalShareMode = false
             state.isRecycleBin = true
             state.pathStack = listOf(PanPath(-2, "回收站"))
         } else {
@@ -377,6 +455,14 @@ class ExplorerViewModel(
     fun enterFolder(pane: PaneIndex, folder: PanFile) {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
         
+        if (state.isExternalShareMode && folder.id == -5L) {
+            if (state.pathStack.size > 1) {
+                navigateBack(pane)
+            } else {
+                exitExternalShare(pane)
+            }
+            return
+        }
         if (state.isRecycleBin && folder.id == -2L) {
             toggleRecycleBin(pane); return
         }
@@ -448,6 +534,9 @@ class ExplorerViewModel(
         if (state.isShareListMode) {
             toggleShareList(pane); return true
         }
+        if (state.isExternalShareMode && state.pathStack.size == 1) {
+            exitExternalShare(pane); return true
+        }
         if (state.pathStack.size > 1) {
             state.pathStack = state.pathStack.dropLast(1)
             loadFiles(pane)
@@ -468,7 +557,7 @@ class ExplorerViewModel(
     fun toggleSelection(pane: PaneIndex, index: Int) {
         val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
         val file = state.fileList.getOrNull(index) ?: return
-        if (file.id <= 0) return
+        if (file.id == -1L || file.id == -2L || file.id == -3L || file.id == -4L || file.id == -5L) return
 
         val fileId = file.id
 
@@ -574,7 +663,7 @@ class ExplorerViewModel(
     }
 
     fun downloadFile(activity: android.app.Activity, file: PanFile) {
-        if (file.id == -1L) return
+        if (file.id < 0) return
         viewModelScope.launch {
             repository.getDownloadUrl(file).onSuccess { url ->
                 runCatching {
@@ -597,6 +686,9 @@ class ExplorerViewModel(
     
     fun showSearchDialog() { isSearchDialogVisible = true }
     fun hideSearchDialog() { isSearchDialogVisible = false }
+    
+    fun showLinkInputDialog() { isLinkInputDialogVisible = true }
+    fun hideLinkInputDialog() { isLinkInputDialogVisible = false }
 
     private fun updatePaneError(pane: PaneIndex, message: String) {
         if (pane == PaneIndex.LEFT) leftPane.error = message else rightPane.error = message

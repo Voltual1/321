@@ -107,3 +107,20 @@ fun KtorClient.ShareGetResponseData.toPageResult(): PanPageResult {
         nextMarker = if (this.Next != "-1") this.Next else null
     )
 }
+
+/**
+ * 将统一文件模型转换为复制分享所需的数据模型
+ * @param targetParentId 目标文件夹 ID（实际调用时会被覆盖，此参数可选）
+ */
+fun PanFile.toCopyFileInfo(targetParentId: Long = 0L): KtorClient.CopyFileInfo {
+    return KtorClient.CopyFileInfo(
+        driveId = 0,
+        duplicate = 2, // duplicate = 2 表示若目标已存在同名文件，则自动重命名
+        etag = this.etag,
+        fileId = this.id,
+        fileName = this.name,
+        parentFileId = targetParentId,
+        size = this.size,
+        type = if (this.isDirectory) 1 else 0
+    )
+}

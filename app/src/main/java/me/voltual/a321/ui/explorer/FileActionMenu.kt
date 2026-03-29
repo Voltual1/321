@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package me.voltual.a321.ui.explorer
 
 import androidx.compose.animation.*
@@ -27,7 +28,8 @@ fun FileActionMenu(
     selectedCount: Int,
     activePaneIndex: PaneIndex,
     isRecycleBin: Boolean,
-    isShareListMode: Boolean,  // 新增参数
+    isShareListMode: Boolean,
+    isExternalShareMode: Boolean, // 新增：是否为外部分享模式
     onDismiss: () -> Unit,
     onAction: (String) -> Unit
 ) {
@@ -82,6 +84,14 @@ fun FileActionMenu(
                     )
 
                     when {
+                        isExternalShareMode -> {
+                            // 外部分享模式：仅支持保存到另一侧
+                            ActionMenuItem(
+                                icon = Icons.Default.ContentCopy,
+                                label = if (isBatch) "批量保存到另一侧" else "保存到另一侧",
+                                iconModifier = moveIconModifier
+                            ) { onAction("save_to_other") }
+                        }
                         isRecycleBin -> {
                             ActionMenuItem(
                                 icon = Icons.Default.Restore, 
@@ -107,7 +117,6 @@ fun FileActionMenu(
                             ) { onAction("delete") }
                         }
                         isShareListMode -> {
-                            // 分享列表特有菜单：取消分享
                             ActionMenuItem(
                                 icon = Icons.Default.LinkOff,
                                 label = if (isBatch) "批量取消分享" else "取消分享",
