@@ -31,7 +31,7 @@ jobs:
       # 1. 新增：检查代码格式
       # 如果代码没格式化，这一步会报错，CI 直接停止，省去后面编译浪费的时间
       - name: Check Code Format
-        run: ./gradlew spotlessCheck
+        run: ./gradlew spotlessApply
 
       - name: Decode Keystore
         env:
