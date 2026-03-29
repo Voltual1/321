@@ -68,7 +68,7 @@ fun FilePropertyDialog(
                     PropertyItem("修改时间", file.updateTime)
                     PropertyItem("文件 ID", file.id.toString(), isMonospace = true)
                     if (file.etag != "") {
-                        PropertyItem("Etag (Hash)", file.etag, isMonospace = true)
+                        PropertyItem("Etag", file.etag, isMonospace = true)
                     }
                     if (file.rawDownloadUrl != "") {
                         PropertyItem("DownloadUrl", file.rawDownloadUrl, isMonospace = true, canWrap = true)

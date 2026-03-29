@@ -380,7 +380,7 @@ suspend fun getShareInfo(
 
     val response = apiService.getShareInfo(token, shareKey, page, 200, parentId, sharePwd).getOrThrow()
     val data = response.data ?: throw Exception("获取分享信息失败")
-    data.toPageResult() // 需要实现扩展函数
+    data.toPageResult() 
 }
 
 /**

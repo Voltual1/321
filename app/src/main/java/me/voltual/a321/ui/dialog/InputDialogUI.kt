@@ -88,12 +88,7 @@ fun IntInputPrefDialogUI(
                     .fillMaxWidth()
                     .focusRequester(textFieldFocusRequester),
                 value = if (savedValue != -1) savedValue.toString() else "",
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
+                colors = textFieldDialogColors(),
                 shape = MaterialTheme.shapes.large,
                 singleLine = true,
                 placeholder = { Text(text = "${range.first}-${range.last}") },
@@ -162,12 +157,7 @@ fun StringInputPrefDialogUI(
                     .fillMaxWidth()
                     .focusRequester(textFieldFocusRequester),
                 value = savedValue,
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
+                colors = textFieldDialogColors(),
                 shape = MaterialTheme.shapes.large,
                 singleLine = true,
                 onValueChange = { savedValue = it },
@@ -237,12 +227,7 @@ fun StringInputDialogUI(
                     .fillMaxWidth()
                     .focusRequester(mainFocusRequester),
                 value = savedValue,
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
+                colors = textFieldDialogColors(),
                 shape = MaterialTheme.shapes.large,
                 singleLine = false,
                 onValueChange = {
@@ -315,12 +300,7 @@ fun CreateFileDialogUI(
                     .fillMaxWidth()
                     .focusRequester(textFieldFocusRequester),
                 value = savedValue,
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
+                colors = textFieldDialogColors(),
                 shape = MaterialTheme.shapes.large,
                 singleLine = true,
                 onValueChange = { savedValue = it },
@@ -366,3 +346,112 @@ fun CreateFileDialogUI(
         }
     }
 }
+
+/**
+ * 分享链接与提取码输入对话框
+ */
+@Composable
+fun LinkAndCodeInputDialogUI(
+    title: String = "输入分享信息",
+    initialLink: String = "",
+    initialCode: String = "",
+    onDismiss: () -> Unit,
+    onConfirm: (link: String, code: String) -> Unit,
+) {
+    val focusManager = LocalFocusManager.current
+    val linkFocusRequester = remember { FocusRequester() }
+    
+    var linkValue by remember { mutableStateOf(initialLink) }
+    var codeValue by remember { mutableStateOf(initialCode) }
+
+    // 自动聚焦到链接输入框
+    LaunchedEffect(Unit) {
+        delay(100)
+        linkFocusRequester.requestFocus()
+    }
+
+    Card(
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.padding(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 16.dp, horizontal = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp) // 稍微拉开一点间距
+        ) {
+            Text(
+                text = title, 
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = TextAlign.Center
+            )
+
+            // 链接输入框
+            TextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(1.dp, MaterialTheme.shapes.large)
+                    .focusRequester(linkFocusRequester),
+                value = linkValue,
+                onValueChange = { linkValue = it },
+                label = { Text("分享链接") },
+                placeholder = { Text("https://...") },
+                singleLine = true,
+                colors = textFieldDialogColors(),
+                shape = MaterialTheme.shapes.large,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next,
+                    keyboardType = KeyboardType.Uri
+                )
+            )
+
+            // 提取码输入框
+            TextField(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(1.dp, MaterialTheme.shapes.large),
+                value = codeValue,
+                onValueChange = { codeValue = it },
+                label = { Text("提取码 (可选)") },
+                placeholder = { Text("请输入密码") },
+                singleLine = true,
+                colors = textFieldDialogColors(),
+                shape = MaterialTheme.shapes.large,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Done,
+                    keyboardType = KeyboardType.Text
+                ),
+                keyboardActions = KeyboardActions(onDone = {
+                    focusManager.clearFocus()
+                    if (linkValue.isNotEmpty()) onConfirm(linkValue, codeValue)
+                })
+            )
+
+            Row(
+                Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                DialogNegativeButton(onClick = onDismiss)
+                DialogPositiveButton(
+                    modifier = Modifier.padding(start = 16.dp),
+                    onClick = {
+                        if (linkValue.isNotEmpty()) {
+                            onConfirm(linkValue, codeValue)
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 提取出的通用 TextField 颜色配置，减少重复代码
+ */
+@Composable
+private fun textFieldDialogColors() = TextFieldDefaults.colors(
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+    focusedIndicatorColor = Color.Transparent,
+    unfocusedIndicatorColor = Color.Transparent,
+)
