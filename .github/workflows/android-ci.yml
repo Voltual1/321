@@ -5,8 +5,6 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-  release:
-    types: [published]
 
 permissions:
   contents: write
@@ -19,7 +17,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 保持完整历史记录以便获取版本信息
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -30,17 +28,11 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         
-      - name: Gradle Cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            ${{ github.workspace }}/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/build.gradle.kts', '**/settings.gradle.kts') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-            
+      # 1. 新增：检查代码格式
+      # 如果代码没格式化，这一步会报错，CI 直接停止，省去后面编译浪费的时间
+      - name: Check Code Format
+        run: ./gradlew spotlessCheck
+
       - name: Decode Keystore
         env:
           ENCODED_STRING: ${{ secrets.SIGNING_KEY }}
@@ -48,12 +40,17 @@ jobs:
           echo $ENCODED_STRING | base64 -d > app/tag_keystore.p12
 
       - name: Build with Gradle
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug assembleRelease
         env:
-          KEYSTORE_PATH: tag_keystore.p12  # 注意路径要对应 build.gradle.kts
+          KEYSTORE_PATH: tag_keystore.p12
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}          
+
+      # 2. 新增：将源码打包成 ZIP
+      - name: Archive Source Code
+        run: |
+          zip -r source-code.zip . -x "*.git*" "*/build/*" ".gradle/*" "*.iml" ".idea/*"
 
       - name: Get version info
         id: version
@@ -64,7 +61,7 @@ jobs:
 
       - name: Create Draft Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: softprops/action-gh-release@v2 # 升级到 v2
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.BUILD_VERSION }}
           name: "Auto Build ${{ steps.version.outputs.BUILD_VERSION }}"
@@ -73,21 +70,14 @@ jobs:
             - 提交: `${{ github.sha }}`
             - 构建时间: `${{ steps.version.outputs.TIMESTAMP }}`
             
-            **注意**: Release 包含 Release 和 Debug 两种 APK。
+            **文件说明**:
+            - `source-code.zip`: 当前版本的完整源代码
+            - `*.apk`: 安装包文件
           draft: true
           files: |
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/release/*.apk
             app/build/outputs/mapping/release/mapping.txt
+            source-code.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Save Gradle cache
-        if: ${{ success() }}
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            ${{ github.workspace }}/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/build.gradle.kts', '**/settings.gradle.kts') }}
