@@ -32,11 +32,11 @@ jobs:
 #      - name: Apply Code Format
 #        run: ./gradlew spotlessApply
 
-#      - name: Decode Keystore
-#        env:
-#          ENCODED_STRING: ${{ secrets.SIGNING_KEY }}
-#        run: |
-#          echo $ENCODED_STRING | base64 -d > app/tag_keystore.p12
+      - name: Decode Keystore
+        env:
+          ENCODED_STRING: ${{ secrets.SIGNING_KEY }}
+        run: |
+          echo $ENCODED_STRING | base64 -d > app/tag_keystore.p12
 
       - name: Build with Gradle
         run: ./gradlew assembleRelease
