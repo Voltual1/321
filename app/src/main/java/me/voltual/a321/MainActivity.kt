@@ -353,7 +353,7 @@ fun restartMainActivity(context: Context) {
 @Composable
 fun getTitleForDestination(route: NavKey?): String {
     return when (route) {
-        Home -> "首页"
+        Home -> "A321"
         Login -> "登录"
         ThemeCustomize -> "主题定制"
         UpdateSettings -> "更新设置"

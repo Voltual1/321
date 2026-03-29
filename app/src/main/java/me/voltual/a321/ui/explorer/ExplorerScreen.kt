@@ -120,7 +120,7 @@ fun ExplorerScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("A321") },
+                    title = { },
                     actions = {
                         BBQIconButton(
                             onClick = { viewModel.showLinkInputDialog() }, // 新增
