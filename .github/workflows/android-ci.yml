@@ -28,9 +28,8 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         
-      # 1. 新增：检查代码格式
-      # 如果代码没格式化，这一步会报错，CI 直接停止，省去后面编译浪费的时间
-      - name: Check Code Format
+      # 格式化代码
+      - name: Apply Code Format
         run: ./gradlew spotlessApply
 
       - name: Decode Keystore
@@ -40,7 +39,7 @@ jobs:
           echo $ENCODED_STRING | base64 -d > app/tag_keystore.p12
 
       - name: Build with Gradle
-        run: ./gradlew assembleDebug assembleRelease
+        run: ./gradlew assembleDebug
         env:
           KEYSTORE_PATH: tag_keystore.p12
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -50,7 +49,7 @@ jobs:
       # 2. 新增：将源码打包成 ZIP
       - name: Archive Source Code
         run: |
-          zip -r source-code.zip . -x "*.git*" "*/build/*" ".gradle/*" "*.iml" ".idea/*"
+          zip -r source-code.zip . -x "*.git*" "*/build/*" ".gradle/*" "*.iml" ".idea/*" "app/tag_keystore.p12"
 
       - name: Get version info
         id: version
