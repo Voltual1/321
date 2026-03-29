@@ -372,6 +372,40 @@ data class ShareDeleteResponseData(
 @Serializable
 data class ShareDeleteItemResult(val ShareId: Long)
 
+// ===== 复制分享文件相关数据类 =====
+
+/**
+ * 复制分享文件时单个文件的信息
+ * @param driveId 网盘ID，默认为0
+ * @param duplicate 重复处理策略（2 表示重命名）
+ * @param etag 文件ETag
+ * @param fileId 分享中的文件ID
+ * @param fileName 文件名
+ * @param parentFileId 目标文件夹ID（用户自己的网盘）
+ * @param size 文件大小
+ * @param type 类型：0 文件，1 文件夹
+ */
+@Serializable
+data class CopyFileInfo(
+    val driveId: Int = 0,
+    val duplicate: Int = 2,
+    val etag: String,
+    val fileId: Long,
+    val fileName: String,
+    val parentFileId: Long,
+    val size: Long,
+    val type: Int
+)
+
+/**
+ * 复制分享文件的请求体
+ */
+@Serializable
+data class CopyShareRequest(
+    val SharePwd: String = "",
+    val shareKey: String,
+    val fileInfoList: List<CopyFileInfo>
+)    
 
     // ===== API 接口定义 =====
 
@@ -491,6 +525,24 @@ suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanRe
         token: String,
         shareIds: List<Long>
     ): Result<PanResponse<ShareDeleteResponseData>>
+    
+        /**
+     * 从分享链接复制文件到自己的网盘
+     * @param token 用户授权Token
+     * @param shareKey 分享标识
+     * @param sharePwd 分享提取码（可选）
+     * @param targetParentId 目标文件夹ID（自己的网盘）
+     * @param files 要复制的文件信息列表（从分享文件列表获取）
+     */
+    suspend fun copyShareFile(
+        token: String,
+        shareKey: String,
+        sharePwd: String,
+        targetParentId: Long,
+        files: List<CopyFileInfo>
+    ): Result<PanResponse<Unit>>
+}
+
 }
     
     object ApiServiceImpl : ApiService {
@@ -804,6 +856,26 @@ override suspend fun listShares(
             contentType(ContentType.Application.Json)
             setBody(ShareDeleteRequest(
                 shareInfoList = shareIds.map { ShareDeleteItem(it) }
+            ))
+        }
+    }
+    
+    override suspend fun copyShareFile(
+        token: String,
+        shareKey: String,
+        sharePwd: String,
+        targetParentId: Long,
+        files: List<CopyFileInfo>
+    ): Result<PanResponse<Unit>> = safeApiCall {
+        // 确保每个文件的 parentFileId 使用用户指定的目标文件夹
+        val adjustedFiles = files.map { it.copy(parentFileId = targetParentId) }
+        httpClient.post("/api/file/copy") {
+            bearerAuth(token)
+            contentType(ContentType.Application.Json)
+            setBody(CopyShareRequest(
+                SharePwd = sharePwd,
+                shareKey = shareKey,
+                fileInfoList = adjustedFiles
             ))
         }
     }
