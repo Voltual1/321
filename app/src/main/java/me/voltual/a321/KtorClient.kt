@@ -542,8 +542,6 @@ suspend fun getFolderDetails(token: String, folderIds: List<Long>): Result<PanRe
         files: List<CopyFileInfo>
     ): Result<PanResponse<Unit>>
 }
-
-}
     
     object ApiServiceImpl : ApiService {
 
