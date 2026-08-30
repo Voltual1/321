@@ -24,7 +24,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -60,19 +59,21 @@ class MainActivity : ComponentActivity() {
     setContent {
       val navigationState =
         rememberNavigationState(startRoute = Home, topLevelRoutes = topLevelRoutes)
-      // 在这里获取 TextToolbar
-      val textToolbar = LocalTextToolbar.current
 
       val view = LocalView.current // 获取承载 Compose 的原生 View
 
+      val topAppBarController = remember { TopAppBarController() }
+
       val navigator =
-        remember(navigationState, textToolbar, view) {
-          Navigator(navigationState, textToolbar, view)
+        remember(navigationState, view) {
+          // 传入控制器
+          Navigator(navigationState, view, topAppBarController)
         }
 
       CompositionLocalProvider(
         LocalNavigator provides navigator,
         LocalNavigationState provides navigationState,
+        LocalTopAppBarController provides topAppBarController,
       ) {
         val snackbarHostState = remember { SnackbarHostState() }
         val context = LocalContext.current
@@ -191,6 +192,8 @@ class MainActivity : ComponentActivity() {
 
     val isLoggedIn = remember { mutableStateOf(false) }
 
+    val topAppBarController = LocalTopAppBarController.current
+
     ModalNavigationDrawer(
       drawerState = drawerState,
       drawerContent = {
@@ -243,7 +246,16 @@ class MainActivity : ComponentActivity() {
               }
             },
             actions = {
-              // 可以在这里添加操作按钮
+              // 动态渲染来自子页面的按钮
+              topAppBarController.actions.forEach { action ->
+                IconButton(onClick = action.onClick) {
+                  Icon(
+                    imageVector = action.icon,
+                    contentDescription = action.description,
+                    tint = action.tint?.invoke() ?: LocalContentColor.current,
+                  )
+                }
+              }
             },
             colors =
               TopAppBarDefaults.topAppBarColors(

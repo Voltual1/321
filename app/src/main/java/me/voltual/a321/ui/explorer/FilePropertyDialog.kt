@@ -18,7 +18,7 @@ import me.voltual.a321.core.utils.extension.text.formatSize
 import me.voltual.a321.data.unified.PanFile
 
 @Composable
-fun FilePropertyDialog(file: PanFile, onDismiss: () -> Unit) {
+fun FilePropertyDialog(file: PanFile, onDismiss: () -> Unit, isShareListMode: Boolean) {
   Dialog(onDismissRequest = onDismiss) {
     Surface(
       modifier = Modifier.width(320.dp).wrapContentHeight(),
@@ -28,7 +28,7 @@ fun FilePropertyDialog(file: PanFile, onDismiss: () -> Unit) {
     ) {
       Column(modifier = Modifier.padding(vertical = 16.dp).verticalScroll(rememberScrollState())) {
         Text(
-          text = if (file.category == 10) "分享详情" else "文件属性",
+          text = if (isShareListMode && file.category == 10) "分享详情" else "文件属性",
           modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
           style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
           color = MaterialTheme.colorScheme.onSurface,
@@ -42,7 +42,7 @@ fun FilePropertyDialog(file: PanFile, onDismiss: () -> Unit) {
 
         PropertyItem("名称", file.name)
 
-        if (file.category == 10) {
+        if (isShareListMode && file.category == 10) {
           // 分享专属信息
           if (file.rawDownloadUrl != "") {
             PropertyItem("分享链接", file.rawDownloadUrl, isMonospace = true, canWrap = true)

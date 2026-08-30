@@ -31,8 +31,8 @@ object KtorClient {
   const val BASE_URL = "https://www.123pan.com"
   private const val MAX_RETRIES = 3
   private const val RETRY_DELAY = 1000L
-  private const val ANDROID_APP_VERSION = "313"
-  private const val ANDROID_X_APP_VERSION = "3.1.3"
+  private const val ANDROID_APP_VERSION = "61"
+  private const val ANDROID_X_APP_VERSION = "2.4.0"
 
   val httpClient =
     HttpClient(OkHttp) {
@@ -49,14 +49,17 @@ object KtorClient {
 
       defaultRequest {
         url(BASE_URL)
-        // 完整伪装 Android 协议 Header
+        header(
+          "user-agent",
+          "123pan/v$ANDROID_X_APP_VERSION(${PanUtils.getFormattedOsVersion()};Android)",
+        )
         header("platform", "android")
         header("app-version", ANDROID_APP_VERSION)
         header("x-app-version", ANDROID_X_APP_VERSION)
-        header("devicetype", PanUtils.getRandomDeviceType())
-        header("devicename", "Xiaomi")
-        header("osversion", "Android_13")
-        header("LoginUuid", PanUtils.generateLoginUuid())
+        header("devicetype", PanUtils.getDeviceModel())
+        header("devicename", PanUtils.getDeviceBrand())
+        header("osversion", PanUtils.getFormattedOsVersion())
+        header("loginuuid", PanUtils.generateLoginUuid())
         header(HttpHeaders.Accept, ContentType.Application.Json.toString())
       }
 

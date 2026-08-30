@@ -2,6 +2,7 @@ package me.voltual.a321.utils
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import java.util.UUID
 import okio.HashingSource
 import okio.blackholeSink
@@ -19,7 +20,15 @@ object PanUtils {
 
   fun generateLoginUuid(): String = UUID.randomUUID().toString().replace("-", "")
 
-  private val DEVICE_TYPES = listOf("24075RP89G", "M2012K11AG", "22021211RG", "21121210G")
+  /** 获取设备型号，例如 "24075RP89G" */
+  fun getDeviceModel(): String = Build.MODEL
 
-  fun getRandomDeviceType(): String = DEVICE_TYPES.random()
+  /** 获取设备品牌/厂商，例如 "Xiaomi" 或 "Samsung" */
+  fun getDeviceBrand(): String = Build.MANUFACTURER
+
+  /** 获取系统的 Android 版本名，例如 "13" 或 "14" */
+  fun getOsVersion(): String = Build.VERSION.RELEASE
+
+  // 更详细的格式如 "Android_13"
+  fun getFormattedOsVersion(): String = "Android_${Build.VERSION.RELEASE}"
 }

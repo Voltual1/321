@@ -9,7 +9,13 @@
 package me.voltual.a321.ui
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 
 /** 当前 Navigator 实例，供任何 Composable 发起类型安全导航。 */
 val LocalNavigator = compositionLocalOf<Navigator> { error("No Navigator provided") }
@@ -21,3 +27,32 @@ val LocalNavigationState =
 /** 全局 SnackbarHostState，避免层层传递。 */
 val LocalSnackbarHostState =
   compositionLocalOf<SnackbarHostState> { error("No SnackbarHostState provided") }
+
+class TopAppBarAction(
+  val icon: ImageVector,
+  val description: String,
+  val onClick: () -> Unit,
+  // 改为 Lambda，默认返回 null 表示使用默认颜色
+  val tint: (@Composable () -> Color)? = null,
+)
+
+class TopAppBarController {
+  // 将变量设为 private，避免自动生成公开的 setActions 方法
+  var actions by mutableStateOf<List<TopAppBarAction>>(emptyList())
+    private set // 重点：只有内部能改，外部只能看或调用 fun
+
+  var customTitle by mutableStateOf<String?>(null)
+
+  // 此时这个方法就不会和自动生成的 setter 冲突了
+  fun updateActions(newActions: List<TopAppBarAction>) {
+    actions = newActions
+  }
+
+  fun clear() {
+    actions = emptyList()
+    customTitle = null
+  }
+}
+
+val LocalTopAppBarController =
+  compositionLocalOf<TopAppBarController> { error("No TopAppBarController provided") }

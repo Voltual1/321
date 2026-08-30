@@ -9,19 +9,21 @@
 package me.voltual.a321.ui
 
 import android.view.View
-import androidx.compose.ui.platform.TextToolbar
 import androidx.navigation3.runtime.NavKey
 
 /** Handles navigation events (forward and back) by updating the navigation state. */
 class Navigator(
   val state: NavigationState,
-  private val textToolbar: TextToolbar? = null,
   private val hostView: View? = null, // 传入原生 View 引用
+  private val topAppBarController: TopAppBarController? = null,
 ) {
   private fun forceCleanup() {
 
     // 剥夺焦点：防止某些view组件因持有焦点而在销毁瞬间尝试重绘菜单
     hostView?.clearFocus()
+    // 自动清空 TopAppBar 状态 :不需要在每一个 Screen 里都写 onDispose { controller.clear() }，防止开发者漏写导致“页面 A
+    // 的按钮出现在页面 B”的尴尬
+    topAppBarController?.clear()
   }
 
   fun logoutAndReset() {

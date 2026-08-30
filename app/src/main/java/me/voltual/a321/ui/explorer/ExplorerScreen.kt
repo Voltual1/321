@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -38,10 +39,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import com.anggrayudi.storage.file.DocumentFileCompat
-import me.voltual.a321.core.ui.theme.BBQIconButton
+import me.voltual.a321.core.ui.icons.prismicons.Code
+import me.voltual.a321.core.ui.icons.prismicons.Iso
+import me.voltual.a321.core.ui.icons.prismicons.Java
+import me.voltual.a321.core.ui.icons.prismicons.Kotlin
+import me.voltual.a321.core.ui.icons.prismicons.Markdown
+import me.voltual.a321.core.ui.icons.prismicons.Pdf
+import me.voltual.a321.core.ui.icons.prismicons.PrismIcons
+import me.voltual.a321.core.ui.icons.prismicons.Sql
+import me.voltual.a321.core.ui.icons.prismicons.Vector
 import me.voltual.a321.core.utils.extension.text.formatSize
 import me.voltual.a321.data.unified.PanFile
 import me.voltual.a321.data.unified.PanPath
+import me.voltual.a321.ui.*
 import me.voltual.a321.ui.dialog.ActionsDialogUI
 import me.voltual.a321.ui.dialog.CreateFileDialogUI
 import me.voltual.a321.ui.dialog.LinkAndCodeInputDialogUI
@@ -56,6 +66,10 @@ fun ExplorerScreen(
 ) {
   val context = LocalContext.current
   val activity = context as? android.app.Activity
+  val controller = LocalTopAppBarController.current
+
+  val activeState =
+    if (viewModel.activePane == PaneIndex.LEFT) viewModel.leftPane else viewModel.rightPane
 
   val leftElevation by
     animateDpAsState(
@@ -87,6 +101,54 @@ fun ExplorerScreen(
         }
       }
     }
+  }
+
+  // 当 ViewModel 状态变化时，同步更新外层的 Actions
+  LaunchedEffect(activeState.isShareListMode, activeState.isRecycleBin, viewModel.activePane) {
+    controller.updateActions(
+      listOf(
+        TopAppBarAction(
+          Icons.Default.Link,
+          "打开分享",
+          { viewModel.showLinkInputDialog() },
+          { MaterialTheme.colorScheme.primary },
+        ),
+        TopAppBarAction(
+          Icons.Default.Search,
+          "搜索",
+          { viewModel.showSearchDialog() },
+          { MaterialTheme.colorScheme.primary },
+        ),
+        TopAppBarAction(
+          icon = Icons.Default.Share,
+          description = "已分享",
+          onClick = { viewModel.toggleShareList(viewModel.activePane) },
+          tint = {
+            if (activeState.isShareListMode) MaterialTheme.colorScheme.onPrimary
+            else MaterialTheme.colorScheme.primary
+          },
+        ),
+        TopAppBarAction(
+          icon =
+            if (activeState.isRecycleBin) Icons.Default.CloudQueue else Icons.Default.DeleteSweep,
+          description = "回收站",
+          onClick = { viewModel.toggleRecycleBin(viewModel.activePane) },
+          tint = {
+            if (activeState.isRecycleBin) MaterialTheme.colorScheme.onPrimary
+            else MaterialTheme.colorScheme.primary
+          },
+        ),
+        TopAppBarAction(
+          Icons.Default.Refresh,
+          "全部刷新",
+          {
+            viewModel.loadFiles(PaneIndex.LEFT)
+            viewModel.loadFiles(PaneIndex.RIGHT)
+          },
+          { MaterialTheme.colorScheme.primary },
+        ),
+      )
+    )
   }
 
   BackHandler(
@@ -121,10 +183,9 @@ fun ExplorerScreen(
     }
 
   Box(modifier = Modifier.fillMaxSize()) {
-    val activeState =
-      if (viewModel.activePane == PaneIndex.LEFT) viewModel.leftPane else viewModel.rightPane
     Scaffold(
       topBar = {
+        /*
         TopAppBar(
           title = {},
           actions = {
@@ -165,7 +226,7 @@ fun ExplorerScreen(
               contentDescription = "全部刷新",
             )
           },
-        )
+        )*/
       },
       floatingActionButton = {
         FloatingActionButton(onClick = { viewModel.showCreateFileDialog() }) {
@@ -401,7 +462,11 @@ fun ExplorerDialogs(
   }
 
   if (viewModel.isPropertyDialogVisible && selectedFile != null) {
-    FilePropertyDialog(file = selectedFile, onDismiss = { viewModel.hidePropertyDialog() })
+    FilePropertyDialog(
+      file = selectedFile,
+      onDismiss = { viewModel.hidePropertyDialog() },
+      isShareListMode = activePaneState.isShareListMode,
+    )
   }
 }
 
@@ -526,6 +591,38 @@ fun BreadcrumbsBar(pathStack: List<PanPath>, onPathClick: (PanPath) -> Unit) {
   }
 }
 
+@Composable
+private fun getFileIcon(file: PanFile): ImageVector {
+  if (file.isDirectory) return Icons.Default.Folder
+
+  val ext = file.extension.lowercase()
+
+  return when {
+    ext == FileMimeType.apkFileType -> Icons.Default.Android
+    ext == FileMimeType.isoFileType -> PrismIcons.Iso
+    ext == FileMimeType.pdfFileType -> PrismIcons.Pdf
+    ext == FileMimeType.sqlFileType -> PrismIcons.Sql
+    ext == FileMimeType.javaFileType -> PrismIcons.Java
+    ext == FileMimeType.kotlinFileType -> PrismIcons.Kotlin
+    ext == FileMimeType.markdownFileType -> PrismIcons.Markdown
+    ext == FileMimeType.prismPrefsFileType -> Icons.Default.BuildCircle
+
+    FileMimeType.videoFileType.contains(ext) -> Icons.Default.Videocam
+    FileMimeType.imageFileType.contains(ext) -> Icons.Default.Image
+    FileMimeType.audioFileType.contains(ext) -> Icons.Default.Audiotrack
+    FileMimeType.archiveFileType.contains(ext) -> Icons.Default.Archive
+    FileMimeType.docFileType.contains(ext) -> Icons.Default.Description
+    FileMimeType.excelFileType.contains(ext) -> Icons.Default.TableChart
+    FileMimeType.pptFileType.contains(ext) -> Icons.Default.Slideshow
+    FileMimeType.fontFileType.contains(ext) -> Icons.Default.TextFields
+    FileMimeType.vectorFileType.contains(ext) -> PrismIcons.Vector
+    FileMimeType.codeFileType.contains(ext) -> PrismIcons.Code
+    FileMimeType.editableFileType.contains(ext) -> Icons.Default.Description
+
+    else -> Icons.AutoMirrored.Filled.InsertDriveFile
+  }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FileListItem(
@@ -583,14 +680,16 @@ fun FileListItem(
       }
     },
     leadingContent = {
+      // --- 关键修改处 ---
       Icon(
-        imageVector =
-          if (file.isDirectory) Icons.Default.Folder else Icons.AutoMirrored.Filled.InsertDriveFile,
+        imageVector = getFileIcon(file),
         contentDescription = null,
         tint =
-          if (isSelected || isHighlighted) MaterialTheme.colorScheme.primary
-          else if (file.isDirectory) MaterialTheme.colorScheme.primary
-          else MaterialTheme.colorScheme.outline,
+          when {
+            isSelected || isHighlighted -> MaterialTheme.colorScheme.primary
+            file.isDirectory -> MaterialTheme.colorScheme.primary
+            else -> MaterialTheme.colorScheme.outline
+          },
       )
     },
   )

@@ -18,7 +18,7 @@ import org.koin.core.annotation.Single
 
 // 定义当前的协议版本号
 object AgreementVersions {
-  const val USER_AGREEMENT = 2
+  const val USER_AGREEMENT = 3
 }
 
 private val Context.userAgreementDataStore: DataStore<Preferences> by

@@ -370,7 +370,7 @@ fun LinkAndCodeInputDialogUI(
         value = linkValue,
         onValueChange = { linkValue = it },
         label = { Text("分享链接") },
-        placeholder = { Text("https://...") },
+        placeholder = { Text("https://……/s/…-…") },
         singleLine = true,
         colors = textFieldDialogColors(),
         shape = MaterialTheme.shapes.large,

@@ -16,15 +16,17 @@ import me.voltual.a321.utils.PanUtils
 import okio.buffer
 import okio.source
 
+const val LOGIN_REQUIRED = "你可能没有登录哦o_O，先点击左上角的按钮把侧边栏抽屉拉出来看看吧"
+
 class PanRepository(private val context: Context) {
   private val apiService = KtorClient.ApiServiceImpl
-  private val CHUNK_SIZE = 5 * 1024 * 1024L // 5MB
+  private val CHUNK_SIZE = 5 * 1024 * 1024L // 5MB  
 
   /** 获取文件列表 */
   suspend fun getFiles(parentId: Long = 0, page: Int = 1): Result<List<PanFile>> = runCatching {
     val credentials = AuthManager.getCredentials(context).first()
     val token = credentials.token
-    if (token.isEmpty()) throw Exception("Login required")
+    if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
 
     val response = apiService.getFileList(token, page, parentId).getOrThrow()
     response.data?.InfoList?.toUnifiedList() ?: emptyList()
@@ -46,7 +48,7 @@ class PanRepository(private val context: Context) {
     onProgress: (Float) -> Unit,
   ): Result<String> = runCatching {
     val token = AuthManager.getCredentials(context).first().token
-    if (token.isEmpty()) throw Exception("Login required")
+    if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
 
     // 1. 计算 MD5 (Okio 流式读取)
     val md5 = PanUtils.calcMd5(context, uri)
@@ -109,7 +111,7 @@ class PanRepository(private val context: Context) {
     runCatching {
       val credentials = AuthManager.getCredentials(context).first()
       val token = credentials.token
-      if (token.isEmpty()) throw Exception("Login required")
+      if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
 
       val response = apiService.getFileList(token, page, parentId).getOrThrow()
       val total = response.data?.Total ?: 0
@@ -145,7 +147,7 @@ class PanRepository(private val context: Context) {
   /** 获取统一的用户信息模型 */
   suspend fun getUserQuota(): Result<PanUserQuota> = runCatching {
     val token = AuthManager.getCredentials(context).first().token
-    if (token.isEmpty()) throw Exception("Login required")
+    if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
 
     val response = apiService.getUserInfo(token).getOrThrow()
     val data = response.data ?: throw Exception("Failed to get user info")
@@ -156,7 +158,7 @@ class PanRepository(private val context: Context) {
   /** 批量删除文件到回收站 */
   suspend fun deleteFiles(fileIds: List<Long>): PanActionResult {
     val token = AuthManager.getCredentials(context).first().token
-    if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+    if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
 
     // 直接使用 apiService 返回的 Result<PanResponse<Unit>>
     return apiService.deleteFiles(token, fileIds).toActionResult()
@@ -208,7 +210,7 @@ class PanRepository(private val context: Context) {
         // 1. 获取 Token
         val credentials = AuthManager.getCredentials(context).first()
         val token = credentials.token
-        if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+        if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
 
         // 2. 调用 API 层
         val response = apiService.moveFiles(token, fileIds, targetParentId).getOrThrow()
@@ -246,7 +248,7 @@ class PanRepository(private val context: Context) {
   suspend fun deleteFilesPermanently(fileIds: List<Long>): PanActionResult {
     return runCatching {
         val token = AuthManager.getCredentials(context).first().token
-        if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+        if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
 
         val response = apiService.deleteFilesPermanently(token, fileIds).getOrThrow()
 
@@ -264,7 +266,7 @@ class PanRepository(private val context: Context) {
   suspend fun restoreFiles(fileIds: List<Long>): PanActionResult {
     return runCatching {
         val token = AuthManager.getCredentials(context).first().token
-        if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+        if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
 
         // 调用 ApiService 中的 restoreFiles (内部 operation 为 false)
         val response = apiService.restoreFiles(token, fileIds).getOrThrow()
@@ -296,7 +298,7 @@ class PanRepository(private val context: Context) {
   ): Result<PanPageResult> = runCatching {
     val credentials = AuthManager.getCredentials(context).first()
     val token = credentials.token
-    if (token.isEmpty()) throw Exception("Login required")
+    if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
 
     val response = apiService.searchFiles(token, keyword, page, limit, parentId).getOrThrow()
     val total = response.data?.Total ?: 0
@@ -315,7 +317,7 @@ class PanRepository(private val context: Context) {
   suspend fun getShareList(next: String? = null, limit: Int = 100): Result<PanPageResult> =
     runCatching {
       val token = AuthManager.getCredentials(context).first().token
-      if (token.isEmpty()) throw Exception("Login required")
+      if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
 
       // 确保首次请求时传 "0"
       val nextParam = if (next.isNullOrEmpty()) "0" else next
@@ -334,7 +336,7 @@ class PanRepository(private val context: Context) {
     return runCatching {
         val credentials = AuthManager.getCredentials(context).first()
         val token = credentials.token
-        if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+        if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
         val response = apiService.renameFile(token, fileId, newName).getOrThrow()
         if (response.isSuccess) {
           PanActionResult.Success
@@ -364,7 +366,7 @@ class PanRepository(private val context: Context) {
     sharePwd: String? = null,
   ): Result<PanPageResult> = runCatching {
     val token = AuthManager.getCredentials(context).first().token
-    if (token.isEmpty()) throw Exception("Login required")
+    if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
 
     // 调用时传入 nextParam
     val nextParam = if (next.isNullOrEmpty()) "1" else next
@@ -384,7 +386,7 @@ class PanRepository(private val context: Context) {
   suspend fun deleteShare(shareId: Long): PanActionResult =
     runCatching {
         val token = AuthManager.getCredentials(context).first().token
-        if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+        if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
 
         val response = apiService.deleteShare(token, listOf(shareId)).getOrThrow()
         if (response.isSuccess) {
@@ -412,7 +414,7 @@ class PanRepository(private val context: Context) {
   ): PanActionResult {
     return runCatching {
         val token = AuthManager.getCredentials(context).first().token
-        if (token.isEmpty()) return PanActionResult.Error(-1, "Login required")
+        if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
 
         // 将 PanFile 列表转换为 CopyFileInfo 列表
         val copyInfos = files.map { it.toCopyFileInfo() }
