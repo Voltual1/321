@@ -28,7 +28,7 @@ import me.voltual.a321.data.UpdateInfo
 import me.voltual.a321.utils.PanUtils
 
 object KtorClient {
-  const val BASE_URL = "https://www.123pan.com"
+  const val BASE_URL = "https://api.123278.com"
   private const val MAX_RETRIES = 3
   private const val RETRY_DELAY = 1000L
   private const val ANDROID_APP_VERSION = "61"
