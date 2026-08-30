@@ -2,114 +2,111 @@ import java.util.Properties
 
 plugins {
   alias(libs.plugins.android.application)
-  alias(libs.plugins.kotlin.android)
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.ksp)
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.protobuf)
-  alias(libs.plugins.shizuku.refine)
-  id("kotlin-parcelize")
 }
 
-val keystoreProperties =
-  Properties().apply {
-    val file = rootProject.file("keystore.properties")
-    if (file.exists()) file.inputStream().use { load(it) }
-  }
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(keystorePropertiesFile.inputStream())
+}
 
 android {
-  namespace = "me.voltual.a321"
-  compileSdk = 36
+    namespace = "me.voltual.a321"
+    compileSdk = 37 // 升级至 37
 
-  defaultConfig {
-    applicationId = "me.voltual.a321"
-    minSdk = 24
-    targetSdk = 36
-    versionCode = 5
-    versionName = "2.2"
-
-    multiDexEnabled = true
-    buildConfigField("String", "LICENSE", "\"GPLv3\"")
-    androidResources { localeFilters += "zh" }
-  }
-
-  signingConfigs {
-    create("release") {
-      storeFile =
-        file(
-          System.getenv("KEYSTORE_PATH")
-            ?: keystoreProperties.getProperty("storeFile")
-            ?: "debug.keystore"
-        )
-      storePassword =
-        System.getenv("KEYSTORE_PASSWORD") ?: keystoreProperties.getProperty("storePassword")
-      keyAlias = System.getenv("KEY_ALIAS") ?: keystoreProperties.getProperty("keyAlias")
-      keyPassword = System.getenv("KEY_PASSWORD") ?: keystoreProperties.getProperty("keyPassword")
+    // AGP 9.0 基础包名/归档名设置
+    base {
+        archivesName.set("A321")
     }
-  }
 
-  applicationVariants.all {
-    val variant = this
-    outputs.all {
-      val output = this as com.android.build.gradle.internal.api.ApkVariantOutputImpl
-      val abi = output.getFilter(com.android.build.OutputFile.ABI) ?: "universal"
-      output.outputFileName = "A321-${variant.versionName}-$abi-${variant.buildType.name}.apk"
+    defaultConfig {
+        applicationId = "me.voltual.a321"
+        minSdk = 24
+        targetSdk = 37 // 升级至 37
+        versionCode = 5
+        versionName = "2.2"
+
+        multiDexEnabled = true
+        buildConfigField("String", "LICENSE", "\"GPLv3\"")
+        // 此处删除了旧的 androidResources
     }
-  }
 
-  splits {
-    abi {
-      isEnable = true
-      reset()
-      include("armeabi-v7a", "arm64-v8a")
-      isUniversalApk = false
+    // AGP 9.0 替代 resourceConfigurations 的新写法
+    androidResources {
+        localeFilters += "zh"
     }
-  }
 
-  buildTypes {
-    release {
-      isMinifyEnabled = true
-      isShrinkResources = true
-      signingConfig = signingConfigs.getByName("release")
-      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+    signingConfigs {
+        create("release") {
+            storeFile = file(
+                System.getenv("KEYSTORE_PATH")
+                    ?: keystoreProperties.getProperty("storeFile")
+                    ?: "debug.keystore"
+            )
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: keystoreProperties.getProperty("storePassword")
+            keyAlias = System.getenv("KEY_ALIAS") ?: keystoreProperties.getProperty("keyAlias")
+            keyPassword = System.getenv("KEY_PASSWORD") ?: keystoreProperties.getProperty("keyPassword")
+        }
     }
-    debug {
-      isDebuggable = true
-      isMinifyEnabled = false
-      signingConfig = signingConfigs.getByName("release")
+
+    // 移除了 AGP 9 不再支持的 applicationVariants 变量重命名块
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            isUniversalApk = false
+        }
     }
-  }
 
-  compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-    isCoreLibraryDesugaringEnabled = true
-  }
-
-  kotlin { jvmToolchain(17) }
-
-  buildFeatures {
-    compose = true
-    buildConfig = true
-  }
-
-  packaging {
-    resources {
-      excludes +=
-        listOf(
-          "/META-INF/{AL2.0,LGPL2.1}",
-          "/META-INF/INDEX.LIST",
-          "/META-INF/DEPENDENCIES",
-          "/META-INF/LICENSE*",
-          "/META-INF/*.txt",
-          "/google/protobuf/**",
-          "/src/google/protobuf/**",
-          "/java/core/java_features_proto-descriptor-set.proto.bin",
-          "DebugProbesKt.bin",
-        )
-      merges += "/META-INF/services/**"
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+        debug {
+            isDebuggable = true
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
+        }
     }
-  }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
+    }
+
+    kotlin {
+        jvmToolchain(17)
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
+    packaging {
+        resources {
+            excludes.add("/META-INF/{AL2.0,LGPL2.1}")
+            excludes.add("/META-INF/INDEX.LIST")
+            excludes.add("/META-INF/DEPENDENCIES")
+            excludes.add("/META-INF/LICENSE*")
+            excludes.add("/META-INF/*.txt")
+            excludes.add("/google/protobuf/**")
+            excludes.add("/src/google/protobuf/**")
+            excludes.add("/java/core/java_features_proto-descriptor-set.proto.bin")
+            excludes.add("DebugProbesKt.bin")
+            merges.add("/META-INF/services/**")
+        }
+    }
 }
 
 dependencies {
@@ -130,10 +127,6 @@ dependencies {
   implementation(libs.compose.navigation3)
   implementation(libs.compose.navigation3.ui)
   implementation(libs.viewmodel.navigation3)
-  //    implementation(libs.compose.adaptive)
-  //    implementation(libs.compose.adaptive.layout)
-  //    implementation(libs.compose.adaptive.navigation)
-
   implementation(libs.okhttp)
   implementation(libs.ktor.client.core)
   implementation(libs.ktor.client.okhttp)
@@ -156,25 +149,12 @@ dependencies {
   ksp(libs.koin.ksp.compiler)
 
   implementation(libs.google.material)
-  //    implementation(libs.androidx.fragment)
   implementation(libs.androidx.palette)
-  //    implementation(libs.androidx.biometric)
-  //    implementation(libs.vico.compose)
-  //    implementation(libs.vico.compose.m3)
   implementation(libs.coil.compose)
   implementation(libs.coil.network.ktor)
   implementation(libs.photoview)
   implementation(libs.imagepicker)
   implementation(libs.markdown)
-  //    implementation(libs.zxing.core)
-  //    implementation(libs.compose.html.converter)
-  //    implementation(libs.ijkplayer)
-  //    implementation(project(":DanmakuFlameMaster"))
-
-  /*    implementation(libs.shizuku.api)
-  implementation(libs.shizuku.provider)
-  implementation(libs.shizuku.refine.runtime)
-  compileOnly(libs.shizuku.hidden)*/
   implementation(libs.libsu.core)
   implementation(libs.simple.storage)
   implementation(libs.tink.android)
@@ -190,14 +170,13 @@ protobuf {
         create("java")
         create("kotlin")
       }
-      // 不建议用lite，别问为什么，等R8混淆后，发现lite是反射你就知道了。
     }
   }
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-  compilerOptions {
-    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-    freeCompilerArgs.add("-XXLanguage:+ExplicitBackingFields")
-  }
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        freeCompilerArgs.add("-XXLanguage:+ExplicitBackingFields")
+    }
 }

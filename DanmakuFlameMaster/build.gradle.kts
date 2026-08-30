@@ -14,33 +14,37 @@
  * limitations under the License.
  */
 
-// DanmakuFlameMaster/build.gradle
+// DanmakuFlameMaster/build.gradle.kts
 
-apply plugin: 'com.android.library'
+plugins {
+    id("com.android.library")
+}
 
 android {
-    // **NEW**: 添加 namespace
-    namespace 'master.flame.danmaku'
+    namespace = "master.flame.danmaku"
     
-    compileSdkVersion 33
-    // buildToolsVersion "30.0.3" // 新版AGP不再需要此行
+    compileSdk = 33
 
     defaultConfig {
-        minSdkVersion 21 // 与BBQ主应用保持一致
-        targetSdkVersion 34 // 与BBQ主应用保持一致
+        minSdk = 21
     }
 
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-project.txt'
+            isMinifyEnabled = false
+            // AGP 9.0 强制要求使用 -optimize 版本
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),                
+            )
         }
     }
+    
     compileOptions {
-        sourceCompatibility = 1.8
-        targetCompatibility = 1.8
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
-    lintOptions {
-        abortOnError false
+    
+    lint {
+        abortOnError = false
     }
 }

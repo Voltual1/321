@@ -3,7 +3,6 @@
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.android.library).apply(false) 
-    alias(libs.plugins.kotlin.android) apply false
     id("com.diffplug.spotless") version "8.4.0"
 }
 //tasks.register<Delete>("clean") {
