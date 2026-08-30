@@ -20,7 +20,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     "https://login.123pan.com/centerlogin?redirect_url=https%3A%2F%2Fwww.123pan.com%2F%3Fnotoken%3D1&source_page=website"
 
   // 强制提取 Cookie 的目标 URL
-  private val targetCookieUrl = "https://login.123pan.com/"
+  //private val targetCookieUrl = "https://login.123pan.com/"
+  //域名已不再是login，域名已更改
+  private val targetCookieUrl = "https://user.123pan.cn/"  //新域名 
 
   fun getInitialUrl() = loginUrl
 
