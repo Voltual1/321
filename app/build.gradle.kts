@@ -145,8 +145,6 @@ dependencies {
   implementation(libs.koin.android.compose)
   implementation(libs.koin.workmanager)
   implementation(libs.koin.startup)
-  implementation(libs.koin.annotations)
-  ksp(libs.koin.ksp.compiler)
 
   implementation(libs.google.material)
   implementation(libs.androidx.palette)

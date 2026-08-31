@@ -5,7 +5,6 @@
 // 有关更多细节，请参阅 GNU 通用公共许可证。
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-@file:OptIn(org.koin.core.annotation.KoinExperimentalAPI::class)
 
 package me.voltual.a321
 
@@ -19,7 +18,6 @@ import me.voltual.a321.core.ui.theme.ThemeColorStore
 import me.voltual.a321.core.ui.theme.ThemeManager
 import org.koin.android.ext.koin.androidContext
 import org.koin.androix.startup.KoinStartup
-import org.koin.core.annotation.KoinApplication
 import org.koin.dsl.koinConfiguration
 
 @KoinApplication

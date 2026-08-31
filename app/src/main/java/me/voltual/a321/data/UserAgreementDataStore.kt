@@ -14,7 +14,6 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import org.koin.core.annotation.Single
 
 // 定义当前的协议版本号
 object AgreementVersions {
@@ -24,7 +23,6 @@ object AgreementVersions {
 private val Context.userAgreementDataStore: DataStore<Preferences> by
   preferencesDataStore(name = "user_agreement_prefs")
 
-@Single
 class UserAgreementDataStore(context: Context) {
 
   private val dataStore = context.userAgreementDataStore
