@@ -30,7 +30,7 @@ android {
         versionCode = 6
         versionName = "3.0"
 
-        multiDexEnabled = true
+        multiDexEnabled = false
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         // 此处删除了旧的 androidResources
     }
@@ -163,11 +163,4 @@ protobuf {
       }
     }
   }
-}
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        freeCompilerArgs.add("-XXLanguage:+ExplicitBackingFields")
-    }
 }
