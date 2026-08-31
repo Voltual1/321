@@ -50,9 +50,9 @@ fun DownloadSettingsScreen(
         Column(modifier = Modifier.padding(8.dp)) {
           DownloadModeOption(
             title = "使用 1DM 下载",
-            description = "调起外部 1DM 下载工具下载",
+            description = "调起外部 1DM 下载工具进行极速多线程下载",
             selected = viewModel.downloadMode == DownloadSettingsDataStore.MODE_1DM,
-            onClick = { viewModel.setDownloadMode(DownloadSettingsDataStore.MODE_1DM) }
+            onClick = { viewModel.updateDownloadMode(DownloadSettingsDataStore.MODE_1DM) }
           )
 
           HorizontalDivider(modifier = Modifier.padding(horizontal = 8.dp))
@@ -61,7 +61,7 @@ fun DownloadSettingsScreen(
             title = "仅复制直链链接",
             description = "静默或点击下载时将下载直链复制到剪贴板，不开始实际下载",
             selected = viewModel.downloadMode == DownloadSettingsDataStore.MODE_COPY_LINK,
-            onClick = { viewModel.setDownloadMode(DownloadSettingsDataStore.MODE_COPY_LINK) }
+            onClick = { viewModel.updateDownloadMode(DownloadSettingsDataStore.MODE_COPY_LINK) }
           )
 
           HorizontalDivider(modifier = Modifier.padding(horizontal = 8.dp))
@@ -70,7 +70,7 @@ fun DownloadSettingsScreen(
             title = "调起默认浏览器跳转",
             description = "跳转到直链链接并依赖浏览器内置机制或外部工具下载",
             selected = viewModel.downloadMode == DownloadSettingsDataStore.MODE_BROWSER,
-            onClick = { viewModel.setDownloadMode(DownloadSettingsDataStore.MODE_BROWSER) }
+            onClick = { viewModel.updateDownloadMode(DownloadSettingsDataStore.MODE_BROWSER) }
           )
         }
       }

@@ -28,7 +28,8 @@ class DownloadSettingsViewModel(private val dataStore: DownloadSettingsDataStore
     }
   }
 
-  fun setDownloadMode(mode: Int) {
+  // 将方法重命名为 updateDownloadMode 以解决 JVM 签名冲突
+  fun updateDownloadMode(mode: Int) {
     viewModelScope.launch {
       dataStore.saveDownloadMode(mode)
     }
