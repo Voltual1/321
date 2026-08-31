@@ -21,7 +21,7 @@ sealed interface QrLoginState {
   object Idle : QrLoginState
   object Loading : QrLoginState
   data class QrReady(val bitmap: Bitmap, val uniID: String) : QrLoginState
-  data class Scanned(val uniID: String) : QrLoginState 
+  data class Scanned(val bitmap: Bitmap, val uniID: String) : QrLoginState // 传入并缓存 bitmap，防止状态回退时重置 uniID
   data class Success(val token: String) : QrLoginState
   data class Error(val message: String) : QrLoginState
 }
@@ -80,14 +80,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         .onSuccess { response ->
           val data = response.data
           if (response.isSuccess && data != null) {
-            // 关键修复：直接强制将基础域名指向官方标准的 wx-app-login.html 授权端点。
+            // 强制将基础域名指向官方标准的 wx-app-login.html 授权端点。
             // 绝不使用可能产生普通网页误导的 qr-scan-page 路径，保证微信直接拉起小程序。
             val finalQrUrl = "https://yun.123pan.cn/wx-app-login.html?env=production&uniID=${data.uniID}&source=123pan&type=login"
 
             val bitmap = generateQrCodeBitmap(finalQrUrl)
             if (bitmap != null) {
               _qrLoginState.value = QrLoginState.QrReady(bitmap, data.uniID)
-              startPolling(data.uniID)
+              startPolling(data.uniID, bitmap)
             } else {
               _qrLoginState.value = QrLoginState.Error("生成二维码图片失败")
             }
@@ -113,7 +113,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   /**
    * 开启轮询，自动支持 App 扫码直登 与 微信扫码授权二次置换
    */
-  private fun startPolling(uniID: String) {
+  private fun startPolling(uniID: String, bitmap: Bitmap) {
     pollingJob = viewModelScope.launch {
       var count = 0
       val maxPollingCount = 120 // 约 3 分钟有效期
@@ -128,15 +128,12 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             if (response.isSuccess && result != null) {
               when (result.loginStatus) {
                 0 -> {
-                  // 继续等待扫码，若之前是Scanned状态则重置回QrReady以便展示二维码
-                  val currentState = _qrLoginState.value
-                  if (currentState is QrLoginState.Scanned) {
-                    startQrLoginFlow() // 二维码可能被在手机端取消，重新生成一个
-                  }
+                  // 关键修复：回到等待扫码状态，直接恢复显示已有的二维码，不做任何网络重置！
+                  _qrLoginState.value = QrLoginState.QrReady(bitmap, uniID)
                 }
                 1 -> {
-                  // 已扫码，等待确认。
-                  _qrLoginState.value = QrLoginState.Scanned(uniID)
+                  // 已扫码，等待确认。在Scanned状态中同样传入并保留bitmap。
+                  _qrLoginState.value = QrLoginState.Scanned(bitmap, uniID)
                 }
                 3 -> {
                   // 扫码授权成功！开始兑换 Token

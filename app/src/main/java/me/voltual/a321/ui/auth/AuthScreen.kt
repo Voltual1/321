@@ -199,7 +199,7 @@ fun AuthScreen(
               }
             }
             is QrLoginState.Scanned -> {
-              // ===== 新增：已扫码等待手机确认状态的精致 UI =====
+              // 已扫码等待手机确认状态的精致 UI
               Surface(
                 modifier = Modifier.size(160.dp),
                 shape = MaterialTheme.shapes.extraLarge,

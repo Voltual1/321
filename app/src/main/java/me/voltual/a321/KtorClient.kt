@@ -145,8 +145,9 @@ object KtorClient {
 
   @Serializable
   data class PanResponse<T>(val code: Int, val message: String, val data: T? = null) {
+    // 关键修复：兼容 0 和 200 作为成功码
     val isSuccess: Boolean
-      get() = code == 0
+      get() = code == 0 || code == 200
   }
 
   @Serializable data class FileListData(val Total: Int, val InfoList: List<FileInfo>)
@@ -200,7 +201,7 @@ object KtorClient {
 
   @Serializable
   data class QrResultData(
-    val loginStatus: Int,      // 0: 等待扫码, 3: 授权成功
+    val loginStatus: Int,      // 0: 等待扫码, 1: 已扫码未确认, 3: 授权成功
     val scanPlatform: Int,     // 4: 微信, 7: 123云盘 App
     val login_type: Int,
     val token: String? = null  // App 授权成功时直接返回
@@ -486,7 +487,7 @@ object KtorClient {
      * 重命名文件或文件夹
      *
      * @param token 用户授权 Token
-     * @param fileId 文件或文件夹的 ID
+     * @param fileId 文件或文件夹 of ID
      * @param newName 新的文件名（需包含后缀名）
      */
     suspend fun renameFile(token: String, fileId: Long, newName: String): Result<PanResponse<Unit>>
@@ -635,7 +636,7 @@ object KtorClient {
               bucket = bucket,
               key = key,
               partNumberStart = partNumber,
-              // 关键修复：End 必须比 Start 大 1 才能获取到当前块的 URL
+              // 关键修复：End 必须比 Start 大 1 才能获取到当前块 of URL
               partNumberEnd = partNumber + 1,
               uploadId = uploadId,
               StorageNode = storageNode,
