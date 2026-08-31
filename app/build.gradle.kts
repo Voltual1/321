@@ -123,6 +123,8 @@ dependencies {
   implementation(libs.androidx.icons.extended)
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.viewmodel.compose)
+  
+  implementation("androidx.navigation:navigation-compose:2.9.6")  
 
   implementation(libs.compose.navigation3)
   implementation(libs.compose.navigation3.ui)

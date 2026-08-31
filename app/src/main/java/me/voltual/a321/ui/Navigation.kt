@@ -8,17 +8,24 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.a321.ui
 
-import androidx.navigation3.runtime.NavKey
-import kotlinx.serialization.Serializable
-
-/** Navigation 3 的类型安全目的地契约。 完全依赖 Kotlinx Serialization 进行类型匹配。 */
-sealed interface AppDestination : NavKey
+/** Navigation 2 的类型安全目的地契约。 */
+sealed interface AppDestination {
+  val route: String
+}
 
 // --- 核心导航 ---
-@Serializable data object Home : AppDestination
+object Home : AppDestination {
+  override val route = "home"
+}
 
-@Serializable data object Login : AppDestination
+object Login : AppDestination {
+  override val route = "login"
+}
 
-@Serializable data object UpdateSettings : AppDestination
+object UpdateSettings : AppDestination {
+  override val route = "update_settings"
+}
 
-@Serializable data object ThemeCustomize : AppDestination
+object ThemeCustomize : AppDestination {
+  override val route = "theme_customize"
+}

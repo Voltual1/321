@@ -27,7 +27,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation3.runtime.NavKey
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -57,22 +59,18 @@ class MainActivity : ComponentActivity() {
     }
 
     setContent {
-      val navigationState =
-        rememberNavigationState(startRoute = Home, topLevelRoutes = topLevelRoutes)
-
+      val navController = rememberNavController()
       val view = LocalView.current // 获取承载 Compose 的原生 View
-
       val topAppBarController = remember { TopAppBarController() }
 
       val navigator =
-        remember(navigationState, view) {
+        remember(navController, view) {
           // 传入控制器
-          Navigator(navigationState, view, topAppBarController)
+          Navigator(navController, view, topAppBarController)
         }
 
       CompositionLocalProvider(
         LocalNavigator provides navigator,
-        LocalNavigationState provides navigationState,
         LocalTopAppBarController provides topAppBarController,
       ) {
         val snackbarHostState = remember { SnackbarHostState() }
@@ -92,7 +90,7 @@ class MainActivity : ComponentActivity() {
 
         BBQTheme(appDarkTheme = ThemeManager.isAppDarkTheme) {
           MainScreenContent(
-            navigationState = navigationState,
+            navController = navController,
             navigator = navigator,
             snackbarHostState = snackbarHostState,
             showAgreementDialog = showAgreementDialog,
@@ -163,12 +161,12 @@ class MainActivity : ComponentActivity() {
   }
 
   /** 定义所有顶层路由（对应抽屉中独立返回堆栈的页面） */
-  val topLevelRoutes: Set<NavKey> = setOf(Home, ThemeCustomize)
+  val topLevelRoutes: Set<AppDestination> = setOf(Home, ThemeCustomize)
 
   @OptIn(ExperimentalMaterial3Api::class)
   @Composable
   fun MainScreenContent(
-    navigationState: NavigationState,
+    navController: NavHostController,
     navigator: Navigator,
     snackbarHostState: SnackbarHostState,
     showAgreementDialog: Boolean,
@@ -178,8 +176,17 @@ class MainActivity : ComponentActivity() {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val currentRoute = navigationState.currentRoute
-    val currentTopLevelRoute = navigationState.topLevelRoute
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRouteString = navBackStackEntry?.destination?.route
+    val currentRoute = remember(currentRouteString) {
+      when (currentRouteString) {
+        Home.route -> Home
+        Login.route -> Login
+        ThemeCustomize.route -> ThemeCustomize
+        UpdateSettings.route -> UpdateSettings
+        else -> Home
+      }
+    }
 
     val showBackButton = remember(currentRoute) { currentRoute != Home && currentRoute != Login }
 
@@ -189,8 +196,6 @@ class MainActivity : ComponentActivity() {
     val darkBgUri by
       ThemeColorStore.getDrawerHeaderDarkBackgroundUriFlow(context).collectAsState(initial = null)
     val drawerHeaderBackgroundUri = if (useDarkTheme) darkBgUri else lightBgUri
-
-    val isLoggedIn = remember { mutableStateOf(false) }
 
     val topAppBarController = LocalTopAppBarController.current
 
@@ -207,7 +212,7 @@ class MainActivity : ComponentActivity() {
             )
             NavigationDrawerItems(
               navigator = navigator,
-              currentTopLevelRoute = currentTopLevelRoute,
+              currentTopLevelRoute = currentRoute,
               drawerState = drawerState,
               scope = scope,
             )
@@ -266,14 +271,9 @@ class MainActivity : ComponentActivity() {
         },
         snackbarHost = { BBQSnackbarHost(hostState = snackbarHostState) },
         content = { innerPadding ->
-          val currentBackStack =
-            navigationState.backStacks[currentTopLevelRoute]
-              ?: navigationState.backStacks[navigationState.startRoute]!!
-
           Box(modifier = Modifier.padding(innerPadding).roundScreenPadding()) {
             BBQNavDisplay(
-              backStack = currentBackStack,
-              onBack = { navigator.goBack() },
+              navController = navController,
               snackbarHostState = snackbarHostState,
               modifier = Modifier.fillMaxSize(),
             )
@@ -341,7 +341,7 @@ fun restartMainActivity(context: Context) {
 }
 
 @Composable
-fun getTitleForDestination(route: NavKey?): String {
+fun getTitleForDestination(route: AppDestination?): String {
   return when (route) {
     Home -> "A321"
     Login -> "登录"

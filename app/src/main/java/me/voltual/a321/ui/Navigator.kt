@@ -9,49 +9,49 @@
 package me.voltual.a321.ui
 
 import android.view.View
-import androidx.navigation3.runtime.NavKey
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 
 /** Handles navigation events (forward and back) by updating the navigation state. */
 class Navigator(
-  val state: NavigationState,
+  val navController: NavHostController,
   private val hostView: View? = null, // 传入原生 View 引用
   private val topAppBarController: TopAppBarController? = null,
 ) {
   private fun forceCleanup() {
-
     // 剥夺焦点：防止某些view组件因持有焦点而在销毁瞬间尝试重绘菜单
     hostView?.clearFocus()
-    // 自动清空 TopAppBar 状态 :不需要在每一个 Screen 里都写 onDispose { controller.clear() }，防止开发者漏写导致“页面 A
-    // 的按钮出现在页面 B”的尴尬
+    // 自动清空 TopAppBar 状态
     topAppBarController?.clear()
   }
 
   fun logoutAndReset() {
-    state.resetToStart()
+    forceCleanup()
+    navController.navigate(Home.route) {
+      popUpTo(navController.graph.findStartDestination().id) {
+        inclusive = true
+      }
+      launchSingleTop = true
+    }
   }
 
-  fun navigate(route: NavKey) {
+  fun navigate(route: AppDestination) {
     forceCleanup() // 执行暴力清理
 
-    if (route in state.backStacks.keys) {
-      state.topLevelRoute = route
-      // This is a top level route, just switch to it.
-    } else {
-      state.backStacks[state.topLevelRoute]?.add(route)
+    navController.navigate(route.route) {
+      // 顶级路由设置标准的 SingleTop 策略，以便在抽屉切换时能够保存并恢复状态
+      if (route == Home || route == ThemeCustomize) {
+        popUpTo(navController.graph.findStartDestination().id) {
+          saveState = true
+        }
+        launchSingleTop = true
+        restoreState = true
+      }
     }
   }
 
   fun goBack() {
     forceCleanup()
-
-    val currentStack =
-      state.backStacks[state.topLevelRoute] ?: error("Stack for ${state.topLevelRoute} not found")
-    // If we're at the base of the current route, go back to the start route stack.
-
-    if (currentStack.last() == state.topLevelRoute) {
-      state.topLevelRoute = state.startRoute
-    } else {
-      currentStack.removeLastOrNull()
-    }
+    navController.popBackStack()
   }
 }

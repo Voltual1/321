@@ -26,7 +26,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation3.runtime.NavKey
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
@@ -67,7 +66,7 @@ fun DrawerHeader(modifier: Modifier = Modifier, backgroundUri: String?) {
 @Composable
 fun NavigationDrawerItems(
   navigator: Navigator,
-  currentTopLevelRoute: NavKey?,
+  currentTopLevelRoute: AppDestination?,
   drawerState: DrawerState,
   scope: CoroutineScope,
 ) {
@@ -202,7 +201,7 @@ fun NavigationDrawerItems(
 @Composable
 private fun ItemContent(
   item: DrawerItem,
-  currentTopLevelRoute: NavKey?,
+  currentTopLevelRoute: AppDestination?,
   isDragged: Boolean,
   scope: CoroutineScope,
   drawerState: DrawerState,

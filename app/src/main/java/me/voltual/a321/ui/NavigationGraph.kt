@@ -9,20 +9,14 @@
 package me.voltual.a321.ui
 
 import android.content.Intent
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.*
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
-import androidx.navigation3.runtime.*
-import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
-import androidx.navigation3.scene.DialogSceneStrategy
-import androidx.navigation3.ui.NavDisplay
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import kotlinx.coroutines.launch
 import me.voltual.a321.core.ui.animation.*
 import me.voltual.a321.core.ui.components.IDMTransferDialog
@@ -33,68 +27,44 @@ import me.voltual.a321.ui.settings.update.UpdateSettingsScreen
 
 @Composable
 fun BBQNavDisplay(
-  backStack: List<NavKey>,
-  onBack: () -> Unit,
+  navController: NavHostController,
   snackbarHostState: SnackbarHostState,
   modifier: Modifier = Modifier,
 ) {
-  val mySceneStrategy = remember { DialogSceneStrategy<NavKey>() }
   val slideDistance = rememberSlideDistance() // 获取 30dp 对应的像素值
-
-  val decorators =
-    listOf(
-      rememberSaveableStateHolderNavEntryDecorator<NavKey>(), // 保持 UI 状态（如滚动位置）
-      rememberViewModelStoreNavEntryDecorator<NavKey>(), // 为每个 Entry 提供独立的 ViewModel 存储
-    )
-
   val scope = rememberCoroutineScope()
 
-  NavDisplay(
-    backStack = backStack,
-    onBack = onBack,
-    entryDecorators = decorators, // 传入装饰器
+  NavHost(
+    navController = navController,
+    startDestination = Home.route,
     modifier = modifier.fillMaxSize(),
-    sceneStrategy = mySceneStrategy,
+    enterTransition = { materialSharedAxisXIn(forward = true, slideDistance = slideDistance) },
+    exitTransition = { materialSharedAxisXOut(forward = true, slideDistance = slideDistance) },
+    popEnterTransition = { materialSharedAxisXIn(forward = false, slideDistance = slideDistance) },
+    popExitTransition = { materialSharedAxisXOut(forward = false, slideDistance = slideDistance) }
+  ) {
+    composable(route = Home.route) {
+      ExplorerScreen(snackbarHostState = snackbarHostState)
+    }
 
-    //  前进动画：当新页面入栈时触发
-    transitionSpec = { materialSharedAxisX(forward = true, slideDistance = slideDistance) },
+    composable(route = ThemeCustomize.route) {
+      ThemeCustomizeScreen(modifier = Modifier.fillMaxSize())
+    }
 
-    //  返回动画：当页面出栈（Pop）时触发
-    popTransitionSpec = { materialSharedAxisX(forward = false, slideDistance = slideDistance) },
-    // 使用手动实现的 entryProvider 闭包
-    entryProvider = { key ->
-      when (key) {
-        is Home -> NavEntry(key) { ExplorerScreen(snackbarHostState = snackbarHostState) }
+    composable(route = UpdateSettings.route) {
+      UpdateSettingsScreen(snackbarHostState = snackbarHostState)
+    }
 
-        is ThemeCustomize ->
-          NavEntry(key) { ThemeCustomizeScreen(modifier = Modifier.fillMaxSize()) }
-
-        is UpdateSettings ->
-          NavEntry(key) { UpdateSettingsScreen(snackbarHostState = snackbarHostState) }
-        is Login ->
-          NavEntry(key) {
-            AuthScreen(
-              snackbarHostState = snackbarHostState,
-              onLoginSuccess = {
-                scope.launch { snackbarHostState.showSnackbar("登录成功") }
-                onBack()
-              },
-            )
-          }
-
-        // 保底逻辑
-        else ->
-          NavEntry(key) {
-            Box(
-              modifier = Modifier.fillMaxSize(),
-              contentAlignment = androidx.compose.ui.Alignment.Center,
-            ) {
-              Text("Unknown Key: ${key::class.simpleName}", color = Color.Red)
-            }
-          }
-      }
-    },
-  )
+    composable(route = Login.route) {
+      AuthScreen(
+        snackbarHostState = snackbarHostState,
+        onLoginSuccess = {
+          scope.launch { snackbarHostState.showSnackbar("登录成功") }
+          navController.popBackStack()
+        },
+      )
+    }
+  }
 }
 
 @Composable
