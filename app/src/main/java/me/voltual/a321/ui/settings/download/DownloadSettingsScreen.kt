@@ -27,7 +27,6 @@ fun DownloadSettingsScreen(
   Scaffold(
     topBar = {
       TopAppBar(
-        title = { Text("下载设置") }
       )
     }
   ) { paddingValues ->
@@ -50,7 +49,7 @@ fun DownloadSettingsScreen(
         Column(modifier = Modifier.padding(8.dp)) {
           DownloadModeOption(
             title = "使用 1DM 下载",
-            description = "调起外部 1DM 下载工具进行极速多线程下载",
+            description = "调起外部 1DM 下载工具进行下载",
             selected = viewModel.downloadMode == DownloadSettingsDataStore.MODE_1DM,
             onClick = { viewModel.updateDownloadMode(DownloadSettingsDataStore.MODE_1DM) }
           )

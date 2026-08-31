@@ -338,6 +338,7 @@ fun getTitleForDestination(route: AppDestination?): String {
     Login -> "登录"
     ThemeCustomize -> "主题定制"
     UpdateSettings -> "更新设置"
+    DownloadSettings -> "下载设置"
     else -> "在~ $route ~里~哦"
   }
 }
