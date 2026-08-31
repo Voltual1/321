@@ -125,10 +125,6 @@ dependencies {
   implementation(libs.androidx.lifecycle.viewmodel.compose)
   
   implementation("androidx.navigation:navigation-compose:2.9.6")  
-
-/*  implementation(libs.compose.navigation3)
-  implementation(libs.compose.navigation3.ui)
-  implementation(libs.viewmodel.navigation3)*/
   implementation(libs.okhttp)
   implementation(libs.ktor.client.core)
   implementation(libs.ktor.client.okhttp)
@@ -147,21 +143,15 @@ dependencies {
 
   implementation(libs.koin.core)
   implementation(libs.koin.android.compose)
-//  implementation(libs.koin.workmanager)
   implementation(libs.koin.startup)
 
   implementation(libs.google.material)
-  implementation(libs.androidx.palette)
   implementation(libs.coil.compose)
   implementation(libs.coil.network.ktor)
-//  implementation(libs.photoview)
-//  implementation(libs.imagepicker)
   implementation(libs.markdown)
-//  implementation(libs.libsu.core)
   implementation(libs.simple.storage)
   implementation(libs.tink.android)
   implementation(libs.protobuf.kotlin)
-//  implementation(libs.androidx.work.runtime)
 }
 
 protobuf {
