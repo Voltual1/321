@@ -143,21 +143,21 @@ dependencies {
 
   implementation(libs.koin.core)
   implementation(libs.koin.android.compose)
-  implementation(libs.koin.workmanager)
+//  implementation(libs.koin.workmanager)
   implementation(libs.koin.startup)
 
   implementation(libs.google.material)
   implementation(libs.androidx.palette)
   implementation(libs.coil.compose)
   implementation(libs.coil.network.ktor)
-  implementation(libs.photoview)
-  implementation(libs.imagepicker)
+//  implementation(libs.photoview)
+//  implementation(libs.imagepicker)
   implementation(libs.markdown)
-  implementation(libs.libsu.core)
+//  implementation(libs.libsu.core)
   implementation(libs.simple.storage)
   implementation(libs.tink.android)
   implementation(libs.protobuf.kotlin)
-  implementation(libs.androidx.work.runtime)
+//  implementation(libs.androidx.work.runtime)
 }
 
 protobuf {

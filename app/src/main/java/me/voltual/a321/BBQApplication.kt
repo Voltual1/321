@@ -20,7 +20,6 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.androix.startup.KoinStartup
 import org.koin.dsl.koinConfiguration
 
-@KoinApplication
 class BBQApplication : Application(), KoinStartup {
   val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
