@@ -1,7 +1,7 @@
 [versions]
 # 构建与核心语言
 agp = "9.2.0"
-kotlin = "2.3.21"
+kotlin = "2.2.21"
 ksp = "2.3.8"
 kotlinx-coroutines = "1.10.2"
 kotlinx-serialization = "1.9.0"
