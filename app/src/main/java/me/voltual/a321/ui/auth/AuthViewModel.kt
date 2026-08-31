@@ -21,7 +21,7 @@ sealed interface QrLoginState {
   object Idle : QrLoginState
   object Loading : QrLoginState
   data class QrReady(val bitmap: Bitmap, val uniID: String) : QrLoginState
-  data class Scanned(val bitmap: Bitmap, val uniID: String) : QrLoginState // 传入并缓存 bitmap，防止状态回退时重置 uniID
+  data class Scanned(val bitmap: Bitmap, val uniID: String) : QrLoginState 
   data class Success(val token: String) : QrLoginState
   data class Error(val message: String) : QrLoginState
 }
@@ -128,7 +128,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             if (response.isSuccess && result != null) {
               when (result.loginStatus) {
                 0 -> {
-                  // 关键修复：回到等待扫码状态，直接恢复显示已有的二维码，不做任何网络重置！
+                  // 回到等待扫码状态，直接恢复显示已有的二维码，不做任何网络重置！
                   _qrLoginState.value = QrLoginState.QrReady(bitmap, uniID)
                 }
                 1 -> {
@@ -157,41 +157,54 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
   /**
    * 统一处理确认授权后的身份换取
+   * 关键重构：使用 when 语句对平台做强制分类判定，提供 100% 覆盖的安全保障
    */
   private suspend fun handleAuthorizationSuccess(uniID: String, result: KtorClient.QrResultData) {
-    // 情况 A：123云盘 App 扫码 (scanPlatform == 7 / login_type == 7) -> 轮询结果中直接有 token
-    if (result.scanPlatform == 7 && !result.token.isNullOrBlank()) {
-      _qrLoginState.value = QrLoginState.Success(result.token)
-      saveToken(result.token)
-      return
-    }
-
-    // 情况 B：微信扫码 (scanPlatform == 4) -> 需要走 微信Code 换 Token 的置换流
-    KtorClient.ApiServiceImpl.getWxCode(uniID)
-      .onSuccess { codeRes ->
-        val wxData = codeRes.data
-        if (codeRes.isSuccess && wxData != null) {
-          // 用 wxCode 登录
-          KtorClient.ApiServiceImpl.loginWithWechatCode(wxData.wxCode)
-            .onSuccess { loginRes ->
-              val token = loginRes.data?.token
-              if (loginRes.isSuccess && !token.isNullOrBlank()) {
-                _qrLoginState.value = QrLoginState.Success(token)
-                saveToken(token)
-              } else {
-                _qrLoginState.value = QrLoginState.Error(loginRes.message)
-              }
-            }
-            .onFailure { err ->
-              _qrLoginState.value = QrLoginState.Error("微信一键登录失败: ${err.localizedMessage}")
-            }
+    when (result.scanPlatform) {
+      7 -> {
+        // 1. 官方 App 扫码直登：直接解析返回的 Token
+        val token = result.token
+        if (!token.isNullOrBlank()) {
+          _qrLoginState.value = QrLoginState.Success(token)
+          saveToken(token)
         } else {
-          _qrLoginState.value = QrLoginState.Error("获取微信凭证失败: ${codeRes.message}")
+          _qrLoginState.value = QrLoginState.Error("App 确认登录成功，但服务器未下发身份凭证(Token)")
         }
       }
-      .onFailure { err ->
-        _qrLoginState.value = QrLoginState.Error("获取微信临时凭证失败: ${err.localizedMessage}")
+      4 -> {
+        // 2. 微信扫码登录：需要通过微信特有的 WxCode 进行二次置换
+        KtorClient.ApiServiceImpl.getWxCode(uniID)
+          .onSuccess { codeRes ->
+            val wxData = codeRes.data
+            if (codeRes.isSuccess && wxData != null) {
+              KtorClient.ApiServiceImpl.loginWithWechatCode(wxData.wxCode)
+                .onSuccess { loginRes ->
+                  val token = loginRes.data?.token
+                  if (loginRes.isSuccess && !token.isNullOrBlank()) {
+                    _qrLoginState.value = QrLoginState.Success(token)
+                    saveToken(token)
+                  } else {
+                    _qrLoginState.value = QrLoginState.Error(
+                      if (loginRes.message.isNotBlank()) loginRes.message else "微信授权登录失败，请稍后重试"
+                    )
+                  }
+                }
+                .onFailure { err ->
+                  _qrLoginState.value = QrLoginState.Error("微信身份置换网络错误: ${err.localizedMessage}")
+                }
+            } else {
+              _qrLoginState.value = QrLoginState.Error("获取微信虚拟凭证失败: ${codeRes.message}")
+            }
+          }
+          .onFailure { err ->
+            _qrLoginState.value = QrLoginState.Error("微信扫码握手失败: ${err.localizedMessage}")
+          }
       }
+      else -> {
+        // 3. 安全防御分支：阻止任何未知平台导致的静默失败卡死
+        _qrLoginState.value = QrLoginState.Error("暂不支持此平台的扫码授权 (Platform Code: ${result.scanPlatform})")
+      }
+    }
   }
 
   /**
