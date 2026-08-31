@@ -142,6 +142,8 @@ dependencies {
 
   implementation(libs.androidx.datastore.preferences)
   implementation(libs.androidx.datastore.core)
+  
+  implementation(libs.zxing.core)
 
   implementation(libs.koin.core)
   implementation(libs.koin.android.compose)

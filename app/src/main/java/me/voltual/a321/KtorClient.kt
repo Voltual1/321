@@ -81,6 +81,16 @@ object KtorClient {
   @Serializable
   data class LoginRequest(val type: Int = 1, val passport: String, val password: String)
 
+  // 微信授权码登录请求
+  @Serializable
+  data class WechatLoginRequest(
+    val from: String = "web",
+    val wechat_code: String,
+    val type: Int = 4,
+    val remember: Boolean = true,
+    val gray: Boolean = true
+  )
+
   @Serializable
   data class UploadRequest(
     val driveId: Int = 0,
@@ -180,6 +190,31 @@ object KtorClient {
   @Serializable data class DownloadData(val DownloadUrl: String)
 
   @Serializable data class LoginData(val token: String)
+
+  // ===== 扫码登录相关数据模型 =====
+  @Serializable
+  data class QrGenerateData(
+    val url: String,
+    val uniID: String
+  )
+
+  @Serializable
+  data class QrResultData(
+    val loginStatus: Int,      // 0: 等待扫码, 3: 授权成功
+    val scanPlatform: Int,     // 4: 微信, 7: 123云盘 App
+    val login_type: Int,
+    val token: String? = null  // App 授权成功时直接返回
+  )
+
+  @Serializable
+  data class WxCodeRequest(
+    val uniID: String
+  )
+
+  @Serializable
+  data class WxCodeData(
+    val wxCode: String
+  )
 
   // ===== 下载相关的请求模型 =====
 
@@ -528,6 +563,28 @@ object KtorClient {
       targetParentId: Long,
       files: List<CopyFileInfo>,
     ): Result<PanResponse<Unit>>
+
+    // ===== 扫码相关新接口 =====
+
+    /**
+     * 1. 申请扫码二维码和uniID
+     */
+    suspend fun generateQrCode(): Result<PanResponse<QrGenerateData>>
+
+    /**
+     * 2. 轮询二维码扫码状态
+     */
+    suspend fun getQrCodeResult(uniID: String): Result<PanResponse<QrResultData>>
+
+    /**
+     * 3. 微信扫码成功后，获取虚拟微信 Code
+     */
+    suspend fun getWxCode(uniID: String): Result<PanResponse<WxCodeData>>
+
+    /**
+     * 4. 使用微信 Code 换取最终登录 Token
+     */
+    suspend fun loginWithWechatCode(wxCode: String): Result<PanResponse<LoginData>>
   }
 
   object ApiServiceImpl : ApiService {
@@ -889,6 +946,36 @@ object KtorClient {
         setBody(
           CopyShareRequest(SharePwd = sharePwd, shareKey = shareKey, fileInfoList = adjustedFiles)
         )
+      }
+    }
+
+    // ===== 扫码接口具体实现 =====
+
+    override suspend fun generateQrCode(): Result<PanResponse<QrGenerateData>> = safeApiCall {
+      httpClient.get("https://user.123pan.cn/api/user/qr-code/generate")
+    }
+
+    override suspend fun getQrCodeResult(uniID: String): Result<PanResponse<QrResultData>> = safeApiCall {
+      httpClient.get("https://user.123pan.cn/api/user/qr-code/result") {
+        url {
+          parameters.append("uniID", uniID)
+          parameters.append("remember", "true")
+          parameters.append("gray", "true")
+        }
+      }
+    }
+
+    override suspend fun getWxCode(uniID: String): Result<PanResponse<WxCodeData>> = safeApiCall {
+      httpClient.post("https://user.123pan.cn/api/user/qr-code/wx_code") {
+        contentType(ContentType.Application.Json)
+        setBody(WxCodeRequest(uniID = uniID))
+      }
+    }
+
+    override suspend fun loginWithWechatCode(wxCode: String): Result<PanResponse<LoginData>> = safeApiCall {
+      httpClient.post("https://user.123pan.cn/api/user/sign_in") {
+        contentType(ContentType.Application.Json)
+        setBody(WechatLoginRequest(wechat_code = wxCode))
       }
     }
   }
