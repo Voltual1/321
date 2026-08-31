@@ -76,20 +76,41 @@ fun AuthScreen(
       }
     },
     floatingActionButton = {
-      if (selectedTab == 0) {
-        // 网页登录时留底的安全手动确认按钮
-        ExtendedFloatingActionButton(
-          onClick = {
-            val found = viewModel.checkAndExtractToken(manual = true)
-            if (!found) {
-              scope.launch { snackbarHostState.showSnackbar("未检测到登录状态，请先在网页内完成登录") }
-            }
-          },
-          icon = { Icon(Icons.Default.Check, contentDescription = null) },
-          text = { Text("我已完成登录") },
-          containerColor = MaterialTheme.colorScheme.primaryContainer,
-          contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
+      when (selectedTab) {
+        0 -> {
+          ExtendedFloatingActionButton(
+            onClick = {
+              val found = viewModel.checkAndExtractToken(manual = true)
+              if (!found) {
+                scope.launch { snackbarHostState.showSnackbar("未检测到登录状态，请先在网页内完成登录") }
+              }
+            },
+            icon = { Icon(Icons.Default.Check, contentDescription = null) },
+            text = { Text("我已完成登录") },
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+          )
+        }
+        1 -> {
+          // 仅在准备好二维码或者用户已扫码的情况下显示手动确认的 FAB 按钮
+          if (qrState is QrLoginState.QrReady || qrState is QrLoginState.Scanned) {
+            ExtendedFloatingActionButton(
+              onClick = {
+                viewModel.checkQrStatusManually { success ->
+                  if (!success) {
+                    scope.launch {
+                      snackbarHostState.showSnackbar("未检测到手机端授权通过，请确保已在手机端点击了“确认登录”")
+                    }
+                  }
+                }
+              },
+              icon = { Icon(Icons.Default.Check, contentDescription = null) },
+              text = { Text("我已扫码并确认") },
+              containerColor = MaterialTheme.colorScheme.primaryContainer,
+              contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+          }
+        }
       }
     },
   ) { padding ->
@@ -180,7 +201,7 @@ fun AuthScreen(
               )
               Spacer(modifier = Modifier.height(8.dp))
               Text(
-                text = "扫码完成后网页会自动同步登录状态，无需额外操作",
+                text = "扫码完成后会自动同步登录状态，无需额外操作",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -199,7 +220,6 @@ fun AuthScreen(
               }
             }
             is QrLoginState.Scanned -> {
-              // 已扫码等待手机确认状态的精致 UI
               Surface(
                 modifier = Modifier.size(160.dp),
                 shape = MaterialTheme.shapes.extraLarge,

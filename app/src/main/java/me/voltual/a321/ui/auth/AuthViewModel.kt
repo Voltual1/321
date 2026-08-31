@@ -36,6 +36,10 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   val qrLoginState = _qrLoginState.asStateFlow()
 
   private var pollingJob: Job? = null
+  
+  // 缓存当前的二维码图片和会话 ID
+  private var currentBitmap: Bitmap? = null
+  private var currentUniID: String? = null
 
   // 默认网页登录页
   private val loginUrl =
@@ -69,7 +73,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   /**
-   * 扫码端：开启扫码流程（硬编码规范路径，确保微信和小程序完美识别）
+   * 扫码端：开启扫码流程
    */
   fun startQrLoginFlow() {
     pollingJob?.cancel()
@@ -80,14 +84,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         .onSuccess { response ->
           val data = response.data
           if (response.isSuccess && data != null) {
-            // 强制将基础域名指向官方标准的 wx-app-login.html 授权端点。
-            // 绝不使用可能产生普通网页误导的 qr-scan-page 路径，保证微信直接拉起小程序。
             val finalQrUrl = "https://yun.123pan.cn/wx-app-login.html?env=production&uniID=${data.uniID}&source=123pan&type=login"
-
             val bitmap = generateQrCodeBitmap(finalQrUrl)
             if (bitmap != null) {
+              currentBitmap = bitmap
+              currentUniID = data.uniID
               _qrLoginState.value = QrLoginState.QrReady(bitmap, data.uniID)
-              startPolling(data.uniID, bitmap)
+              startPolling()
             } else {
               _qrLoginState.value = QrLoginState.Error("生成二维码图片失败")
             }
@@ -107,19 +110,24 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   fun stopQrLoginFlow() {
     pollingJob?.cancel()
     pollingJob = null
+    currentBitmap = null
+    currentUniID = null
     _qrLoginState.value = QrLoginState.Idle
   }
 
   /**
-   * 开启轮询，自动支持 App 扫码直登 与 微信扫码授权二次置换
+   * 开启后台自动轮询
    */
-  private fun startPolling(uniID: String, bitmap: Bitmap) {
+  private fun startPolling() {
+    val uniID = currentUniID ?: return
+    val bitmap = currentBitmap ?: return
+
     pollingJob = viewModelScope.launch {
       var count = 0
-      val maxPollingCount = 120 // 约 3 分钟有效期
+      val maxPollingCount = 120 // 约 3 分钟
 
       while (count < maxPollingCount) {
-        delay(1500) // 1.5 秒轮询一次
+        delay(1500)
         count++
 
         KtorClient.ApiServiceImpl.getQrCodeResult(uniID)
@@ -128,27 +136,21 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             if (response.isSuccess && result != null) {
               when (result.loginStatus) {
                 0 -> {
-                  // 回到等待扫码状态，直接恢复显示已有的二维码，不做任何网络重置！
                   _qrLoginState.value = QrLoginState.QrReady(bitmap, uniID)
                 }
                 1 -> {
-                  // 已扫码，等待确认。在Scanned状态中同样传入并保留bitmap。
                   _qrLoginState.value = QrLoginState.Scanned(bitmap, uniID)
                 }
                 3 -> {
-                  // 扫码授权成功！开始兑换 Token
-                  pollingJob?.cancel() // 停止轮询
+                  // 关键修复：直接调用换取凭证并退出协程，坚决不在协程内部提前调用 cancel() 导致自我毁灭
                   handleAuthorizationSuccess(uniID, result)
                   return@launch
-                }
-                else -> {
-                  // 容错处理
                 }
               }
             }
           }
           .onFailure {
-            // 轮询单次请求异常不阻断，继续尝试
+            // 忽略单次网络抖动
           }
       }
       _qrLoginState.value = QrLoginState.Error("二维码已过期，请刷新")
@@ -156,23 +158,49 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   /**
+   * 提供给 UI 层的手动同步按钮点击事件：双重保障逻辑
+   */
+  fun checkQrStatusManually(onResult: (Boolean) -> Unit) {
+    val uniID = currentUniID
+    if (uniID.isNullOrBlank()) {
+      onResult(false)
+      return
+    }
+
+    viewModelScope.launch {
+      KtorClient.ApiServiceImpl.getQrCodeResult(uniID)
+        .onSuccess { response ->
+          val result = response.data
+          if (response.isSuccess && result != null && result.loginStatus == 3) {
+            // 确认用户已经同意登录：此时我们在手动触发的新协程中，可以安全地取消原轮询 Job
+            pollingJob?.cancel()
+            handleAuthorizationSuccess(uniID, result)
+            onResult(true)
+          } else {
+            onResult(false)
+          }
+        }
+        .onFailure {
+          onResult(false)
+        }
+    }
+  }
+
+  /**
    * 统一处理确认授权后的身份换取
-   * 关键重构：使用 when 语句对平台做强制分类判定，提供 100% 覆盖的安全保障
    */
   private suspend fun handleAuthorizationSuccess(uniID: String, result: KtorClient.QrResultData) {
     when (result.scanPlatform) {
       7 -> {
-        // 1. 官方 App 扫码直登：直接解析返回的 Token
         val token = result.token
         if (!token.isNullOrBlank()) {
           _qrLoginState.value = QrLoginState.Success(token)
           saveToken(token)
         } else {
-          _qrLoginState.value = QrLoginState.Error("App 确认登录成功，但服务器未下发身份凭证(Token)")
+          _qrLoginState.value = QrLoginState.Error("App 确认登录成功，但服务器未下发 Token")
         }
       }
       4 -> {
-        // 2. 微信扫码登录：需要通过微信特有的 WxCode 进行二次置换
         KtorClient.ApiServiceImpl.getWxCode(uniID)
           .onSuccess { codeRes ->
             val wxData = codeRes.data
@@ -193,7 +221,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                   _qrLoginState.value = QrLoginState.Error("微信身份置换网络错误: ${err.localizedMessage}")
                 }
             } else {
-              _qrLoginState.value = QrLoginState.Error("获取微信虚拟凭证失败: ${codeRes.message}")
+              _qrLoginState.value = QrLoginState.Error("获取微信凭证失败: ${codeRes.message}")
             }
           }
           .onFailure { err ->
@@ -201,7 +229,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
           }
       }
       else -> {
-        // 3. 安全防御分支：阻止任何未知平台导致的静默失败卡死
         _qrLoginState.value = QrLoginState.Error("暂不支持此平台的扫码授权 (Platform Code: ${result.scanPlatform})")
       }
     }
