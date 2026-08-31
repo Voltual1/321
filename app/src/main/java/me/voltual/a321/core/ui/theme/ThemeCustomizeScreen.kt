@@ -10,13 +10,8 @@ package me.voltual.a321.core.ui.theme
 
 import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.content.res.Configuration
-import android.net.Uri
 import android.util.DisplayMetrics
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -33,12 +28,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import coil3.compose.rememberAsyncImagePainter
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -75,92 +68,6 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
   // 翻译状态
   var translate by remember { mutableStateOf(false) }
 
-  // 分离各种图片选择器启动器
-  val globalBackgroundPickerLauncher =
-    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-      uri?.let {
-        context.contentResolver.takePersistableUriPermission(
-          it,
-          Intent.FLAG_GRANT_READ_URI_PERMISSION,
-        )
-        scope.launch { ThemeColorStore.saveGlobalBackgroundUri(context, it.toString()) }
-      }
-    }
-
-  // 日间模式图片主题选择器
-  val lightImageThemePickerLauncher =
-    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-      uri?.let {
-        context.contentResolver.takePersistableUriPermission(
-          it,
-          Intent.FLAG_GRANT_READ_URI_PERMISSION,
-        )
-        scope.launch {
-          ThemeColorStore.saveImageThemeLightUri(context, it.toString())
-          // 提取颜色并更新 lightColors
-          val bitmap = ColorUtils.getBitmapFromUri(context, it)
-          val colorSet = ColorUtils.extractColorsFromBitmap(bitmap)
-          colorSet?.let { newColors -> lightColors = newColors }
-        }
-      }
-    }
-
-  // 夜间模式图片主题选择器
-  val darkImageThemePickerLauncher =
-    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-      uri?.let {
-        context.contentResolver.takePersistableUriPermission(
-          it,
-          Intent.FLAG_GRANT_READ_URI_PERMISSION,
-        )
-        scope.launch {
-          ThemeColorStore.saveImageThemeDarkUri(context, it.toString())
-          // 提取颜色并更新 darkColors
-          val bitmap = ColorUtils.getBitmapFromUri(context, it)
-          val colorSet = ColorUtils.extractColorsFromBitmap(bitmap)
-          colorSet?.let { newColors -> darkColors = newColors }
-        }
-      }
-    }
-
-  // 日间模式侧边栏背景选择器
-  val lightDrawerBgPickerLauncher =
-    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-      uri?.let {
-        context.contentResolver.takePersistableUriPermission(
-          it,
-          Intent.FLAG_GRANT_READ_URI_PERMISSION,
-        )
-        scope.launch { ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, it.toString()) }
-      }
-    }
-
-  // 夜间模式侧边栏背景选择器
-  val darkDrawerBgPickerLauncher =
-    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-      uri?.let {
-        context.contentResolver.takePersistableUriPermission(
-          it,
-          Intent.FLAG_GRANT_READ_URI_PERMISSION,
-        )
-        scope.launch { ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, it.toString()) }
-      }
-    }
-
-  // 状态收集 - 使用正确的 Flow
-  val globalBackgroundUri by
-    ThemeColorStore.getGlobalBackgroundUriFlow(context).collectAsState(initial = null)
-
-  val lightImageThemeUri by
-    ThemeColorStore.getImageThemeLightUriFlow(context).collectAsState(initial = null)
-  val darkImageThemeUri by
-    ThemeColorStore.getImageThemeDarkUriFlow(context).collectAsState(initial = null)
-
-  val lightDrawerBgUri by
-    ThemeColorStore.getDrawerHeaderLightBackgroundUriFlow(context).collectAsState(initial = null)
-  val darkDrawerBgUri by
-    ThemeColorStore.getDrawerHeaderDarkBackgroundUriFlow(context).collectAsState(initial = null)
-
   var selectedTab by remember { mutableStateOf(0) }
 
   LaunchedEffect(showSavedMessage) {
@@ -174,24 +81,17 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
     AlertDialog(
       onDismissRequest = { showResetDialog = false },
       title = { Text("恢复默认主题") },
-      text = { Text("确定要恢复所有颜色、设置和背景图片为默认值吗？此操作不可撤销。") },
+      text = { Text("确定要恢复所有颜色和设置吗？此操作不可撤销。") },
       confirmButton = {
         Button(
           onClick = {
             scope.launch {
-              // 重置所有颜色
+              // 重置所有颜色和显示设置
               lightColors = ThemeColorStore.DEFAULT_COLORS.lightSet
               darkColors = ThemeColorStore.DEFAULT_COLORS.darkSet
               dpi = 1.0f
               fontSize = 1.0f
               customDpiEnabled = false // 重置为不启用自定义 DPI
-
-              // 清除所有图片 URI
-              ThemeColorStore.saveGlobalBackgroundUri(context, null)
-              ThemeColorStore.saveImageThemeLightUri(context, null)
-              ThemeColorStore.saveImageThemeDarkUri(context, null)
-              ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, null)
-              ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, null)
             }
             showResetDialog = false
           },
@@ -230,18 +130,6 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 80.dp),
       ) {
-        // 全局背景设置（独立于主题模式）
-        item {
-          GlobalBackgroundEditor(
-            title = "主页背景图片",
-            backgroundUri = globalBackgroundUri,
-            onSelectImage = { globalBackgroundPickerLauncher.launch(arrayOf("image/*")) },
-            onReset = { scope.launch { ThemeColorStore.saveGlobalBackgroundUri(context, null) } },
-          )
-        }
-
-        item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
-
         item {
           Text(
             text = "显示设置",
@@ -336,33 +224,6 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
 
         when (selectedTab) {
           0 -> { // 日间模式
-            item {
-              ImageThemeEditor(
-                title = "图片主题 (日间)",
-                description = "从此图片提取颜色生成日间主题",
-                imageUri = lightImageThemeUri,
-                onSelectImage = { lightImageThemePickerLauncher.launch(arrayOf("image/*")) },
-                onReset = {
-                  scope.launch {
-                    ThemeColorStore.saveImageThemeLightUri(context, null)
-                    lightColors = ThemeColorStore.DEFAULT_COLORS.lightSet
-                  }
-                },
-              )
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) }
-            item {
-              DrawerBackgroundEditor(
-                title = "侧边栏背景 (日间)",
-                description = "仅修改侧边栏头部背景图片",
-                backgroundUri = lightDrawerBgUri,
-                onSelectImage = { lightDrawerBgPickerLauncher.launch(arrayOf("image/*")) },
-                onReset = {
-                  scope.launch { ThemeColorStore.saveDrawerHeaderLightBackgroundUri(context, null) }
-                },
-              )
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) }
             items(lightColors.toList(), key = { "light_" + it.first }) { (name, color) ->
               Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 ColorEditItem(
@@ -378,33 +239,6 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
             }
           }
           1 -> { // 夜间模式
-            item {
-              ImageThemeEditor(
-                title = "图片主题 (夜间)",
-                description = "从此图片提取颜色生成夜间主题",
-                imageUri = darkImageThemeUri,
-                onSelectImage = { darkImageThemePickerLauncher.launch(arrayOf("image/*")) },
-                onReset = {
-                  scope.launch {
-                    ThemeColorStore.saveImageThemeDarkUri(context, null)
-                    darkColors = ThemeColorStore.DEFAULT_COLORS.darkSet
-                  }
-                },
-              )
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) }
-            item {
-              DrawerBackgroundEditor(
-                title = "侧边栏背景 (夜间)",
-                description = "仅修改侧边栏头部背景图片",
-                backgroundUri = darkDrawerBgUri,
-                onSelectImage = { darkDrawerBgPickerLauncher.launch(arrayOf("image/*")) },
-                onReset = {
-                  scope.launch { ThemeColorStore.saveDrawerHeaderDarkBackgroundUri(context, null) }
-                },
-              )
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) }
             items(darkColors.toList(), key = { "dark_" + it.first }) { (name, color) ->
               Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 ColorEditItem(
@@ -443,54 +277,6 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
       contentColor = MaterialTheme.colorScheme.onPrimary,
       modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
     )
-  }
-}
-
-// 全局背景图片编辑器
-@Composable
-private fun GlobalBackgroundEditor(
-  title: String,
-  backgroundUri: String?,
-  onSelectImage: () -> Unit,
-  onReset: () -> Unit,
-) {
-  Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-    Text(
-      text = title,
-      style = MaterialTheme.typography.titleSmall,
-      modifier = Modifier.padding(horizontal = 16.dp),
-    )
-    Card(
-      modifier =
-        Modifier.fillMaxWidth().height(180.dp).padding(horizontal = 16.dp, vertical = 8.dp),
-      elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-    ) {
-      if (backgroundUri != null) {
-        Image(
-          painter = rememberAsyncImagePainter(model = backgroundUri),
-          contentDescription = "Global Background Preview",
-          contentScale = ContentScale.Crop,
-          modifier = Modifier.fillMaxSize(),
-        )
-      } else {
-        Box(
-          modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-          Text(
-            text = "未选择图片",
-            modifier = Modifier.align(Alignment.Center),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-        }
-      }
-    }
-    Row(
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-      Button(onClick = onSelectImage, modifier = Modifier.weight(1f)) { Text("选择图片") }
-      OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f)) { Text("恢复默认") }
-    }
   }
 }
 
@@ -550,98 +336,6 @@ private fun saveThemeAndRestart(
         delay(300)
         restartMainActivity(context) // 重启
       }
-    }
-  }
-}
-
-@Composable
-private fun DrawerBackgroundEditor(
-  title: String,
-  description: String,
-  backgroundUri: String?,
-  onSelectImage: () -> Unit,
-  onReset: () -> Unit,
-) {
-  Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-    Text(
-      text = title,
-      style = MaterialTheme.typography.titleSmall,
-      modifier = Modifier.padding(horizontal = 16.dp),
-    )
-    Text(
-      text = description,
-      style = MaterialTheme.typography.bodySmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-    )
-    Card(
-      modifier =
-        Modifier.fillMaxWidth().height(180.dp).padding(horizontal = 16.dp, vertical = 8.dp),
-      elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-    ) {
-      DrawerHeaderPreview(modifier = Modifier.fillMaxSize(), backgroundUri = backgroundUri)
-    }
-    Row(
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-      Button(onClick = onSelectImage, modifier = Modifier.weight(1f)) { Text("选择图片") }
-      OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f)) { Text("恢复默认") }
-    }
-  }
-}
-
-// 图片主题编辑器
-@Composable
-private fun ImageThemeEditor(
-  title: String,
-  description: String,
-  imageUri: String?,
-  onSelectImage: () -> Unit,
-  onReset: () -> Unit,
-) {
-  Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-    Text(
-      text = title,
-      style = MaterialTheme.typography.titleSmall,
-      modifier = Modifier.padding(horizontal = 16.dp),
-    )
-    Text(
-      text = description,
-      style = MaterialTheme.typography.bodySmall,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-    )
-    Card(
-      modifier =
-        Modifier.fillMaxWidth().height(180.dp).padding(horizontal = 16.dp, vertical = 8.dp),
-      elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-    ) {
-      if (imageUri != null) {
-        Image(
-          painter = rememberAsyncImagePainter(model = imageUri),
-          contentDescription = "Image Theme Preview",
-          contentScale = ContentScale.Crop,
-          modifier = Modifier.fillMaxSize(),
-        )
-      } else {
-        Box(
-          modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-          Text(
-            text = "未选择图片",
-            modifier = Modifier.align(Alignment.Center),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-        }
-      }
-    }
-    Row(
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-      Button(onClick = onSelectImage, modifier = Modifier.weight(1f)) { Text("选择图片") }
-      OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f)) { Text("恢复默认") }
     }
   }
 }
@@ -790,23 +484,6 @@ fun HsvColorPickerDialog(
     dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
     shape = AppShapes.medium, // 应用 AppShapes.medium
   )
-}
-
-@Composable
-private fun DrawerHeaderPreview(modifier: Modifier = Modifier, backgroundUri: String?) {
-  Box(modifier = modifier.background(MaterialTheme.colorScheme.primaryContainer)) {
-    if (backgroundUri != null) {
-      androidx.compose.foundation.Image(
-        painter = rememberAsyncImagePainter(model = backgroundUri),
-        contentDescription = "Drawer Header Background Preview",
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.fillMaxSize(),
-      )
-    } else {
-      // 显示默认背景或占位符
-      Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary))
-    }
-  }
 }
 
 fun Color.toHex(): String {

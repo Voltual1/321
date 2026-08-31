@@ -9,7 +9,6 @@
 package me.voltual.a321.core.ui.theme
 
 import android.content.Context
-import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.core.DataStore
@@ -162,7 +161,6 @@ data class ColorSet(
 }
 
 object ThemeColorStore {
-  // 直接使用默认函数创建默认颜色集
   val DEFAULT_COLORS =
     CustomColorSet(lightSet = ColorSet.defaultLight(), darkSet = ColorSet.defaultDark())
 
@@ -220,21 +218,6 @@ object ThemeColorStore {
 
   private val DPI_KEY = floatPreferencesKey("dpi")
   private val FONT_SIZE_KEY = floatPreferencesKey("font_size")
-  private val DRAWER_HEADER_LIGHT_BG_URI_KEY = stringPreferencesKey("drawer_header_light_bg_uri")
-  private val DRAWER_HEADER_DARK_BG_URI_KEY = stringPreferencesKey("drawer_header_dark_bg_uri")
-
-  private val GLOBAL_BACKGROUND_URI_KEY = stringPreferencesKey("global_background_uri")
-
-  suspend fun saveGlobalBackgroundUri(context: Context, uri: String?) {
-    context.themeSettingsDataStore.edit { preferences ->
-      if (uri != null) preferences[GLOBAL_BACKGROUND_URI_KEY] = uri
-      else preferences.remove(GLOBAL_BACKGROUND_URI_KEY)
-    }
-  }
-
-  fun getGlobalBackgroundUriFlow(context: Context): Flow<String?> {
-    return context.themeSettingsDataStore.data.map { it[GLOBAL_BACKGROUND_URI_KEY] }
-  }
 
   suspend fun saveColors(context: Context, colors: CustomColorSet) {
     context.themeSettingsDataStore.edit { preferences ->
@@ -247,37 +230,11 @@ object ThemeColorStore {
     }
   }
 
-  // 注意：load 方法保持 runBlocking，因为它们需要在 Activity 初始化（非 suspend 上下文）时同步加载
-  // ThemeColorStore.kt
-
   fun loadColors(context: Context): CustomColorSet {
     return runBlocking {
       val preferences = context.themeSettingsDataStore.data.first()
-
-      val lightSet: ColorSet =
-        try {
-          // 优先尝试从图片主题加载
-          preferences[IMAGE_THEME_LIGHT_URI_KEY]?.let { uriString ->
-            val uri = Uri.parse(uriString)
-            val bitmap = ColorUtils.getBitmapFromUri(context, uri)
-            ColorUtils.extractColorsFromBitmap(bitmap)
-          } ?: loadColorSet(preferences, LIGHT_COLOR_KEYS, DEFAULT_COLORS.lightSet)
-        } catch (e: Exception) {
-          // 如果图片主题加载失败，回退到手动设置的颜色
-          loadColorSet(preferences, LIGHT_COLOR_KEYS, DEFAULT_COLORS.lightSet)
-        }
-
-      val darkSet: ColorSet =
-        try {
-          preferences[IMAGE_THEME_DARK_URI_KEY]?.let { uriString ->
-            val uri = Uri.parse(uriString)
-            val bitmap = ColorUtils.getBitmapFromUri(context, uri)
-            ColorUtils.extractColorsFromBitmap(bitmap)
-          } ?: loadColorSet(preferences, DARK_COLOR_KEYS, DEFAULT_COLORS.darkSet)
-        } catch (e: Exception) {
-          loadColorSet(preferences, DARK_COLOR_KEYS, DEFAULT_COLORS.darkSet)
-        }
-
+      val lightSet = loadColorSet(preferences, LIGHT_COLOR_KEYS, DEFAULT_COLORS.lightSet)
+      val darkSet = loadColorSet(preferences, DARK_COLOR_KEYS, DEFAULT_COLORS.darkSet)
       CustomColorSet(lightSet, darkSet)
     }
   }
@@ -332,53 +289,6 @@ object ThemeColorStore {
 
   fun loadFontSize(context: Context): Float {
     return runBlocking { context.themeSettingsDataStore.data.first()[FONT_SIZE_KEY] ?: 1.0f }
-  }
-
-  suspend fun saveDrawerHeaderLightBackgroundUri(context: Context, uri: String?) {
-    context.themeSettingsDataStore.edit { preferences ->
-      if (uri != null) preferences[DRAWER_HEADER_LIGHT_BG_URI_KEY] = uri
-      else preferences.remove(DRAWER_HEADER_LIGHT_BG_URI_KEY)
-    }
-  }
-
-  fun getDrawerHeaderLightBackgroundUriFlow(context: Context): Flow<String?> {
-    return context.themeSettingsDataStore.data.map { it[DRAWER_HEADER_LIGHT_BG_URI_KEY] }
-  }
-
-  suspend fun saveDrawerHeaderDarkBackgroundUri(context: Context, uri: String?) {
-    context.themeSettingsDataStore.edit { preferences ->
-      if (uri != null) preferences[DRAWER_HEADER_DARK_BG_URI_KEY] = uri
-      else preferences.remove(DRAWER_HEADER_DARK_BG_URI_KEY)
-    }
-  }
-
-  fun getDrawerHeaderDarkBackgroundUriFlow(context: Context): Flow<String?> {
-    return context.themeSettingsDataStore.data.map { it[DRAWER_HEADER_DARK_BG_URI_KEY] }
-  }
-
-  private val IMAGE_THEME_LIGHT_URI_KEY = stringPreferencesKey("image_theme_light_uri")
-  private val IMAGE_THEME_DARK_URI_KEY = stringPreferencesKey("image_theme_dark_uri")
-
-  suspend fun saveImageThemeLightUri(context: Context, uri: String?) {
-    context.themeSettingsDataStore.edit { preferences ->
-      if (uri != null) preferences[IMAGE_THEME_LIGHT_URI_KEY] = uri
-      else preferences.remove(IMAGE_THEME_LIGHT_URI_KEY)
-    }
-  }
-
-  fun getImageThemeLightUriFlow(context: Context): Flow<String?> {
-    return context.themeSettingsDataStore.data.map { it[IMAGE_THEME_LIGHT_URI_KEY] }
-  }
-
-  suspend fun saveImageThemeDarkUri(context: Context, uri: String?) {
-    context.themeSettingsDataStore.edit { preferences ->
-      if (uri != null) preferences[IMAGE_THEME_DARK_URI_KEY] = uri
-      else preferences.remove(IMAGE_THEME_DARK_URI_KEY)
-    }
-  }
-
-  fun getImageThemeDarkUriFlow(context: Context): Flow<String?> {
-    return context.themeSettingsDataStore.data.map { it[IMAGE_THEME_DARK_URI_KEY] }
   }
 
   // 是否启用自定义 DPI 的 DataStore 键
