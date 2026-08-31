@@ -145,7 +145,6 @@ dependencies {
   implementation(libs.koin.android.compose)
   implementation(libs.koin.startup)
 
-  implementation(libs.google.material)
   implementation(libs.coil.compose)
   implementation(libs.coil.network.ktor)
   implementation(libs.markdown)
