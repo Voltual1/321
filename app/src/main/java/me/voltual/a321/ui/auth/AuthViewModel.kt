@@ -68,7 +68,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   /**
-   * 扫码端：开启扫码流程（生成二维码）
+   * 扫码端：开启扫码流程（生成包含参数的正确登录授权二维码）
    */
   fun startQrLoginFlow() {
     pollingJob?.cancel()
@@ -79,7 +79,12 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         .onSuccess { response ->
           val data = response.data
           if (response.isSuccess && data != null) {
-            val bitmap = generateQrCodeBitmap(data.url)
+            // 关键修复：拼接出官方 App 可识别的特定安全登录 URL
+            val baseUrl = data.url
+            val separator = if (baseUrl.contains("?")) "&" else "?"
+            val finalQrUrl = "${baseUrl}${separator}env=production&uniID=${data.uniID}&source=123pan&type=login"
+
+            val bitmap = generateQrCodeBitmap(finalQrUrl)
             if (bitmap != null) {
               _qrLoginState.value = QrLoginState.QrReady(bitmap, data.uniID)
               startPolling(data.uniID)
