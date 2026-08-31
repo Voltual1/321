@@ -174,7 +174,6 @@ class MainActivity : ComponentActivity() {
   ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRouteString = navBackStackEntry?.destination?.route
@@ -190,13 +189,6 @@ class MainActivity : ComponentActivity() {
 
     val showBackButton = remember(currentRoute) { currentRoute != Home && currentRoute != Login }
 
-    val useDarkTheme = ThemeManager.isAppDarkTheme
-    val lightBgUri by
-      ThemeColorStore.getDrawerHeaderLightBackgroundUriFlow(context).collectAsState(initial = null)
-    val darkBgUri by
-      ThemeColorStore.getDrawerHeaderDarkBackgroundUriFlow(context).collectAsState(initial = null)
-    val drawerHeaderBackgroundUri = if (useDarkTheme) darkBgUri else lightBgUri
-
     val topAppBarController = LocalTopAppBarController.current
 
     ModalNavigationDrawer(
@@ -208,7 +200,6 @@ class MainActivity : ComponentActivity() {
           ) {
             DrawerHeader(
               modifier = Modifier.fillMaxWidth().height(180.dp),
-              backgroundUri = drawerHeaderBackgroundUri,
             )
             NavigationDrawerItems(
               navigator = navigator,
