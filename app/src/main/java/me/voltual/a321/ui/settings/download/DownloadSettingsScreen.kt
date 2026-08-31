@@ -25,10 +25,7 @@ fun DownloadSettingsScreen(
   modifier: Modifier = Modifier
 ) {
   Scaffold(
-    topBar = {
-      TopAppBar(
-      )
-    }
+    topBar = {    }
   ) { paddingValues ->
     Column(
       modifier = modifier
