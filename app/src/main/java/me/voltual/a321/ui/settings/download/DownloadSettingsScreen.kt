@@ -16,22 +16,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import me.voltual.a321.data.DownloadSettingsDataStore
+import me.voltual.a321.ui.LocalTopAppBarController
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadSettingsScreen(
   viewModel: DownloadSettingsViewModel = koinViewModel(),
   modifier: Modifier = Modifier
 ) {
-  Scaffold(
-    topBar = {    }
-  ) { paddingValues ->
+
+  Box(
+    modifier = modifier
+      .fillMaxSize()
+      .padding(16.dp)
+  ) {
     Column(
-      modifier = modifier
-        .fillMaxSize()
-        .padding(paddingValues)
-        .padding(16.dp),
+      modifier = Modifier.fillMaxSize(),
       verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
       Text(
@@ -46,7 +46,7 @@ fun DownloadSettingsScreen(
         Column(modifier = Modifier.padding(8.dp)) {
           DownloadModeOption(
             title = "使用 1DM 下载",
-            description = "调起外部 1DM 下载工具进行下载",
+            description = "调起外部 1DM 下载工具进行极速多线程下载",
             selected = viewModel.downloadMode == DownloadSettingsDataStore.MODE_1DM,
             onClick = { viewModel.updateDownloadMode(DownloadSettingsDataStore.MODE_1DM) }
           )

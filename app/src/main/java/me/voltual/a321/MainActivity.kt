@@ -183,6 +183,7 @@ class MainActivity : ComponentActivity() {
         Login.route -> Login
         ThemeCustomize.route -> ThemeCustomize
         UpdateSettings.route -> UpdateSettings
+        DownloadSettings.route -> DownloadSettings
         else -> Home
       }
     }
