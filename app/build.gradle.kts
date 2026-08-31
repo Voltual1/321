@@ -25,7 +25,7 @@ android {
 
     defaultConfig {
         applicationId = "me.voltual.a321"
-        minSdk = 24
+        minSdk = 21
         targetSdk = 37 // 升级至 37
         versionCode = 5
         versionName = "2.2"
@@ -126,9 +126,9 @@ dependencies {
   
   implementation("androidx.navigation:navigation-compose:2.9.6")  
 
-  implementation(libs.compose.navigation3)
+/*  implementation(libs.compose.navigation3)
   implementation(libs.compose.navigation3.ui)
-  implementation(libs.viewmodel.navigation3)
+  implementation(libs.viewmodel.navigation3)*/
   implementation(libs.okhttp)
   implementation(libs.ktor.client.core)
   implementation(libs.ktor.client.okhttp)
