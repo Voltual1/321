@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -76,6 +77,7 @@ fun AuthScreen(
     },
     floatingActionButton = {
       if (selectedTab == 0) {
+        // 网页登录时留底的安全手动确认按钮
         ExtendedFloatingActionButton(
           onClick = {
             val found = viewModel.checkAndExtractToken(manual = true)
@@ -195,6 +197,45 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("刷新二维码")
               }
+            }
+            is QrLoginState.Scanned -> {
+              // ===== 新增：已扫码等待手机确认状态的精致 UI =====
+              Surface(
+                modifier = Modifier.size(160.dp),
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.primaryContainer
+              ) {
+                Box(contentAlignment = Alignment.Center) {
+                  Icon(
+                    imageVector = Icons.Default.PhoneAndroid,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(80.dp)
+                  )
+                }
+              }
+              Spacer(modifier = Modifier.height(24.dp))
+              Text(
+                text = "扫码成功！",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+              )
+              Spacer(modifier = Modifier.height(8.dp))
+              Text(
+                text = "请在手机端点击“确认登录”完成授权",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+              )
+              Spacer(modifier = Modifier.height(24.dp))
+              LinearProgressIndicator(
+                modifier = Modifier
+                  .width(140.dp)
+                  .height(4.dp),
+                color = MaterialTheme.colorScheme.primary
+              )
             }
             is QrLoginState.Success -> {
               Icon(

@@ -21,6 +21,7 @@ sealed interface QrLoginState {
   object Idle : QrLoginState
   object Loading : QrLoginState
   data class QrReady(val bitmap: Bitmap, val uniID: String) : QrLoginState
+  data class Scanned(val uniID: String) : QrLoginState // 新增：已扫码未确认状态
   data class Success(val token: String) : QrLoginState
   data class Error(val message: String) : QrLoginState
 }
@@ -79,7 +80,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         .onSuccess { response ->
           val data = response.data
           if (response.isSuccess && data != null) {
-            // 关键修复：拼接出官方 App 可识别的特定安全登录 URL
+            // 拼接出官方 App 可识别的特定安全登录 URL
             val baseUrl = data.url
             val separator = if (baseUrl.contains("?")) "&" else "?"
             val finalQrUrl = "${baseUrl}${separator}env=production&uniID=${data.uniID}&source=123pan&type=login"
@@ -128,7 +129,16 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             if (response.isSuccess && result != null) {
               when (result.loginStatus) {
                 0 -> {
-                  // 继续等待扫码
+                  // 继续等待扫码，若之前是Scanned状态则重置回QrReady以便展示二维码
+                  val currentState = _qrLoginState.value
+                  if (currentState is QrLoginState.Scanned) {
+                    startQrLoginFlow() // 二维码可能被在手机端取消，重新生成一个
+                  }
+                }
+                1 -> {
+                  // 关键修复：已扫码，等待确认。
+                  // 更新状态至 Scanned，通知 UI 改变提示文本，同时绝不中断轮询！
+                  _qrLoginState.value = QrLoginState.Scanned(uniID)
                 }
                 3 -> {
                   // 扫码授权成功！开始兑换 Token
@@ -137,16 +147,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                   return@launch
                 }
                 else -> {
-                  // 其他非预期状态，退出
-                  pollingJob?.cancel()
-                  _qrLoginState.value = QrLoginState.Error("二维码授权状态异常")
-                  return@launch
+                  // 容错处理：对于任何未知的中间过渡状态，我们选择继续轮询，不轻易自杀
                 }
               }
             }
           }
           .onFailure {
-            // 轮询异常不直接阻断，继续尝试
+            // 轮询单次请求异常（如瞬时断网）不阻断，继续尝试
           }
       }
       _qrLoginState.value = QrLoginState.Error("二维码已过期，请刷新")
