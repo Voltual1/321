@@ -30,7 +30,7 @@ android {
         versionCode = 6
         versionName = "3.0"
 
-        multiDexEnabled = false
+        multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
         // 此处删除了旧的 androidResources
     }
