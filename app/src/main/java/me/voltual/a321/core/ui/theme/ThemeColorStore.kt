@@ -218,6 +218,9 @@ object ThemeColorStore {
 
   private val DPI_KEY = floatPreferencesKey("dpi")
   private val FONT_SIZE_KEY = floatPreferencesKey("font_size")
+  
+  // 应用主题选项 DataStore 键：0 -> 跟随系统, 1 -> 日间模式, 2 -> 夜间模式
+  private val APP_THEME_MODE_KEY = intPreferencesKey("app_theme_mode")
 
   suspend fun saveColors(context: Context, colors: CustomColorSet) {
     context.themeSettingsDataStore.edit { preferences ->
@@ -289,6 +292,19 @@ object ThemeColorStore {
 
   fun loadFontSize(context: Context): Float {
     return runBlocking { context.themeSettingsDataStore.data.first()[FONT_SIZE_KEY] ?: 1.0f }
+  }
+
+  // 保存和加载应用主题设置 (0: 系统, 1: 日间, 2: 夜间)
+  suspend fun saveThemeMode(context: Context, mode: Int) {
+    context.themeSettingsDataStore.edit { it[APP_THEME_MODE_KEY] = mode }
+  }
+
+  fun loadThemeMode(context: Context): Int {
+    return runBlocking { context.themeSettingsDataStore.data.first()[APP_THEME_MODE_KEY] ?: 0 }
+  }
+
+  fun getThemeModeFlow(context: Context): Flow<Int> {
+    return context.themeSettingsDataStore.data.map { it[APP_THEME_MODE_KEY] ?: 0 }
   }
 
   // 是否启用自定义 DPI 的 DataStore 键

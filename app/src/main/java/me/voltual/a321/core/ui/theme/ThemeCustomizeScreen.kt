@@ -65,6 +65,10 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
   var roundRight by remember { mutableStateOf(roundScreenPaddings.right) }
   var roundBottom by remember { mutableStateOf(roundScreenPaddings.bottom) }
 
+  // 持久化的主题模式 (0: 跟随系统, 1: 日间, 2: 夜间)
+  var appThemeMode by remember { mutableStateOf(ThemeColorStore.loadThemeMode(context)) }
+  var themeDropdownExpanded by remember { mutableStateOf(false) }
+
   // 翻译状态
   var translate by remember { mutableStateOf(false) }
 
@@ -92,6 +96,7 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
               dpi = 1.0f
               fontSize = 1.0f
               customDpiEnabled = false // 重置为不启用自定义 DPI
+              appThemeMode = 0 // 重置为跟随系统
             }
             showResetDialog = false
           },
@@ -136,6 +141,38 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
           )
+        }
+        item {
+          // 自定义下拉菜单选择应用主题模式
+          val themeOptions = listOf("跟随系统", "日间模式", "夜间模式")
+          BBQExposedDropdownMenuBox(
+            expanded = themeDropdownExpanded,
+            onExpandedChange = { themeDropdownExpanded = it },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+          ) {
+            OutlinedTextField(
+              value = themeOptions.getOrElse(appThemeMode) { "跟随系统" },
+              onValueChange = {},
+              readOnly = true,
+              label = { Text("应用主题") },
+              trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = themeDropdownExpanded) },
+              modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth()
+            )
+            BBQExposedDropdownMenu(
+              expanded = themeDropdownExpanded,
+              onDismissRequest = { themeDropdownExpanded = false }
+            ) {
+              themeOptions.forEachIndexed { index, option ->
+                DropdownMenuItem(
+                  text = { Text(option) },
+                  onClick = {
+                    appThemeMode = index
+                    themeDropdownExpanded = false
+                  }
+                )
+              }
+            }
+          }
         }
         item {
           SwitchWithText(
@@ -268,6 +305,7 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
           roundTop = roundTop,
           roundRight = roundRight,
           roundBottom = roundBottom,
+          appThemeMode = appThemeMode,
         )
         showSavedMessage = true
       },
@@ -294,6 +332,7 @@ private fun saveThemeAndRestart(
   roundTop: Float,
   roundRight: Float,
   roundBottom: Float,
+  appThemeMode: Int,
 ) {
   val scope =
     (context as? androidx.lifecycle.LifecycleOwner)?.lifecycleScope
@@ -302,6 +341,7 @@ private fun saveThemeAndRestart(
     val oldDpi = ThemeColorStore.loadDpi(context)
     val oldFontScale = ThemeColorStore.loadFontSize(context)
     val oldCustomDpiEnabled = ThemeColorStore.loadCustomDpiEnabled(context)
+    val oldThemeMode = ThemeColorStore.loadThemeMode(context)
 
     ThemeColorStore.saveColors(context, colors)
     ThemeColorStore.saveDpi(context, dpi)
@@ -315,12 +355,14 @@ private fun saveThemeAndRestart(
       roundRight,
       roundBottom,
     )
+    ThemeColorStore.saveThemeMode(context, appThemeMode) // 持久化存储主题模式
 
     withContext(Dispatchers.Main) {
-      ThemeManager.applyCustomColors(context) // 应用颜色
+      ThemeManager.applyCustomColors(context) // 应用颜色自定义
+      ThemeManager.applyThemeMode(context, appThemeMode) // 即时且平滑地应用主题模式
 
-      // 仅当 DPI 或字体大小或自定义 DPI 启用状态改变时才重启 Activity
-      if (oldDpi != dpi || oldFontScale != fontScale || oldCustomDpiEnabled != customDpiEnabled) {
+      // 仅当 DPI、字体大小、自定义 DPI 启用状态或主题模式改变时才重启 Activity
+      if (oldDpi != dpi || oldFontScale != fontScale || oldCustomDpiEnabled != customDpiEnabled || oldThemeMode != appThemeMode) {
         (context as? Activity)?.let {
           if (customDpiEnabled) {
             val resources = it.resources
@@ -334,7 +376,7 @@ private fun saveThemeAndRestart(
           }
         }
         delay(300)
-        restartMainActivity(context) // 重启
+        restartMainActivity(context) // 重启以重建界面样式
       }
     }
   }

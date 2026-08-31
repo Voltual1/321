@@ -13,6 +13,8 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.runBlocking
+import me.voltual.a321.BBQApplication
 
 object ThemeManager {
   var isAppDarkTheme by mutableStateOf(false)
@@ -22,27 +24,43 @@ object ThemeManager {
     customColorSet = ThemeColorStore.loadColors(context)
   }
 
-  fun toggleTheme() {
-    val newMode =
-      when (AppCompatDelegate.getDefaultNightMode()) {
-        AppCompatDelegate.MODE_NIGHT_YES -> AppCompatDelegate.MODE_NIGHT_NO
-        AppCompatDelegate.MODE_NIGHT_NO -> AppCompatDelegate.MODE_NIGHT_YES
-        else -> AppCompatDelegate.MODE_NIGHT_YES // 处理未设置的情况
-      }
+  /**
+   * 应用特定的主题模式并刷新 isAppDarkTheme 状态
+   * 0 -> 跟随系统, 1 -> 强制日间模式, 2 -> 强制夜间模式
+   */
+  fun applyThemeMode(context: Context, mode: Int) {
+    val targetNightMode = when (mode) {
+      1 -> AppCompatDelegate.MODE_NIGHT_NO
+      2 -> AppCompatDelegate.MODE_NIGHT_YES
+      else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+    }
+    AppCompatDelegate.setDefaultNightMode(targetNightMode)
+    isAppDarkTheme = when (mode) {
+      1 -> false
+      2 -> true
+      else -> isSystemInDarkTheme(context)
+    }
+  }
 
-    AppCompatDelegate.setDefaultNightMode(newMode)
-    isAppDarkTheme = newMode == AppCompatDelegate.MODE_NIGHT_YES
+  /**
+   * 抽屉快速切换暗色主题：切换 1 (日间) 和 2 (夜间) 模式并进行持久化
+   */
+  fun toggleTheme() {
+    val context = BBQApplication.context
+    val currentMode = ThemeColorStore.loadThemeMode(context)
+    val newMode = if (currentMode == 2) 1 else 2
+    runBlocking {
+      ThemeColorStore.saveThemeMode(context, newMode)
+    }
+    applyThemeMode(context, newMode)
   }
 
   fun initialize(context: Context) {
-    isAppDarkTheme =
-      when (AppCompatDelegate.getDefaultNightMode()) {
-        AppCompatDelegate.MODE_NIGHT_YES -> true
-        AppCompatDelegate.MODE_NIGHT_NO -> false
-        else -> isSystemInDarkTheme(context)
-      }
+    // 确保读取持久化存储的主题模式并应用
+    val mode = ThemeColorStore.loadThemeMode(context)
+    applyThemeMode(context, mode)
 
-    // 确保加载自定义颜色
+    // 加载自定义颜色
     applyCustomColors(context)
   }
 
