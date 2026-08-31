@@ -1,5 +1,17 @@
+// Copyright (C) 2025 Voltual
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
+// （或任意更新的版本）的条款重新分发和/或修改它。
+// 本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 package me.voltual.a321.ui.explorer
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
@@ -11,6 +23,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import me.voltual.a321.core.utils.Util1DM
+import me.voltual.a321.data.DownloadSettingsDataStore
 import me.voltual.a321.data.repository.PanRepository
 import me.voltual.a321.data.unified.PanActionResult
 import me.voltual.a321.data.unified.PanFile
@@ -26,7 +39,10 @@ sealed class ExplorerEvent {
   data class ShowSnackbar(val message: String, val actionLabel: String? = null) : ExplorerEvent()
 }
 
-class ExplorerViewModel(private val repository: PanRepository) : ViewModel() {
+class ExplorerViewModel(
+  private val repository: PanRepository,
+  private val downloadSettingsDataStore: DownloadSettingsDataStore
+) : ViewModel() {
 
   class PaneState {
     var fileList by mutableStateOf<List<PanFile>>(emptyList())
@@ -776,8 +792,41 @@ class ExplorerViewModel(private val repository: PanRepository) : ViewModel() {
     if (file.id < 0) return
     viewModelScope.launch {
       repository.getDownloadUrl(file).onSuccess { url ->
-        runCatching { Util1DM.downloadFile(activity, url, false, true) }
-          .onFailure { updatePaneError(activePane, "1DM 调用失败") }
+        val mode = downloadSettingsDataStore.loadDownloadMode()
+        when (mode) {
+          DownloadSettingsDataStore.MODE_1DM -> {
+            runCatching {
+              Util1DM.downloadFile(activity, url, false, true)
+              _events.send(ExplorerEvent.ShowSnackbar("正在调起 1DM 下载..."))
+            }.onFailure {
+              updatePaneError(activePane, "1DM 调用失败")
+              _events.send(ExplorerEvent.ShowSnackbar("调起 1DM 失败，请检查是否安装"))
+            }
+          }
+          DownloadSettingsDataStore.MODE_COPY_LINK -> {
+            runCatching {
+              val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+              val clip = ClipData.newPlainText("Download Link", url)
+              clipboard.setPrimaryClip(clip)
+              _events.send(ExplorerEvent.ShowSnackbar("下载直链已成功复制到剪贴板"))
+            }.onFailure {
+              _events.send(ExplorerEvent.ShowSnackbar("直链复制失败"))
+            }
+          }
+          DownloadSettingsDataStore.MODE_BROWSER -> {
+            runCatching {
+              val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+              }
+              activity.startActivity(intent)
+              _events.send(ExplorerEvent.ShowSnackbar("正在调起浏览器打开链接..."))
+            }.onFailure {
+              _events.send(ExplorerEvent.ShowSnackbar("无法调起浏览器，打开失败"))
+            }
+          }
+        }
+      }.onFailure {
+        _events.send(ExplorerEvent.ShowSnackbar("获取直链失败: ${it.message}"))
       }
     }
   }

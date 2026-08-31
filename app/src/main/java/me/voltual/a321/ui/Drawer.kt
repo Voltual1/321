@@ -14,6 +14,8 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -70,6 +72,12 @@ fun NavigationDrawerItems(
         "主题设置",
         IconSource.Resource(R.drawable.ic_menu_settings),
         ThemeCustomize,
+      ),
+      DrawerItem(
+        "download_settings",
+        "下载设置",
+        IconSource.Vector(Icons.Default.Download), // 添加矢量下载图标
+        DownloadSettings,
       ),
       DrawerItem(
         "update_settings",

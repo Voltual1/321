@@ -24,6 +24,7 @@ import me.voltual.a321.core.ui.theme.ThemeCustomizeScreen
 import me.voltual.a321.ui.auth.AuthScreen
 import me.voltual.a321.ui.explorer.ExplorerScreen
 import me.voltual.a321.ui.settings.update.UpdateSettingsScreen
+import me.voltual.a321.ui.settings.download.DownloadSettingsScreen
 
 @Composable
 fun BBQNavDisplay(
@@ -63,6 +64,11 @@ fun BBQNavDisplay(
           navController.popBackStack()
         },
       )
+    }
+
+    // 新增：下载设置页面路由支持
+    composable(route = DownloadSettings.route) {
+      DownloadSettingsScreen(modifier = Modifier.fillMaxSize())
     }
   }
 }

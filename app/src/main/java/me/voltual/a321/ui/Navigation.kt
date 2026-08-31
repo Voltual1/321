@@ -29,3 +29,8 @@ object UpdateSettings : AppDestination {
 object ThemeCustomize : AppDestination {
   override val route = "theme_customize"
 }
+
+// 新增下载设置导航目的地
+object DownloadSettings : AppDestination {
+  override val route = "download_settings"
+}
