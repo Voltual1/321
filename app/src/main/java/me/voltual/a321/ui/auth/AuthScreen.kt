@@ -1,4 +1,3 @@
-// AuthScreen.kt
 package me.voltual.a321.ui.auth
 
 import android.view.ViewGroup
@@ -7,6 +6,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
@@ -121,36 +122,47 @@ fun AuthScreen(
     ) {
       if (selectedTab == 0) {
         // ===== 网页登录通道 =====
-        AndroidView(
+        // 使用单页的 HorizontalPager 来拦截并消费水平滑动手势，防止触发侧边栏抽屉
+        val webPagerState = rememberPagerState(initialPage = 0) { 1 }
+        
+        HorizontalPager(
+          state = webPagerState,
           modifier = Modifier.fillMaxSize(),
-          factory = { context ->
-            WebView(context).apply {
-              layoutParams =
-                ViewGroup.LayoutParams(
-                  ViewGroup.LayoutParams.MATCH_PARENT,
-                  ViewGroup.LayoutParams.MATCH_PARENT,
-                )
+          userScrollEnabled = true
+        ) { page ->
+          if (page == 0) {
+            AndroidView(
+              modifier = Modifier.fillMaxSize(),
+              factory = { context ->
+                WebView(context).apply {
+                  layoutParams =
+                    ViewGroup.LayoutParams(
+                      ViewGroup.LayoutParams.MATCH_PARENT,
+                      ViewGroup.LayoutParams.MATCH_PARENT,
+                    )
 
-              settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-              }
-
-              webViewClient =
-                object : WebViewClient() {
-                  override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    viewModel.checkAndExtractToken(manual = false)
+                  settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                   }
-                }
 
-              CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-              loadUrl(viewModel.getInitialUrl())
-            }
-          },
-          update = { /* 状态由 WebView 自身管理 */ },
-        )
+                  webViewClient =
+                    object : WebViewClient() {
+                      override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        viewModel.checkAndExtractToken(manual = false)
+                      }
+                    }
+
+                  CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                  loadUrl(viewModel.getInitialUrl())
+                }
+              },
+              update = { /* 状态由 WebView 自身管理 */ },
+            )
+          }
+        }
       } else {
         // ===== 扫码登录通道 =====
         Column(
