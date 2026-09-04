@@ -1,5 +1,7 @@
 package me.voltual.a321.ui.auth
 
+import android.annotation.SuppressLint
+import android.view.MotionEvent
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebView
@@ -25,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
+@SuppressLint("ClickableViewAccessibility")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreen(
@@ -122,7 +125,6 @@ fun AuthScreen(
     ) {
       if (selectedTab == 0) {
         // ===== 网页登录通道 =====
-        // 使用单页的 HorizontalPager 来拦截并消费水平滑动手势，防止触发侧边栏抽屉
         val webPagerState = rememberPagerState(initialPage = 0) { 1 }
         
         HorizontalPager(
@@ -154,6 +156,21 @@ fun AuthScreen(
                         viewModel.checkAndExtractToken(manual = false)
                       }
                     }
+
+                  // 核心修复：拦截触摸事件分发，阻止父布局中途抢夺手势，解决滑块卡顿、无法一滑到底的问题
+                  setOnTouchListener { view, event ->
+                    when (event.action) {
+                      MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                        // 告知父容器不要拦截我的触摸事件
+                        view.parent?.requestDisallowInterceptTouchEvent(true)
+                      }
+                      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        view.parent?.requestDisallowInterceptTouchEvent(false)
+                      }
+                    }
+                    // 返回 false，让 WebView 内部的标准 HTML5/JS 逻辑继续消费这套事件进行滑动
+                    false
+                  }
 
                   CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                   loadUrl(viewModel.getInitialUrl())
