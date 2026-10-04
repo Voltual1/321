@@ -19,6 +19,34 @@ import me.voltual.a321.Cloud139Client
 import me.voltual.a321.KtorClient
 import me.voltual.a321.data.unified.PanPlatform
 
+enum class LoginUrlConfig(val platform: PanPlatform, val loginUrl: String) {
+  PAN123(
+    PanPlatform.PAN123,
+    "https://login.123pan.com/centerlogin?redirect_url=https%3A%2F%2Fwww.123pan.com%2F%3Fnotoken%3D1&source_page=website"
+  ),
+  CLOUD139(
+    PanPlatform.CLOUD139,
+    "https://yun.139.com/m/#/login"
+  );
+
+  companion object {
+    fun getUrl(platform: PanPlatform): String {
+      return entries.find { it.platform == platform }?.loginUrl ?: PAN123.loginUrl
+    }
+
+    /**
+     * 判断传入的 URL 是否仍处于该平台的登录页面
+     */
+    fun isAtLoginPage(platform: PanPlatform, url: String?): Boolean {
+      if (url.isNullOrBlank()) return true
+      return when (platform) {
+        PanPlatform.PAN123 -> url.contains("login.123pan.com") || url.contains("centerlogin")
+        PanPlatform.CLOUD139 -> url.contains("/login") || url.endsWith("#/login") || url.contains("login.html")
+      }
+    }
+  }
+}
+
 sealed interface QrLoginState {
   object Idle : QrLoginState
   object Loading : QrLoginState
@@ -43,11 +71,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   private var currentBitmap: Bitmap? = null
   private var currentUniID: String? = null
 
-  private val login123Url =
-    "https://login.123pan.com/centerlogin?redirect_url=https%3A%2F%2Fwww.123pan.com%2F%3Fnotoken%3D1&source_page=website"
   private val target123CookieUrl = "https://user.123pan.cn/"
-
-  private val login139Url = "https://yun.139.com/"
   private val target139CookieUrl = "https://yun.139.com/"
 
   fun selectPlatform(platform: PanPlatform) {
@@ -56,15 +80,21 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   fun getInitialUrl(): String {
-    return when (_selectedPlatform.value) {
-      PanPlatform.PAN123 -> login123Url
-      PanPlatform.CLOUD139 -> login139Url
-    }
+    return LoginUrlConfig.getUrl(_selectedPlatform.value)
   }
 
-  fun checkAndExtractToken(manual: Boolean = false): Boolean {
+  /**
+   * 检查 Cookie 提取 Token；如果在页面完成时，URL 仍处于登录页面，则不会自动触发提取
+   */
+  fun checkAndExtractToken(currentUrl: String? = null, manual: Boolean = false): Boolean {
+    val platform = _selectedPlatform.value
+
+    if (!manual && LoginUrlConfig.isAtLoginPage(platform, currentUrl)) {
+      return false
+    }
+
     val cookieManager = CookieManager.getInstance()
-    return when (_selectedPlatform.value) {
+    return when (platform) {
       PanPlatform.PAN123 -> {
         val cookies = cookieManager.getCookie(target123CookieUrl) ?: ""
         val token = cookies
@@ -74,7 +104,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
           ?.substringAfter("sso-token=")
 
         if (!token.isNullOrBlank()) {
-          saveToken("123pan|$token")
+          saveToken(platform, token)
           true
         } else {
           false
@@ -90,7 +120,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
         if (!rawAuth.isNullOrBlank()) {
           Cloud139Client.login(rawAuth)
-          saveToken("cloud139|$rawAuth")
+          saveToken(platform, rawAuth)
           true
         } else {
           false
@@ -205,7 +235,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         val token = result.token
         if (!token.isNullOrBlank()) {
           _qrLoginState.value = QrLoginState.Success(token)
-          saveToken("123pan|$token")
+          saveToken(PanPlatform.PAN123, token)
         } else {
           _qrLoginState.value = QrLoginState.Error("App 确认登录成功，但服务器未下发 Token")
         }
@@ -220,7 +250,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                   val token = loginRes.data?.token
                   if (loginRes.isSuccess && !token.isNullOrBlank()) {
                     _qrLoginState.value = QrLoginState.Success(token)
-                    saveToken("123pan|$token")
+                    saveToken(PanPlatform.PAN123, token)
                   } else {
                     _qrLoginState.value = QrLoginState.Error(
                       if (loginRes.message.isNotBlank()) loginRes.message else "微信授权登录失败，请稍后重试"
@@ -269,9 +299,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
   }
 
-  private fun saveToken(formattedToken: String) {
+  private fun saveToken(platform: PanPlatform, rawToken: String) {
     viewModelScope.launch {
-      AuthManager.saveCredentials(getApplication(), formattedToken)
+      AuthManager.saveCredentials(getApplication(), platform, rawToken)
       _isLoginSuccess.value = true
     }
   }

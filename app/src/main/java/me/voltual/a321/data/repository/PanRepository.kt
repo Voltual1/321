@@ -18,16 +18,22 @@ class PanRepository(private val context: Context) {
     val rawToken = credentials.token
     if (rawToken.isEmpty()) throw Exception(LOGIN_REQUIRED)
 
-    return when {
-      rawToken.startsWith("cloud139|") -> {
-        Cloud139Service(rawToken.removePrefix("cloud139|"))
-      }
-      rawToken.startsWith("Basic ") -> {
-        Cloud139Service(rawToken)
-      }
-      else -> {
-        Pan123Service(rawToken.removePrefix("123pan|"))
-      }
+    val activePlatformId = credentials.activePlatform.ifEmpty {
+      if (rawToken.startsWith("cloud139|") || rawToken.startsWith("Basic ")) PanPlatform.CLOUD139.id else PanPlatform.PAN123.id
+    }
+
+    val platform = PanPlatform.fromId(activePlatformId)
+
+    val tokenValue = when (platform) {
+      PanPlatform.CLOUD139 -> credentials.tokenCloud139.ifEmpty { rawToken.removePrefix("cloud139|") }
+      PanPlatform.PAN123 -> credentials.token123Pan.ifEmpty { rawToken.removePrefix("123pan|") }
+    }
+
+    if (tokenValue.isEmpty()) throw Exception(LOGIN_REQUIRED)
+
+    return when (platform) {
+      PanPlatform.CLOUD139 -> Cloud139Service(tokenValue)
+      PanPlatform.PAN123 -> Pan123Service(tokenValue)
     }
   }
 

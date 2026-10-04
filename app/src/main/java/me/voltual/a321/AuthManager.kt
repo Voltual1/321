@@ -18,11 +18,10 @@ import com.google.crypto.tink.RegistryConfiguration
 import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import me.voltual.a321.core.proto.UserCredentials
 import me.voltual.a321.core.proto.UserCredentialsSerializer
+import me.voltual.a321.data.unified.PanPlatform
 
-// 定义 DataStore 扩展属性
 private val Context.credentialsStore: DataStore<UserCredentials> by
   dataStore(
     fileName = "user_credentials_v2.pb",
@@ -37,11 +36,9 @@ object AuthManager {
 
   fun getAead(): Aead = aead
 
-  /** 初始化 Tink 加密环境 (必须在 Application.onCreate 中调用) */
   fun initialize(context: Context) {
     AeadConfig.register()
 
-    // Android 下管理 Keyset 的标准做法
     val keysetHandle =
       AndroidKeysetManager.Builder()
         .withSharedPref(context, KEYSET_NAME, PREF_FILE_NAME)
@@ -53,32 +50,44 @@ object AuthManager {
     aead = keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java)
   }
 
-  // --- 1. 保存逻辑 ---
+  suspend fun saveCredentials(context: Context, platform: PanPlatform, rawToken: String) {
+    val fullToken = "${platform.id}|$rawToken"
+    context.credentialsStore.updateData { current ->
+      val builder = current.toBuilder()
+        .setToken(fullToken)
+        .setActivePlatform(platform.id)
 
-  suspend fun saveCredentials(context: Context, token: String) {
-    context.credentialsStore.updateData { current -> current.toBuilder().setToken(token).build() }
-  }
+      when (platform) {
+        PanPlatform.PAN123 -> builder.setToken123Pan(rawToken)
+        PanPlatform.CLOUD139 -> builder.setTokenCloud139(rawToken)
+      }
 
-  // --- 2. 读取逻辑 ---
-
-  fun getCredentials(context: Context): Flow<UserCredentials> = context.credentialsStore.data
-
-  // --- 3. 清理逻辑 ---
-
-  suspend fun clearCredentials(context: Context) {
-    context.credentialsStore.updateData { UserCredentials.getDefaultInstance() }
-    // 2. 清除 WebView Cookie
-    val cookieManager = CookieManager.getInstance()
-
-    // 清除所有当前的 Session Cookie（内存中）
-    cookieManager.removeSessionCookies {}
-
-    // 清除所有持久化的 Cookie（磁盘中）
-    cookieManager.removeAllCookies {
-      // 确保清除操作落盘
-      cookieManager.flush()
+      builder.build()
     }
   }
 
-  private fun generateDeviceId(): String = (1..15).map { (0..9).random() }.joinToString("")
+  suspend fun switchPlatform(context: Context, platform: PanPlatform) {
+    context.credentialsStore.updateData { current ->
+      val targetToken = when (platform) {
+        PanPlatform.PAN123 -> current.token123Pan
+        PanPlatform.CLOUD139 -> current.tokenCloud139
+      }
+      val fullToken = if (targetToken.isNotEmpty()) "${platform.id}|$targetToken" else ""
+      current.toBuilder()
+        .setToken(fullToken)
+        .setActivePlatform(platform.id)
+        .build()
+    }
+  }
+
+  fun getCredentials(context: Context): Flow<UserCredentials> = context.credentialsStore.data
+
+  suspend fun clearCredentials(context: Context) {
+    context.credentialsStore.updateData { UserCredentials.getDefaultInstance() }
+    val cookieManager = CookieManager.getInstance()
+    cookieManager.removeSessionCookies {}
+    cookieManager.removeAllCookies {
+      cookieManager.flush()
+    }
+  }
 }

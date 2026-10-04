@@ -50,7 +50,6 @@ fun AuthScreen(
   var selectedTab by remember { mutableIntStateOf(0) }
   var isDropdownExpanded by remember { mutableStateOf(false) }
 
-  // 动态注入包含 BBQExposedDropdownMenu 的下拉选择菜单标题
   LaunchedEffect(selectedPlatform, isDropdownExpanded) {
     topAppBarController.titleContent = {
       BBQExposedDropdownMenuBox(
@@ -213,7 +212,7 @@ fun AuthScreen(
                       object : WebViewClient() {
                         override fun onPageFinished(view: WebView?, url: String?) {
                           super.onPageFinished(view, url)
-                          viewModel.checkAndExtractToken(manual = false)
+                          viewModel.checkAndExtractToken(currentUrl = url, manual = false)
                         }
                       }
 
@@ -233,7 +232,7 @@ fun AuthScreen(
                     loadUrl(viewModel.getInitialUrl())
                   }
                 },
-                update = { /* 由 WebView 自身维护 */ },
+                update = { },
               )
             }
           }
