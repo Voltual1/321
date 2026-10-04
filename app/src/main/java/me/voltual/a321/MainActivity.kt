@@ -60,12 +60,11 @@ class MainActivity : ComponentActivity() {
 
     setContent {
       val navController = rememberNavController()
-      val view = LocalView.current // 获取承载 Compose 的原生 View
+      val view = LocalView.current
       val topAppBarController = remember { TopAppBarController() }
 
       val navigator =
         remember(navController, view) {
-          // 传入控制器
           Navigator(navController, view, topAppBarController)
         }
 
@@ -77,7 +76,6 @@ class MainActivity : ComponentActivity() {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
 
-        // 协议状态监听
         val userAccepted by
           agreementDataStore.isUserAgreementAccepted.collectAsState(initial = true)
         var isAgreementDataLoaded by remember { mutableStateOf(false) }
@@ -160,7 +158,6 @@ class MainActivity : ComponentActivity() {
     resources.updateConfiguration(configuration, metrics)
   }
 
-  /** 定义所有顶层路由（对应抽屉中独立返回堆栈的页面） */
   val topLevelRoutes: Set<AppDestination> = setOf(Home, ThemeCustomize)
 
   @OptIn(ExperimentalMaterial3Api::class)
@@ -218,10 +215,15 @@ class MainActivity : ComponentActivity() {
         topBar = {
           TopAppBar(
             title = {
-              Text(
-                text = getTitleForDestination(currentRoute),
-                color = MaterialTheme.colorScheme.onSurface,
-              )
+              val customContent = topAppBarController.titleContent
+              if (customContent != null) {
+                customContent()
+              } else {
+                Text(
+                  text = topAppBarController.customTitle ?: getTitleForDestination(currentRoute),
+                  color = MaterialTheme.colorScheme.onSurface,
+                )
+              }
             },
             navigationIcon = {
               if (showBackButton) {
@@ -243,14 +245,10 @@ class MainActivity : ComponentActivity() {
               }
             },
             actions = {
-              // 动态渲染来自子页面的按钮
               topAppBarController.actions.forEach { action ->
+                val iconTint = action.tint?.invoke() ?: LocalContentColor.current
                 IconButton(onClick = action.onClick) {
-                  Icon(
-                    imageVector = action.icon,
-                    contentDescription = action.description,
-                    tint = action.tint?.invoke() ?: LocalContentColor.current,
-                  )
+                  action.icon(iconTint)
                 }
               }
             },
@@ -272,7 +270,7 @@ class MainActivity : ComponentActivity() {
 
             if (showAgreementDialog) {
               UserAgreementDialog(
-                onAgreed = { /* 已在 Dialog 内部处理 */ },
+                onAgreed = { },
                 onDismissRequest = onAgreementDismiss,
               )
             }

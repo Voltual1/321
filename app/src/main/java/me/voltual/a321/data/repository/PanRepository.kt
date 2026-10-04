@@ -2,439 +2,138 @@ package me.voltual.a321.data.repository
 
 import android.content.Context
 import android.net.Uri
-import io.ktor.client.request.put
-import io.ktor.client.request.setBody
-import io.ktor.http.isSuccess
-import java.io.IOException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import me.voltual.a321.AuthManager
-import me.voltual.a321.KtorClient
-import me.voltual.a321.data.UpdateInfo
+import me.voltual.a321.data.service.Cloud139Service
+import me.voltual.a321.data.service.Pan123Service
+import me.voltual.a321.data.service.PanService
 import me.voltual.a321.data.unified.*
-import me.voltual.a321.utils.PanUtils
-import okio.buffer
-import okio.source
 
 const val LOGIN_REQUIRED = "你可能没有登录哦o_O，先点击左上角的按钮把侧边栏抽屉拉出来看看吧"
 
 class PanRepository(private val context: Context) {
-  private val apiService = KtorClient.ApiServiceImpl
-  private val CHUNK_SIZE = 5 * 1024 * 1024L // 5MB  
 
-  /** 获取文件列表 */
-  suspend fun getFiles(parentId: Long = 0, page: Int = 1): Result<List<PanFile>> = runCatching {
+  private suspend fun getActiveService(): PanService {
     val credentials = AuthManager.getCredentials(context).first()
-    val token = credentials.token
-    if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
+    val rawToken = credentials.token
+    if (rawToken.isEmpty()) throw Exception(LOGIN_REQUIRED)
 
-    val response = apiService.getFileList(token, page, parentId).getOrThrow()
-    response.data?.InfoList?.toUnifiedList() ?: emptyList()
+    return when {
+      rawToken.startsWith("cloud139|") -> {
+        Cloud139Service(rawToken.removePrefix("cloud139|"))
+      }
+      rawToken.startsWith("Basic ") -> {
+        Cloud139Service(rawToken)
+      }
+      else -> {
+        Pan123Service(rawToken.removePrefix("123pan|"))
+      }
+    }
   }
 
-  /**
-   * 基于 Uri 和 Okio 的流式分块上传
-   *
-   * @param uri 文件的 Uri (来自 SimpleStorage 或系统选择器)
-   * @param fileName 文件名
-   * @param fileSize 文件大小
-   * @param parentId 目标目录 ID
-   */
+  suspend fun getFiles(parentId: Long = 0, page: Int = 1): Result<List<PanFile>> {
+    return getActiveService().getFiles(parentId, page)
+  }
+
+  suspend fun getFilesWithTotal(parentId: Long = 0, page: Int = 1): Result<PanPageResult> {
+    return getActiveService().getFilesWithTotal(parentId, page)
+  }
+
   suspend fun uploadFile(
     uri: Uri,
     fileName: String,
     fileSize: Long,
     parentId: Long,
     onProgress: (Float) -> Unit,
-  ): Result<String> = runCatching {
-    val token = AuthManager.getCredentials(context).first().token
-    if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
-
-    // 1. 计算 MD5 (Okio 流式读取)
-    val md5 = PanUtils.calcMd5(context, uri)
-
-    // 2. 申请上传
-    val reqRes = apiService.requestUpload(token, parentId, fileName, fileSize, md5).getOrThrow()
-    val uploadInfo = reqRes.data ?: throw Exception("Upload request failed")
-
-    if (uploadInfo.Reuse) {
-      onProgress(1.0f)
-      return@runCatching "秒传成功"
-    }
-
-    // 3. 准备分块上传参数
-    val bucket = uploadInfo.Bucket!!
-    val key = uploadInfo.Key!!
-    val uploadId = uploadInfo.UploadId!!
-    val storageNode = uploadInfo.StorageNode!!
-    val fileId = uploadInfo.FileId!!
-    val totalParts = ((fileSize + CHUNK_SIZE - 1) / CHUNK_SIZE).toInt()
-
-    // 4. 开始分块读取并上传
-    context.contentResolver.openInputStream(uri)?.source()?.buffer()?.use { source ->
-      for (partNumber in 1..totalParts) {
-        // 读取一块数据
-        val chunk =
-          source.readByteArray(minOf(CHUNK_SIZE, fileSize - (partNumber - 1) * CHUNK_SIZE))
-
-        // 获取 S3 预签名 URL
-        val urlRes =
-          apiService
-            .getS3PartUrls(token, bucket, key, uploadId, storageNode, partNumber)
-            .getOrThrow()
-        val uploadUrl =
-          urlRes.data?.presignedUrls?.get(partNumber.toString())
-            ?: throw Exception("Failed to get S3 URL")
-
-        // PUT 到 S3
-        val putResponse = KtorClient.httpClient.put(uploadUrl) { setBody(chunk) }
-
-        if (!putResponse.status.isSuccess()) {
-          throw IOException("S3 Upload failed at part $partNumber")
-        }
-
-        onProgress(partNumber.toFloat() / totalParts * 0.9f)
-      }
-    } ?: throw Exception("Failed to open Uri source")
-
-    // 5. 合并与确认
-    apiService.completeS3Upload(token, bucket, key, uploadId, storageNode).getOrThrow()
-    delay(1000)
-    apiService.confirmUpload(token, fileId).getOrThrow()
-
-    onProgress(1.0f)
-    "上传成功"
+  ): Result<String> {
+    return getActiveService().uploadFile(context, uri, fileName, fileSize, parentId, onProgress)
   }
 
-  /** 获取文件列表及总条数 */
-  suspend fun getFilesWithTotal(parentId: Long = 0, page: Int = 1): Result<PanPageResult> =
-    runCatching {
-      val credentials = AuthManager.getCredentials(context).first()
-      val token = credentials.token
-      if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
-
-      val response = apiService.getFileList(token, page, parentId).getOrThrow()
-      val total = response.data?.Total ?: 0
-      val files = response.data?.InfoList?.toUnifiedList() ?: emptyList()
-
-      // 统一封装成 PanPageResult
-      PanPageResult(
-        files = files,
-        totalCount = total,
-        hasMore = files.size >= 100, // 对应 pageSize
-      )
-    }
-
-  /** 获取文件的真实下载直链 */
-  suspend fun getDownloadUrl(file: PanFile): Result<String> = runCatching {
-    val token = AuthManager.getCredentials(context).first().token
-
-    // 将统一模型转回 FileInfo 传给 API 层（或者直接在 API 层接受参数）
-    // 这里我们构造一个临时的 FileInfo
-    val tempInfo =
-      KtorClient.FileInfo(
-        FileId = file.id,
-        FileName = file.name,
-        Type = if (file.isDirectory) 1 else 0,
-        Size = file.size,
-        Etag = file.etag,
-        S3KeyFlag = file.s3KeyFlag,
-      )
-
-    apiService.getDownloadUrl(token, tempInfo).getOrThrow()
+  suspend fun getDownloadUrl(file: PanFile): Result<String> {
+    return getActiveService().getDownloadUrl(file)
   }
 
-  /** 获取统一的用户信息模型 */
-  suspend fun getUserQuota(): Result<PanUserQuota> = runCatching {
-    val token = AuthManager.getCredentials(context).first().token
-    if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
-
-    val response = apiService.getUserInfo(token).getOrThrow()
-    val data = response.data ?: throw Exception("Failed to get user info")
-
-    data.toUnifiedQuota()
+  suspend fun getUserQuota(): Result<PanUserQuota> {
+    return getActiveService().getUserQuota()
   }
 
-  /** 批量删除文件到回收站 */
   suspend fun deleteFiles(fileIds: List<Long>): PanActionResult {
-    val token = AuthManager.getCredentials(context).first().token
-    if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
-
-    // 直接使用 apiService 返回的 Result<PanResponse<Unit>>
-    return apiService.deleteFiles(token, fileIds).toActionResult()
+    return runCatching { getActiveService().deleteFiles(fileIds) }
+      .getOrElse { PanActionResult.Error(-1, it.message ?: "删除失败") }
   }
 
-  /**
-   * 在指定目录下创建新文件夹
-   *
-   * @param name 文件夹名称
-   * @param parentId 父目录 ID（根目录为 0）
-   */
   suspend fun createFolder(name: String, parentId: Long): PanActionResult {
-    return runCatching {
-        val credentials = AuthManager.getCredentials(context).first()
-        val token = credentials.token
-
-        if (token.isEmpty()) {
-          return PanActionResult.Error(-1, "登录已失效，请重新登录")
-        }
-        val response = apiService.createFolder(token, name, parentId).getOrThrow()
-
-        if (response.isSuccess) {
-          PanActionResult.Success
-        } else {
-          // 处理常见的错误码，例如 4000 可能是文件夹已存在
-          PanActionResult.Error(response.code, response.message)
-        }
-      }
-      .getOrElse { throwable -> PanActionResult.Error(-1, throwable.message ?: "网络请求失败，请稍后重试") }
+    return runCatching { getActiveService().createFolder(name, parentId) }
+      .getOrElse { PanActionResult.Error(-1, it.message ?: "新建文件夹失败") }
   }
 
-  /** 获取回收站文件列表 */
-  suspend fun getRecycleBinFiles(page: Int = 1): Result<PanPageResult> = runCatching {
-    val token = AuthManager.getCredentials(context).first().token
-    val response = apiService.listRecycle(token, page).getOrThrow()
-
-    val data = response.data ?: throw Exception("Empty recycle bin")
-    data.toPageResult() // 映射为统一分页模型
-  }
-
-  /**
-   * 移动文件或文件夹到指定目录
-   *
-   * @param fileIds 需要移动的文件/文件夹 ID 列表
-   * @param targetParentId 目标文件夹的 ID (根目录为 0)
-   */
   suspend fun moveFiles(fileIds: List<Long>, targetParentId: Long): PanActionResult {
-    return runCatching {
-        // 1. 获取 Token
-        val credentials = AuthManager.getCredentials(context).first()
-        val token = credentials.token
-        if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
-
-        // 2. 调用 API 层
-        val response = apiService.moveFiles(token, fileIds, targetParentId).getOrThrow()
-
-        // 3. 转换为统一结果模型
-        if (response.isSuccess) {
-          PanActionResult.Success
-        } else {
-          PanActionResult.Error(response.code, response.message)
-        }
-      }
-      .getOrElse { throwable ->
-        // 异常处理
-        PanActionResult.Error(-1, throwable.message ?: "Unknown Error during move")
-      }
+    return runCatching { getActiveService().moveFiles(fileIds, targetParentId) }
+      .getOrElse { PanActionResult.Error(-1, it.message ?: "移动失败") }
   }
 
-  /**
-   * 创建文件分享
-   *
-   * @param expiration ISO 8601 格式字符串，例如 "2099-12-12T08:00:00+08:00"
-   */
+  suspend fun renameFile(fileId: Long, newName: String): PanActionResult {
+    return runCatching { getActiveService().renameFile(fileId, newName) }
+      .getOrElse { PanActionResult.Error(-1, it.message ?: "重命名失败") }
+  }
+
   suspend fun shareFiles(
     fileIds: List<Long>,
     password: String = "",
     expiration: String = "",
-  ): Result<String> = runCatching {
-    val token = AuthManager.getCredentials(context).first().token
-    val response = apiService.createShare(token, fileIds, password, expiration).getOrThrow()
-
-    response.data?.ShareKey ?: throw Exception("分享失败：未获取到 Key")
+  ): Result<String> {
+    return getActiveService().shareFiles(fileIds, password, expiration)
   }
 
-  /** 彻底删除文件（不可恢复） 对应 API: /api/file/delete */
-  suspend fun deleteFilesPermanently(fileIds: List<Long>): PanActionResult {
-    return runCatching {
-        val token = AuthManager.getCredentials(context).first().token
-        if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
-
-        val response = apiService.deleteFilesPermanently(token, fileIds).getOrThrow()
-
-        // 123云盘彻底删除可能返回 0 或 7301 (表示正在异步释放空间)
-        if (response.code == 0 || response.code == 7301) {
-          PanActionResult.Success
-        } else {
-          PanActionResult.Error(response.code, response.message)
-        }
-      }
-      .getOrElse { throwable -> PanActionResult.Error(-1, throwable.message ?: "彻底删除失败") }
+  suspend fun getRecycleBinFiles(page: Int = 1): Result<PanPageResult> {
+    return getActiveService().getRecycleBinFiles(page)
   }
 
-  /** 从回收站恢复文件 对应 API: /a/api/file/trash (operation = false) */
   suspend fun restoreFiles(fileIds: List<Long>): PanActionResult {
-    return runCatching {
-        val token = AuthManager.getCredentials(context).first().token
-        if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
-
-        // 调用 ApiService 中的 restoreFiles (内部 operation 为 false)
-        val response = apiService.restoreFiles(token, fileIds).getOrThrow()
-
-        if (response.isSuccess) {
-          PanActionResult.Success
-        } else {
-          PanActionResult.Error(response.code, response.message)
-        }
-      }
-      .getOrElse { throwable -> PanActionResult.Error(-1, throwable.message ?: "恢复文件失败") }
+    return runCatching { getActiveService().restoreFiles(fileIds) }
+      .getOrElse { PanActionResult.Error(-1, it.message ?: "恢复失败") }
   }
 
-  /**
-   * 搜索文件
-   *
-   * @param keyword 搜索关键词
-   * @param page 页码（从1开始）
-   * @param parentId 搜索的目录ID，默认为0（全盘搜索）
-   * @param limit 每页数量，默认100
-   * @return 搜索结果，包含文件列表和总数
-   */
-  /** 搜索文件 */
+  suspend fun deleteFilesPermanently(fileIds: List<Long>): PanActionResult {
+    return runCatching { getActiveService().deleteFilesPermanently(fileIds) }
+      .getOrElse { PanActionResult.Error(-1, it.message ?: "彻底删除失败") }
+  }
+
   suspend fun searchFiles(
     keyword: String,
     page: Int = 1,
     parentId: Long = 0,
     limit: Int = 100,
-  ): Result<PanPageResult> = runCatching {
-    val credentials = AuthManager.getCredentials(context).first()
-    val token = credentials.token
-    if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
-
-    val response = apiService.searchFiles(token, keyword, page, limit, parentId).getOrThrow()
-    val total = response.data?.Total ?: 0
-    val files = response.data?.InfoList?.toUnifiedList() ?: emptyList()
-
-    PanPageResult(files = files, totalCount = total, hasMore = files.size >= limit)
+  ): Result<PanPageResult> {
+    return getActiveService().searchFiles(keyword, page, parentId, limit)
   }
 
-  /**
-   * 获取分享列表（支持分页）
-   *
-   * @param next 分页游标，首次请求传 null 或 "0"
-   * @param limit 每页数量，默认 100
-   * @return 统一分页结果，可直接用于文件列表 UI
-   */
-  suspend fun getShareList(next: String? = null, limit: Int = 100): Result<PanPageResult> =
-    runCatching {
-      val token = AuthManager.getCredentials(context).first().token
-      if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
-
-      // 确保首次请求时传 "0"
-      val nextParam = if (next.isNullOrEmpty()) "0" else next
-      val response = apiService.listShares(token, nextParam, limit).getOrThrow()
-      val data = response.data ?: throw Exception("获取分享列表失败")
-      data.toPageResult()
-    }
-
-  /**
-   * 重命名文件或文件夹
-   *
-   * @param fileId 文件/文件夹的唯一 ID
-   * @param newName 新的文件名（如果是文件，应包含后缀名）
-   */
-  suspend fun renameFile(fileId: Long, newName: String): PanActionResult {
-    return runCatching {
-        val credentials = AuthManager.getCredentials(context).first()
-        val token = credentials.token
-        if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
-        val response = apiService.renameFile(token, fileId, newName).getOrThrow()
-        if (response.isSuccess) {
-          PanActionResult.Success
-        } else {
-          PanActionResult.Error(response.code, response.message)
-        }
-      }
-      .getOrElse { throwable ->
-        // 异常捕获
-        PanActionResult.Error(-1, throwable.message ?: "Unknown Error during rename")
-      }
+  suspend fun getShareList(next: String? = null, limit: Int = 100): Result<PanPageResult> {
+    return getActiveService().getShareList(next, limit)
   }
 
-  /**
-   * 获取分享链接中的文件列表
-   *
-   * @param shareKey 分享标识
-   * @param parentId 文件夹 ID（0 表示根目录）
-   * @param next 分页游标，初始通常为 "1"
-   * @param sharePwd 提取码（可选）
-   */
   suspend fun getShareInfo(
     shareKey: String,
     next: String? = "1",
     parentId: Long = 0,
     page: Int = 1,
     sharePwd: String? = null,
-  ): Result<PanPageResult> = runCatching {
-    val token = AuthManager.getCredentials(context).first().token
-    if (token.isEmpty()) throw Exception("$LOGIN_REQUIRED")
-
-    // 调用时传入 nextParam
-    val nextParam = if (next.isNullOrEmpty()) "1" else next
-    val response =
-      apiService
-        .getShareInfo(token, shareKey, nextParam, page, 200, parentId, sharePwd)
-        .getOrThrow()
-    val data = response.data ?: throw Exception("获取分享信息失败")
-    data.toPageResult()
+  ): Result<PanPageResult> {
+    return getActiveService().getShareInfo(shareKey, next, parentId, page, sharePwd)
   }
 
-  /**
-   * 取消分享（删除已创建的分享）
-   *
-   * @param shareId 分享 ID
-   */
-  suspend fun deleteShare(shareId: Long): PanActionResult =
-    runCatching {
-        val token = AuthManager.getCredentials(context).first().token
-        if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
+  suspend fun deleteShare(shareId: Long): PanActionResult {
+    return runCatching { getActiveService().deleteShare(shareId) }
+      .getOrElse { PanActionResult.Error(-1, it.message ?: "取消分享失败") }
+  }
 
-        val response = apiService.deleteShare(token, listOf(shareId)).getOrThrow()
-        if (response.isSuccess) {
-          PanActionResult.Success
-        } else {
-          PanActionResult.Error(response.code, response.message)
-        }
-      }
-      .getOrElse { throwable -> PanActionResult.Error(-1, throwable.message ?: "取消分享失败") }
-
-  /**
-   * 从分享链接复制文件/文件夹到自己的网盘
-   *
-   * @param shareKey 分享标识
-   * @param sharePwd 提取码（无密码时传空字符串）
-   * @param targetParentId 目标文件夹 ID（自己的网盘中的目录）
-   * @param files 要复制的文件列表（从 getShareInfo 获取的 PanFile 列表）
-   * @return 操作结果
-   */
   suspend fun copyShareFiles(
     shareKey: String,
     sharePwd: String,
     targetParentId: Long,
     files: List<PanFile>,
   ): PanActionResult {
-    return runCatching {
-        val token = AuthManager.getCredentials(context).first().token
-        if (token.isEmpty()) return PanActionResult.Error(-1, "$LOGIN_REQUIRED")
-
-        // 将 PanFile 列表转换为 CopyFileInfo 列表
-        val copyInfos = files.map { it.toCopyFileInfo() }
-
-        // 调用 API
-        val response =
-          apiService
-            .copyShareFile(token, shareKey, sharePwd, targetParentId, copyInfos)
-            .getOrThrow()
-
-        if (response.isSuccess) {
-          PanActionResult.Success
-        } else {
-          PanActionResult.Error(response.code, response.message)
-        }
-      }
-      .getOrElse { throwable -> PanActionResult.Error(-1, throwable.message ?: "复制文件失败") }
-  }
-
-  suspend fun getLatestRelease(url: String): Result<UpdateInfo> {
-    return apiService.getLatestRelease(url)
+    return runCatching { getActiveService().copyShareFiles(shareKey, sharePwd, targetParentId, files) }
+      .getOrElse { PanActionResult.Error(-1, it.message ?: "转存失败") }
   }
 }

@@ -15,7 +15,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import me.voltual.a321.AuthManager
+import me.voltual.a321.Cloud139Client
 import me.voltual.a321.KtorClient
+import me.voltual.a321.data.unified.PanPlatform
 
 sealed interface QrLoginState {
   object Idle : QrLoginState
@@ -28,54 +30,78 @@ sealed interface QrLoginState {
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
+  private val _selectedPlatform = MutableStateFlow(PanPlatform.PAN123)
+  val selectedPlatform = _selectedPlatform.asStateFlow()
+
   private val _isLoginSuccess = MutableStateFlow(false)
   val isLoginSuccess = _isLoginSuccess.asStateFlow()
 
-  // 扫码状态机
   private val _qrLoginState = MutableStateFlow<QrLoginState>(QrLoginState.Idle)
   val qrLoginState = _qrLoginState.asStateFlow()
 
   private var pollingJob: Job? = null
-  
-  // 缓存当前的二维码图片和会话 ID
   private var currentBitmap: Bitmap? = null
   private var currentUniID: String? = null
 
-  // 默认网页登录页
-  private val loginUrl =
+  private val login123Url =
     "https://login.123pan.com/centerlogin?redirect_url=https%3A%2F%2Fwww.123pan.com%2F%3Fnotoken%3D1&source_page=website"
+  private val target123CookieUrl = "https://user.123pan.cn/"
 
-  // 强制提取 Cookie 的目标 URL
-  private val targetCookieUrl = "https://user.123pan.cn/"
+  private val login139Url = "https://yun.139.com/"
+  private val target139CookieUrl = "https://yun.139.com/"
 
-  fun getInitialUrl() = loginUrl
+  fun selectPlatform(platform: PanPlatform) {
+    _selectedPlatform.value = platform
+    stopQrLoginFlow()
+  }
 
-  /**
-   * 网页端：提取并校验 Cookie 中的 Token
-   */
-  fun checkAndExtractToken(manual: Boolean = false): Boolean {
-    val cookieManager = CookieManager.getInstance()
-    val cookies = cookieManager.getCookie(targetCookieUrl) ?: ""
-
-    val token =
-      cookies
-        .split(";")
-        .map { it.trim() }
-        .find { it.startsWith("sso-token=") }
-        ?.substringAfter("sso-token=")
-
-    return if (!token.isNullOrBlank()) {
-      saveToken(token)
-      true
-    } else {
-      false
+  fun getInitialUrl(): String {
+    return when (_selectedPlatform.value) {
+      PanPlatform.PAN123 -> login123Url
+      PanPlatform.CLOUD139 -> login139Url
     }
   }
 
-  /**
-   * 扫码端：开启扫码流程
-   */
+  fun checkAndExtractToken(manual: Boolean = false): Boolean {
+    val cookieManager = CookieManager.getInstance()
+    return when (_selectedPlatform.value) {
+      PanPlatform.PAN123 -> {
+        val cookies = cookieManager.getCookie(target123CookieUrl) ?: ""
+        val token = cookies
+          .split(";")
+          .map { it.trim() }
+          .find { it.startsWith("sso-token=") }
+          ?.substringAfter("sso-token=")
+
+        if (!token.isNullOrBlank()) {
+          saveToken("123pan|$token")
+          true
+        } else {
+          false
+        }
+      }
+      PanPlatform.CLOUD139 -> {
+        val cookies = cookieManager.getCookie(target139CookieUrl) ?: ""
+        val rawAuth = cookies
+          .split(";")
+          .map { it.trim() }
+          .find { it.startsWith("authorization=") }
+          ?.substringAfter("authorization=")
+
+        if (!rawAuth.isNullOrBlank()) {
+          Cloud139Client.login(rawAuth)
+          saveToken("cloud139|$rawAuth")
+          true
+        } else {
+          false
+        }
+      }
+    }
+  }
+
   fun startQrLoginFlow() {
+    if (_selectedPlatform.value != PanPlatform.PAN123) return
+
     pollingJob?.cancel()
     _qrLoginState.value = QrLoginState.Loading
 
@@ -104,9 +130,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
   }
 
-  /**
-   * 停止轮询
-   */
   fun stopQrLoginFlow() {
     pollingJob?.cancel()
     pollingJob = null
@@ -115,16 +138,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     _qrLoginState.value = QrLoginState.Idle
   }
 
-  /**
-   * 开启后台自动轮询
-   */
   private fun startPolling() {
     val uniID = currentUniID ?: return
     val bitmap = currentBitmap ?: return
 
     pollingJob = viewModelScope.launch {
       var count = 0
-      val maxPollingCount = 120 // 约 3 分钟
+      val maxPollingCount = 120
 
       while (count < maxPollingCount) {
         delay(1500)
@@ -142,24 +162,18 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                   _qrLoginState.value = QrLoginState.Scanned(bitmap, uniID)
                 }
                 3 -> {
-                  // 关键修复：直接调用换取凭证并退出协程，坚决不在协程内部提前调用 cancel() 导致自我毁灭
                   handleAuthorizationSuccess(uniID, result)
                   return@launch
                 }
               }
             }
           }
-          .onFailure {
-            // 忽略单次网络抖动
-          }
+          .onFailure { }
       }
       _qrLoginState.value = QrLoginState.Error("二维码已过期，请刷新")
     }
   }
 
-  /**
-   * 提供给 UI 层的手动同步按钮点击事件：双重保障逻辑
-   */
   fun checkQrStatusManually(onResult: (Boolean) -> Unit) {
     val uniID = currentUniID
     if (uniID.isNullOrBlank()) {
@@ -172,7 +186,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         .onSuccess { response ->
           val result = response.data
           if (response.isSuccess && result != null && result.loginStatus == 3) {
-            // 确认用户已经同意登录：此时我们在手动触发的新协程中，可以安全地取消原轮询 Job
             pollingJob?.cancel()
             handleAuthorizationSuccess(uniID, result)
             onResult(true)
@@ -186,16 +199,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
   }
 
-  /**
-   * 统一处理确认授权后的身份换取
-   */
   private suspend fun handleAuthorizationSuccess(uniID: String, result: KtorClient.QrResultData) {
     when (result.scanPlatform) {
       7 -> {
         val token = result.token
         if (!token.isNullOrBlank()) {
           _qrLoginState.value = QrLoginState.Success(token)
-          saveToken(token)
+          saveToken("123pan|$token")
         } else {
           _qrLoginState.value = QrLoginState.Error("App 确认登录成功，但服务器未下发 Token")
         }
@@ -210,7 +220,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                   val token = loginRes.data?.token
                   if (loginRes.isSuccess && !token.isNullOrBlank()) {
                     _qrLoginState.value = QrLoginState.Success(token)
-                    saveToken(token)
+                    saveToken("123pan|$token")
                   } else {
                     _qrLoginState.value = QrLoginState.Error(
                       if (loginRes.message.isNotBlank()) loginRes.message else "微信授权登录失败，请稍后重试"
@@ -234,9 +244,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
   }
 
-  /**
-   * 使用 ZXing 生成二维码 Bitmap 图像
-   */
   private fun generateQrCodeBitmap(content: String, width: Int = 512, height: Int = 512): Bitmap? {
     return try {
       val bitMatrix: BitMatrix = MultiFormatWriter().encode(
@@ -262,9 +269,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
   }
 
-  private fun saveToken(token: String) {
+  private fun saveToken(formattedToken: String) {
     viewModelScope.launch {
-      AuthManager.saveCredentials(getApplication(), token)
+      AuthManager.saveCredentials(getApplication(), formattedToken)
       _isLoginSuccess.value = true
     }
   }

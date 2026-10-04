@@ -11,9 +11,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
+import me.voltual.a321.core.ui.theme.BBQExposedDropdownMenu
+import me.voltual.a321.core.ui.theme.BBQExposedDropdownMenuBox
+import me.voltual.a321.data.unified.PanPlatform
+import me.voltual.a321.ui.LocalTopAppBarController
 import org.koin.androidx.compose.koinViewModel
 
 @SuppressLint("ClickableViewAccessibility")
@@ -32,16 +37,71 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun AuthScreen(
   onLoginSuccess: () -> Unit,
-  snackbarHostState: SnackbarHostState, // 从导航传递过来
+  snackbarHostState: SnackbarHostState,
   modifier: Modifier = Modifier,
   viewModel: AuthViewModel = koinViewModel(),
 ) {
   val isSuccess by viewModel.isLoginSuccess.collectAsStateWithLifecycle()
   val qrState by viewModel.qrLoginState.collectAsStateWithLifecycle()
+  val selectedPlatform by viewModel.selectedPlatform.collectAsStateWithLifecycle()
   val scope = rememberCoroutineScope()
+  val topAppBarController = LocalTopAppBarController.current
 
-  // 0: 网页登录, 1: 扫码登录
   var selectedTab by remember { mutableIntStateOf(0) }
+  var isDropdownExpanded by remember { mutableStateOf(false) }
+
+  // 动态注入包含 BBQExposedDropdownMenu 的下拉选择菜单标题
+  LaunchedEffect(selectedPlatform, isDropdownExpanded) {
+    topAppBarController.titleContent = {
+      BBQExposedDropdownMenuBox(
+        expanded = isDropdownExpanded,
+        onExpandedChange = { isDropdownExpanded = it }
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier
+            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+            .padding(vertical = 4.dp)
+        ) {
+          Text(
+            text = selectedPlatform.displayName,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+          )
+          Icon(
+            imageVector = Icons.Default.ArrowDropDown,
+            contentDescription = "选择云盘平台",
+            tint = MaterialTheme.colorScheme.onSurface
+          )
+        }
+
+        BBQExposedDropdownMenu(
+          expanded = isDropdownExpanded,
+          onDismissRequest = { isDropdownExpanded = false }
+        ) {
+          PanPlatform.entries.forEach { platform ->
+            DropdownMenuItem(
+              text = { Text(platform.displayName, fontWeight = if (platform == selectedPlatform) FontWeight.Bold else FontWeight.Normal) },
+              onClick = {
+                viewModel.selectPlatform(platform)
+                isDropdownExpanded = false
+                if (selectedTab == 1 && platform != PanPlatform.PAN123) {
+                  selectedTab = 0
+                }
+              }
+            )
+          }
+        }
+      }
+    }
+  }
+
+  DisposableEffect(Unit) {
+    onDispose {
+      topAppBarController.titleContent = null
+    }
+  }
 
   LaunchedEffect(isSuccess) {
     if (isSuccess) {
@@ -49,9 +109,8 @@ fun AuthScreen(
     }
   }
 
-  // 当用户切换到“扫码登录”时，自动开启扫码，切回时关闭轮询
-  LaunchedEffect(selectedTab) {
-    if (selectedTab == 1) {
+  LaunchedEffect(selectedTab, selectedPlatform) {
+    if (selectedTab == 1 && selectedPlatform == PanPlatform.PAN123) {
       viewModel.startQrLoginFlow()
     } else {
       viewModel.stopQrLoginFlow()
@@ -71,11 +130,13 @@ fun AuthScreen(
             onClick = { selectedTab = 0 },
             text = { Text("网页登录", fontWeight = FontWeight.Bold) }
           )
-          Tab(
-            selected = selectedTab == 1,
-            onClick = { selectedTab = 1 },
-            text = { Text("扫码登录", fontWeight = FontWeight.Bold) }
-          )
+          if (selectedPlatform == PanPlatform.PAN123) {
+            Tab(
+              selected = selectedTab == 1,
+              onClick = { selectedTab = 1 },
+              text = { Text("扫码登录", fontWeight = FontWeight.Bold) }
+            )
+          }
         }
       }
     },
@@ -86,7 +147,7 @@ fun AuthScreen(
             onClick = {
               val found = viewModel.checkAndExtractToken(manual = true)
               if (!found) {
-                scope.launch { snackbarHostState.showSnackbar("未检测到登录状态，请先在网页内完成登录") }
+                scope.launch { snackbarHostState.showSnackbar("未检测到登录 Token，请先在网页内完成登录") }
               }
             },
             icon = { Icon(Icons.Default.Check, contentDescription = null) },
@@ -96,14 +157,13 @@ fun AuthScreen(
           )
         }
         1 -> {
-          // 仅在准备好二维码或者用户已扫码的情况下显示手动确认的 FAB 按钮
           if (qrState is QrLoginState.QrReady || qrState is QrLoginState.Scanned) {
             ExtendedFloatingActionButton(
               onClick = {
                 viewModel.checkQrStatusManually { success ->
                   if (!success) {
                     scope.launch {
-                      snackbarHostState.showSnackbar("未检测到手机端授权通过，请确保已在手机端点击了“确认登录”")
+                      snackbarHostState.showSnackbar("未检测到授权通过，请确保已在手机端点击了“确认登录”")
                     }
                   }
                 }
@@ -124,7 +184,6 @@ fun AuthScreen(
         .fillMaxSize()
     ) {
       if (selectedTab == 0) {
-        // ===== 网页登录通道 =====
         val webPagerState = rememberPagerState(initialPage = 0) { 1 }
         
         HorizontalPager(
@@ -133,55 +192,53 @@ fun AuthScreen(
           userScrollEnabled = true
         ) { page ->
           if (page == 0) {
-            AndroidView(
-              modifier = Modifier.fillMaxSize(),
-              factory = { context ->
-                WebView(context).apply {
-                  layoutParams =
-                    ViewGroup.LayoutParams(
-                      ViewGroup.LayoutParams.MATCH_PARENT,
-                      ViewGroup.LayoutParams.MATCH_PARENT,
-                    )
+            key(selectedPlatform) {
+              AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { context ->
+                  WebView(context).apply {
+                    layoutParams =
+                      ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                      )
 
-                  settings.apply {
-                    javaScriptEnabled = true
-                    domStorageEnabled = true
-                    mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                  }
-
-                  webViewClient =
-                    object : WebViewClient() {
-                      override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        viewModel.checkAndExtractToken(manual = false)
-                      }
+                    settings.apply {
+                      javaScriptEnabled = true
+                      domStorageEnabled = true
+                      mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                     }
 
-                  // 核心修复：拦截触摸事件分发，阻止父布局中途抢夺手势，解决滑块卡顿、无法一滑到底的问题
-                  setOnTouchListener { view, event ->
-                    when (event.action) {
-                      MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                        // 告知父容器不要拦截我的触摸事件
-                        view.parent?.requestDisallowInterceptTouchEvent(true)
+                    webViewClient =
+                      object : WebViewClient() {
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                          super.onPageFinished(view, url)
+                          viewModel.checkAndExtractToken(manual = false)
+                        }
                       }
-                      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        view.parent?.requestDisallowInterceptTouchEvent(false)
-                      }
-                    }
-                    // 返回 false，让 WebView 内部的标准 HTML5/JS 逻辑继续消费这套事件进行滑动
-                    false
-                  }
 
-                  CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                  loadUrl(viewModel.getInitialUrl())
-                }
-              },
-              update = { /* 状态由 WebView 自身管理 */ },
-            )
+                    setOnTouchListener { view, event ->
+                      when (event.action) {
+                        MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                          view.parent?.requestDisallowInterceptTouchEvent(true)
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                          view.parent?.requestDisallowInterceptTouchEvent(false)
+                        }
+                      }
+                      false
+                    }
+
+                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                    loadUrl(viewModel.getInitialUrl())
+                  }
+                },
+                update = { /* 由 WebView 自身维护 */ },
+              )
+            }
           }
         }
       } else {
-        // ===== 扫码登录通道 =====
         Column(
           modifier = Modifier
             .fillMaxSize()

@@ -25,21 +25,33 @@ val LocalSnackbarHostState =
   compositionLocalOf<SnackbarHostState> { error("No SnackbarHostState provided") }
 
 class TopAppBarAction(
-  val icon: ImageVector,
+  val icon: @Composable (tint: Color) -> Unit,
   val description: String,
   val onClick: () -> Unit,
-  // 改为 Lambda，默认返回 null 表示使用默认颜色
   val tint: (@Composable () -> Color)? = null,
-)
+) {
+  constructor(
+    icon: ImageVector,
+    description: String,
+    onClick: () -> Unit,
+    tint: (@Composable () -> Color)? = null,
+  ) : this(
+    icon = { t -> androidx.compose.material3.Icon(icon, contentDescription = description, tint = t) },
+    description = description,
+    onClick = onClick,
+    tint = tint,
+  )
+}
 
 class TopAppBarController {
-  // 将变量设为 private，避免自动生成公开的 setActions 方法
   var actions by mutableStateOf<List<TopAppBarAction>>(emptyList())
-    private set // 重点：只有内部能改，外部只能看或调用 fun
+    private set
 
   var customTitle by mutableStateOf<String?>(null)
 
-  // 此时这个方法就不会和自动生成的 setter 冲突了
+  // 支持完全自定义的标题 Composable 区域
+  var titleContent by mutableStateOf<(@Composable () -> Unit)?>(null)
+
   fun updateActions(newActions: List<TopAppBarAction>) {
     actions = newActions
   }
@@ -47,6 +59,7 @@ class TopAppBarController {
   fun clear() {
     actions = emptyList()
     customTitle = null
+    titleContent = null
   }
 }
 
