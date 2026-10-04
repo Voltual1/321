@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
@@ -26,8 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
-import me.voltual.a321.core.ui.theme.BBQExposedDropdownMenu
-import me.voltual.a321.core.ui.theme.BBQExposedDropdownMenuBox
+import me.voltual.a321.core.ui.theme.PanPlatformDropdownMenu
 import me.voltual.a321.data.unified.PanPlatform
 import me.voltual.a321.ui.LocalTopAppBarController
 import org.koin.androidx.compose.koinViewModel
@@ -48,51 +46,19 @@ fun AuthScreen(
   val topAppBarController = LocalTopAppBarController.current
 
   var selectedTab by remember { mutableIntStateOf(0) }
-  var isDropdownExpanded by remember { mutableStateOf(false) }
 
-  LaunchedEffect(selectedPlatform, isDropdownExpanded) {
+  // 注入全亮 PanPlatformDropdownMenu 组件到 TopAppBar 标题栏
+  LaunchedEffect(selectedPlatform) {
     topAppBarController.titleContent = {
-      BBQExposedDropdownMenuBox(
-        expanded = isDropdownExpanded,
-        onExpandedChange = { isDropdownExpanded = it }
-      ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          modifier = Modifier
-            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-            .padding(vertical = 4.dp)
-        ) {
-          Text(
-            text = selectedPlatform.displayName,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-          )
-          Icon(
-            imageVector = Icons.Default.ArrowDropDown,
-            contentDescription = "选择云盘平台",
-            tint = MaterialTheme.colorScheme.onSurface
-          )
-        }
-
-        BBQExposedDropdownMenu(
-          expanded = isDropdownExpanded,
-          onDismissRequest = { isDropdownExpanded = false }
-        ) {
-          PanPlatform.entries.forEach { platform ->
-            DropdownMenuItem(
-              text = { Text(platform.displayName, fontWeight = if (platform == selectedPlatform) FontWeight.Bold else FontWeight.Normal) },
-              onClick = {
-                viewModel.selectPlatform(platform)
-                isDropdownExpanded = false
-                if (selectedTab == 1 && platform != PanPlatform.PAN123) {
-                  selectedTab = 0
-                }
-              }
-            )
+      PanPlatformDropdownMenu(
+        selectedPlatform = selectedPlatform,
+        onPlatformSelected = { platform ->
+          viewModel.selectPlatform(platform)
+          if (selectedTab == 1 && platform != PanPlatform.PAN123) {
+            selectedTab = 0
           }
         }
-      }
+      )
     }
   }
 

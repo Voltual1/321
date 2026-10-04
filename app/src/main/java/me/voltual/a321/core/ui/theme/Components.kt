@@ -8,12 +8,6 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>。
 package me.voltual.a321.core.ui.theme
 
-// --- Kotlin 协程 ---
-// --- Compose 核心基础 (UI, Layout, Foundation) ---
-// --- Compose UI 配置 (Graphics, Positioning, Text) ---
-// --- Material Design 3 组件 ---
-// --- 图片加载 (Coil 3) ---
-
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -29,12 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
-import coil3.compose.rememberAsyncImagePainter
+import me.voltual.a321.data.unified.PanPlatform
 
 // 基础按钮组件
 @Composable
@@ -152,7 +145,6 @@ fun BBQSnackbar(
   actionColor: Color = MaterialTheme.colorScheme.primary,
   dismissActionContentColor: Color = contentColor,
 ) {
-  // 使用基础版 Snackbar 重载，它支持 dismissAction
   Snackbar(
     modifier = modifier.padding(12.dp),
     actionOnNewLine = actionOnNewLine,
@@ -160,9 +152,7 @@ fun BBQSnackbar(
     containerColor = containerColor,
     contentColor = contentColor,
     dismissActionContentColor = dismissActionContentColor,
-    // 设置中间的文本内容
     content = { Text(text = snackbarData.visuals.message) },
-    // 设置右侧的动作按钮（如果有的话）
     action =
       snackbarData.visuals.actionLabel?.let { label ->
         {
@@ -272,7 +262,6 @@ fun BBQSnackbarHost(
   },
 ) {
   Box(modifier = Modifier.fillMaxSize()) {
-    // 在 BoxScope 内部调用 SnackbarHost
     SnackbarHost(
       hostState = hostState,
       modifier = modifier.align(Alignment.TopCenter),
@@ -281,7 +270,7 @@ fun BBQSnackbarHost(
   }
 }
 
-/** 自定义基础 DropdownMenu 参数与原版完全一致，默认添加了 surfaceVariant 背景色 */
+/** 自定义基础 DropdownMenu */
 @Composable
 fun BBQDropdownMenu(
   expanded: Boolean,
@@ -322,7 +311,6 @@ fun ExposedDropdownMenuBoxScope.BBQExposedDropdownMenu(
   )
 }
 
-// 为了方便调用，同时提供一个 Box 的包装（虽然它只是透明转发）
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BBQExposedDropdownMenuBox(
@@ -340,15 +328,64 @@ fun BBQExposedDropdownMenuBox(
 }
 
 /**
- * 自定义的下拉刷新指示器，使用 MaterialTheme 语义颜色。 兼容 Compose Material 3 1.4.0 及以上版本。
- *
- * @param state [PullToRefreshState] 状态对象。
- * @param isRefreshing Boolean，指示是否正在进行刷新。
- * @param modifier Modifier 应用于此指示器的修饰符。
- * @param backgroundColor 指示器容器的背景色，默认使用 [MaterialTheme.colorScheme.surface]。
- * @param contentColor 指示器的颜色，默认使用 [MaterialTheme.colorScheme.primary]。
- * @param containerShape 指示器容器的形状，默认使用 [PullToRefreshDefaults.indicatorShape]。
+ * 通用网盘平台切换菜单组件，基于 PanPlatform 封装
  */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PanPlatformDropdownMenu(
+  selectedPlatform: PanPlatform,
+  onPlatformSelected: (PanPlatform) -> Unit,
+  modifier: Modifier = Modifier,
+  platforms: List<PanPlatform> = PanPlatform.entries
+) {
+  var isExpanded by remember { mutableStateOf(false) }
+
+  BBQExposedDropdownMenuBox(
+    expanded = isExpanded,
+    onExpandedChange = { isExpanded = it },
+    modifier = modifier
+  ) {
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      modifier = Modifier
+        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+        .padding(vertical = 4.dp)
+    ) {
+      Text(
+        text = selectedPlatform.displayName,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface
+      )
+      Icon(
+        imageVector = Icons.Default.ArrowDropDown,
+        contentDescription = "切换网盘平台",
+        tint = MaterialTheme.colorScheme.onSurface
+      )
+    }
+
+    BBQExposedDropdownMenu(
+      expanded = isExpanded,
+      onDismissRequest = { isExpanded = false }
+    ) {
+      platforms.forEach { platform ->
+        DropdownMenuItem(
+          text = {
+            Text(
+              text = platform.displayName,
+              fontWeight = if (platform == selectedPlatform) FontWeight.Bold else FontWeight.Normal
+            )
+          },
+          onClick = {
+            onPlatformSelected(platform)
+            isExpanded = false
+          }
+        )
+      }
+    }
+  }
+}
+
 @Composable
 fun BBQPullRefreshIndicator(
   state: PullToRefreshState,
