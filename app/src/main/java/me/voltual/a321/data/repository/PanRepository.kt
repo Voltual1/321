@@ -31,12 +31,12 @@ class PanRepository(private val context: Context) {
     }
   }
 
-  suspend fun getFiles(parentId: Long = 0, page: Int = 1): Result<List<PanFile>> {
-    return getActiveService().getFiles(parentId, page)
+  suspend fun getFiles(parentId: Long = 0, page: Int = 1): Result<List<PanFile>> = runCatching {
+    getActiveService().getFiles(parentId, page).getOrThrow()
   }
 
-  suspend fun getFilesWithTotal(parentId: Long = 0, page: Int = 1): Result<PanPageResult> {
-    return getActiveService().getFilesWithTotal(parentId, page)
+  suspend fun getFilesWithTotal(parentId: Long = 0, page: Int = 1): Result<PanPageResult> = runCatching {
+    getActiveService().getFilesWithTotal(parentId, page).getOrThrow()
   }
 
   suspend fun uploadFile(
@@ -45,16 +45,16 @@ class PanRepository(private val context: Context) {
     fileSize: Long,
     parentId: Long,
     onProgress: (Float) -> Unit,
-  ): Result<String> {
-    return getActiveService().uploadFile(context, uri, fileName, fileSize, parentId, onProgress)
+  ): Result<String> = runCatching {
+    getActiveService().uploadFile(context, uri, fileName, fileSize, parentId, onProgress).getOrThrow()
   }
 
-  suspend fun getDownloadUrl(file: PanFile): Result<String> {
-    return getActiveService().getDownloadUrl(file)
+  suspend fun getDownloadUrl(file: PanFile): Result<String> = runCatching {
+    getActiveService().getDownloadUrl(file).getOrThrow()
   }
 
-  suspend fun getUserQuota(): Result<PanUserQuota> {
-    return getActiveService().getUserQuota()
+  suspend fun getUserQuota(): Result<PanUserQuota> = runCatching {
+    getActiveService().getUserQuota().getOrThrow()
   }
 
   suspend fun deleteFiles(fileIds: List<Long>): PanActionResult {
@@ -81,12 +81,12 @@ class PanRepository(private val context: Context) {
     fileIds: List<Long>,
     password: String = "",
     expiration: String = "",
-  ): Result<String> {
-    return getActiveService().shareFiles(fileIds, password, expiration)
+  ): Result<String> = runCatching {
+    getActiveService().shareFiles(fileIds, password, expiration).getOrThrow()
   }
 
-  suspend fun getRecycleBinFiles(page: Int = 1): Result<PanPageResult> {
-    return getActiveService().getRecycleBinFiles(page)
+  suspend fun getRecycleBinFiles(page: Int = 1): Result<PanPageResult> = runCatching {
+    getActiveService().getRecycleBinFiles(page).getOrThrow()
   }
 
   suspend fun restoreFiles(fileIds: List<Long>): PanActionResult {
@@ -104,12 +104,12 @@ class PanRepository(private val context: Context) {
     page: Int = 1,
     parentId: Long = 0,
     limit: Int = 100,
-  ): Result<PanPageResult> {
-    return getActiveService().searchFiles(keyword, page, parentId, limit)
+  ): Result<PanPageResult> = runCatching {
+    getActiveService().searchFiles(keyword, page, parentId, limit).getOrThrow()
   }
 
-  suspend fun getShareList(next: String? = null, limit: Int = 100): Result<PanPageResult> {
-    return getActiveService().getShareList(next, limit)
+  suspend fun getShareList(next: String? = null, limit: Int = 100): Result<PanPageResult> = runCatching {
+    getActiveService().getShareList(next, limit).getOrThrow()
   }
 
   suspend fun getShareInfo(
@@ -118,8 +118,8 @@ class PanRepository(private val context: Context) {
     parentId: Long = 0,
     page: Int = 1,
     sharePwd: String? = null,
-  ): Result<PanPageResult> {
-    return getActiveService().getShareInfo(shareKey, next, parentId, page, sharePwd)
+  ): Result<PanPageResult> = runCatching {
+    getActiveService().getShareInfo(shareKey, next, parentId, page, sharePwd).getOrThrow()
   }
 
   suspend fun deleteShare(shareId: Long): PanActionResult {
