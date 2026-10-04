@@ -33,6 +33,8 @@ import java.util.Base64
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
@@ -393,7 +395,7 @@ object Cloud139Client {
       contentType(ContentType.Application.Json)
       setBody(bodyJson)
     }
-    response.body()
+    response.body<T>()
   }
 
   /**
@@ -450,8 +452,8 @@ object Cloud139Client {
 
     val bodyJson = buildJsonObject {
       putJsonArray("imageThumbnailStyleList") {
-        add("Small")
-        add("Large")
+        add(JsonPrimitive("Small"))
+        add(JsonPrimitive("Large"))
       }
       put("orderBy", "updated_at")
       put("orderDirection", "DESC")
@@ -497,7 +499,7 @@ object Cloud139Client {
 
     val bodyJson = buildJsonObject {
       putJsonArray("fileIds") {
-        fileIds.forEach { add(it) }
+        fileIds.forEach { add(JsonPrimitive(it)) }
       }
     }
 
@@ -535,7 +537,7 @@ object Cloud139Client {
 
     val bodyJson = buildJsonObject {
       putJsonArray("fileIds") {
-        fileIds.forEach { add(it) }
+        fileIds.forEach { add(JsonPrimitive(it)) }
       }
       put("toParentFileId", if (toParentFileId.isEmpty()) "/" else toParentFileId)
     }
@@ -555,7 +557,7 @@ object Cloud139Client {
 
     val bodyJson = buildJsonObject {
       putJsonArray("fileIds") {
-        fileIds.forEach { add(it) }
+        fileIds.forEach { add(JsonPrimitive(it)) }
       }
       put("toParentFileId", if (toParentFileId.isEmpty()) "/" else toParentFileId)
     }
