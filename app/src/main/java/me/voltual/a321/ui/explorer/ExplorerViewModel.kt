@@ -203,6 +203,12 @@ class ExplorerViewModel(
     viewModelScope.launch {
       when (action) {
         "info" -> showPropertyDialog()
+        "copy_share_info" -> {
+          val url = file.shareUrl ?: file.rawDownloadUrl
+          val code = file.sharePwd
+          val textToCopy = if (!code.isNullOrBlank()) "$url 提取码: $code" else url
+          _events.send(ExplorerEvent.ShowSnackbar("分享链接及提取码：$textToCopy", "复制"))
+        }
         "save_to_other" -> {
           val targetPaneIndex = if (paneIndex == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
           val targetPane = if (targetPaneIndex == PaneIndex.LEFT) leftPane else rightPane

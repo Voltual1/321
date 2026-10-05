@@ -30,7 +30,7 @@ fun FileActionMenu(
   activePaneIndex: PaneIndex,
   isRecycleBin: Boolean,
   isShareListMode: Boolean,
-  isExternalShareMode: Boolean, // 新增：是否为外部分享模式
+  isExternalShareMode: Boolean,
   onDismiss: () -> Unit,
   onAction: (String) -> Unit,
 ) {
@@ -87,7 +87,6 @@ fun FileActionMenu(
 
           when {
             isExternalShareMode -> {
-              // 外部分享模式：仅支持保存到另一侧
               ActionMenuItem(
                 icon = Icons.Default.ContentCopy,
                 label = if (isBatch) "批量保存到另一侧" else "保存到另一侧",
@@ -127,6 +126,15 @@ fun FileActionMenu(
               }
             }
             isShareListMode -> {
+              if (!isBatch) {
+                ActionMenuItem(
+                  icon = Icons.Default.ContentCopy,
+                  label = "复制链接及提取码",
+                ) {
+                  onAction("copy_share_info")
+                }
+              }
+
               ActionMenuItem(
                 icon = Icons.Default.LinkOff,
                 label = if (isBatch) "批量取消分享" else "取消分享",
