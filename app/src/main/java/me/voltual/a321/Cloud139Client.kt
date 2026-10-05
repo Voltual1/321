@@ -45,6 +45,7 @@ object Cloud139Client {
   private const val ROUTE_POLICY_URL = "https://user-njs.yun.139.com/user/route/qryRoutePolicy"
   private const val SEARCH_URL = "https://search-njs.yun.139.com/search/SearchFile"
   private const val CREATE_OUT_LINK_URL = "https://yun.139.com/orchestration/personalCloud-rebuild/outlink/v1.0/getOutLink"
+  private const val GET_OUT_LINK_INFO_URL = "https://share-kd-njs.yun.139.com/yun-share/richlifeApp/devapp/IOutLink/getOutLinkInfoV6"
   private const val MCLOUD_VERSION = "7.14.0"
   private const val MCLOUD_CLIENT = "10701"
   private const val MCLOUD_CHANNEL = "1000101"
@@ -379,6 +380,59 @@ object Cloud139Client {
     val passwd: String? = null
   )
 
+  @Serializable
+  data class OutLinkInfoResp(
+    val resultCode: String? = null,
+    val desc: String? = null,
+    val success: Boolean? = null,
+    val code: String? = null,
+    val data: OutLinkInfoData? = null
+  )
+
+  @Serializable
+  data class OutLinkInfoData(
+    val nodNum: Int? = null,
+    val caLst: List<OutLinkFolder>? = null,
+    val coLst: List<OutLinkFile>? = null,
+    val lkName: String? = null
+  )
+
+  @Serializable
+  data class OutLinkFolder(
+    val caID: String? = null,
+    val caName: String? = null,
+    val udTime: String? = null
+  ) {
+    fun toPersonalFileItem(): PersonalFileItem {
+      return PersonalFileItem(
+        fileId = caID,
+        name = caName,
+        size = 0L,
+        type = "folder",
+        updatedAt = udTime
+      )
+    }
+  }
+
+  @Serializable
+  data class OutLinkFile(
+    val coID: String? = null,
+    val coName: String? = null,
+    val coSize: Long? = null,
+    val udTime: String? = null,
+    val path: String? = null
+  ) {
+    fun toPersonalFileItem(): PersonalFileItem {
+      return PersonalFileItem(
+        fileId = coID,
+        name = coName,
+        size = coSize,
+        type = "file",
+        updatedAt = udTime
+      )
+    }
+  }
+
   // ===== 核心 API 实现 =====
 
   fun parseToken(rawToken: String): Result<Config> = runCatching {
@@ -479,11 +533,52 @@ object Cloud139Client {
   }
 
   /**
-   * 创建外链分享 API (getOutLink)
-   * @param fileIds 文件 ID 列表
-   * @param title 分享显示的名称/标题
-   * @param days 有效天数；为 null 时代表永久有效
+   * 查看移动云盘外链内容 (明文不加 hcy-cool-flag)
    */
+  suspend fun getOutLinkInfo(
+    linkId: String,
+    passwd: String,
+    parentCaId: String = "root",
+    bNum: Int = 1,
+    eNum: Int = 200
+  ): Result<OutLinkInfoResp> = runCatching {
+    val bodyJson = buildJsonObject {
+      put("getOutLinkInfoReq", buildJsonObject {
+        put("account", currentConfig.account)
+        put("linkID", linkId)
+        put("passwd", passwd)
+        put("caSrt", 1)
+        put("coSrt", 1)
+        put("srtDr", 0)
+        put("bNum", bNum)
+        put("pCaID", parentCaId)
+        put("eNum", eNum)
+      })
+    }
+
+    val bodyStr = bodyJson.toString()
+    val response: HttpResponse = httpClient.post(GET_OUT_LINK_INFO_URL) {
+      // 不发送 hcy-cool-flag，直接使用明文 JSON 交互
+      buildCommonHeaders(this)
+      val ts = getCurrentTimestamp()
+      val randStr = generateRandStr(16)
+      val sign = calcSign(bodyStr, ts, randStr)
+      val authValue = if (currentConfig.authorization.startsWith("Basic ")) currentConfig.authorization else "Basic ${currentConfig.authorization}"
+
+      header("Authorization", authValue)
+      header("mcloud-sign", "$ts,$randStr,$sign")
+      header("x-SvcType", "1")
+      contentType(ContentType.Application.Json)
+      setBody(bodyJson)
+    }
+
+    val resp = response.body<OutLinkInfoResp>()
+    if (resp.resultCode != "0" && resp.code != "0") {
+      throw IOException("获取外链内容失败: ${resp.desc}")
+    }
+    resp
+  }
+
   suspend fun createOutLink(
     fileIds: List<String>,
     title: String,

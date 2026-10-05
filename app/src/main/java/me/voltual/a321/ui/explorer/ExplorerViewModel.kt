@@ -519,7 +519,11 @@ class ExplorerViewModel(
   }
 
   fun openExternalShare(url: String, pwd: String, pane: PaneIndex) {
-    val key = url.substringAfterLast("/s/").substringBefore("?").substringBefore("/")
+    val key = when (currentPlatform) {
+      PanPlatform.PAN123 -> url.substringAfterLast("/s/").substringBefore("?").substringBefore("/")
+      PanPlatform.CLOUD139 -> url.substringAfterLast("/i/").substringBefore("?").substringBefore("/")
+    }
+
     if (key.isBlank()) return
 
     val state = if (pane == PaneIndex.LEFT) leftPane else rightPane

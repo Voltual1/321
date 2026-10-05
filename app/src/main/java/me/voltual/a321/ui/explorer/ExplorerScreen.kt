@@ -342,6 +342,7 @@ fun ExplorerDialogs(
   if (viewModel.isLinkInputDialogVisible) {
     Dialog(onDismissRequest = { viewModel.hideLinkInputDialog() }) {
       LinkAndCodeInputDialogUI(
+        codeRequired = viewModel.currentPlatform == me.voltual.a321.data.unified.PanPlatform.CLOUD139,
         onDismiss = { viewModel.hideLinkInputDialog() },
         onConfirm = { link, code ->
           viewModel.hideLinkInputDialog()

@@ -33,15 +33,6 @@ import me.voltual.a321.core.utils.extension.text.RE_finishChars
 import me.voltual.a321.ui.components.DialogNegativeButton
 import me.voltual.a321.ui.components.DialogPositiveButton
 
-/**
- * 通用整数输入对话框
- *
- * @param title 标题文本
- * @param initialValue 初始显示的数值
- * @param range 允许输入的范围
- * @param onDismiss 关闭对话框回调
- * @param onConfirm 点击确认并保存回调
- */
 @Composable
 fun IntInputPrefDialogUI(
   title: String,
@@ -53,7 +44,6 @@ fun IntInputPrefDialogUI(
   val focusManager = LocalFocusManager.current
   val textFieldFocusRequester = remember { FocusRequester() }
 
-  // 内部状态记录当前输入
   var savedValue by remember { mutableIntStateOf(initialValue) }
 
   LaunchedEffect(Unit) {
@@ -118,7 +108,6 @@ fun IntInputPrefDialogUI(
   }
 }
 
-/** 通用字符串输入对话框（受限或带 Label） */
 @Composable
 fun StringInputPrefDialogUI(
   title: String,
@@ -180,7 +169,6 @@ fun StringInputPrefDialogUI(
   }
 }
 
-/** 自由文本输入对话框 */
 @Composable
 fun StringInputDialogUI(
   titleText: String,
@@ -251,7 +239,6 @@ fun StringInputDialogUI(
   }
 }
 
-/** 仿 MT 管理器新建对话框 */
 @Composable
 fun CreateFileDialogUI(
   title: String = "新建",
@@ -301,18 +288,15 @@ fun CreateFileDialogUI(
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
       )
 
-      // 底部按钮区域：水平排列三个按钮
       Row(
         Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-        horizontalArrangement = Arrangement.End, // 按钮向右对齐
+        horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        // 取消按钮
         DialogNegativeButton(textId = android.R.string.cancel, onClick = onDismiss)
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // 文件夹按钮 (使用 Positive 样式)
         DialogPositiveButton(
           textId = R.string.folder,
           onClick = { if (savedValue.isNotEmpty()) onConfirmFolder(savedValue) },
@@ -320,19 +304,19 @@ fun CreateFileDialogUI(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // 文件按钮 (使用 Positive 样式)
         DialogPositiveButton(textId = R.string.file, onClick = { onConfirmFile(savedValue) })
       }
     }
   }
 }
 
-/** 分享链接与提取码输入对话框 */
+/** 链接与提取码输入对话框 (支持必填提取码控制) */
 @Composable
 fun LinkAndCodeInputDialogUI(
   title: String = "输入分享信息",
   initialLink: String = "",
   initialCode: String = "",
+  codeRequired: Boolean = false,
   onDismiss: () -> Unit,
   onConfirm: (link: String, code: String) -> Unit,
 ) {
@@ -342,7 +326,8 @@ fun LinkAndCodeInputDialogUI(
   var linkValue by remember { mutableStateOf(initialLink) }
   var codeValue by remember { mutableStateOf(initialCode) }
 
-  // 自动聚焦到链接输入框
+  val canConfirm = linkValue.isNotBlank() && (!codeRequired || codeValue.isNotBlank())
+
   LaunchedEffect(Unit) {
     delay(100)
     linkFocusRequester.requestFocus()
@@ -357,11 +342,10 @@ fun LinkAndCodeInputDialogUI(
     Column(
       modifier = Modifier.padding(vertical = 16.dp, horizontal = 12.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.spacedBy(12.dp), // 稍微拉开一点间距
+      verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
       Text(text = title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
 
-      // 链接输入框
       TextField(
         modifier =
           Modifier.fillMaxWidth()
@@ -370,7 +354,7 @@ fun LinkAndCodeInputDialogUI(
         value = linkValue,
         onValueChange = { linkValue = it },
         label = { Text("分享链接") },
-        placeholder = { Text("https://……/s/…-…") },
+        placeholder = { Text("https://……") },
         singleLine = true,
         colors = textFieldDialogColors(),
         shape = MaterialTheme.shapes.large,
@@ -378,12 +362,11 @@ fun LinkAndCodeInputDialogUI(
           KeyboardOptions(imeAction = ImeAction.Next, keyboardType = KeyboardType.Uri),
       )
 
-      // 提取码输入框
       TextField(
         modifier = Modifier.fillMaxWidth().shadow(1.dp, MaterialTheme.shapes.large),
         value = codeValue,
         onValueChange = { codeValue = it },
-        label = { Text("提取码 (可选)") },
+        label = { Text(if (codeRequired) "提取码 (必填)" else "提取码 (可选)") },
         placeholder = { Text("请输入密码") },
         singleLine = true,
         colors = textFieldDialogColors(),
@@ -394,7 +377,7 @@ fun LinkAndCodeInputDialogUI(
           KeyboardActions(
             onDone = {
               focusManager.clearFocus()
-              if (linkValue.isNotEmpty()) onConfirm(linkValue, codeValue)
+              if (canConfirm) onConfirm(linkValue, codeValue)
             }
           ),
       )
@@ -407,7 +390,7 @@ fun LinkAndCodeInputDialogUI(
         DialogPositiveButton(
           modifier = Modifier.padding(start = 16.dp),
           onClick = {
-            if (linkValue.isNotEmpty()) {
+            if (canConfirm) {
               onConfirm(linkValue, codeValue)
             }
           },
@@ -417,7 +400,6 @@ fun LinkAndCodeInputDialogUI(
   }
 }
 
-/** 提取出的通用 TextField 颜色配置，减少重复代码 */
 @Composable
 private fun textFieldDialogColors() =
   TextFieldDefaults.colors(

@@ -116,7 +116,6 @@ class Cloud139Service(private val token: String) : PanService {
   ): Result<String> = runCatching {
     val title = if (fileIds.size > 1) "已选择 ${fileIds.size} 个文件" else "文件分享"
     
-    // 如果字符串传为 "PERMANENT" 或者无法解析为有效日期，代表用户勾选了“永久有效”
     val days = if (expiration == "PERMANENT") {
       null
     } else {
@@ -137,6 +136,29 @@ class Cloud139Service(private val token: String) : PanService {
     } else {
       url
     }
+  }
+
+  override suspend fun getShareInfo(
+    shareKey: String,
+    next: String?,
+    parentId: String,
+    page: Int,
+    sharePwd: String?
+  ): Result<PanPageResult> = runCatching {
+    val parentCaId = if (parentId == "0" || parentId.isEmpty()) "root" else parentId
+    val pwd = sharePwd ?: ""
+    val resp = Cloud139Client.getOutLinkInfo(shareKey, pwd, parentCaId).getOrThrow()
+    val data = resp.data ?: throw IOException("返回的外链数据为空")
+
+    val folderFiles = data.caLst?.map { it.toPersonalFileItem().toUnifiedFile() } ?: emptyList()
+    val regularFiles = data.coLst?.map { it.toPersonalFileItem().toUnifiedFile() } ?: emptyList()
+    val allFiles = folderFiles + regularFiles
+
+    PanPageResult(
+      files = allFiles,
+      totalCount = data.nodNum ?: allFiles.size,
+      hasMore = false
+    )
   }
 
   override suspend fun searchFiles(
