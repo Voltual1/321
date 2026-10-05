@@ -46,6 +46,8 @@ object Cloud139Client {
   private const val SEARCH_URL = "https://search-njs.yun.139.com/search/SearchFile"
   private const val CREATE_OUT_LINK_URL = "https://yun.139.com/orchestration/personalCloud-rebuild/outlink/v1.0/getOutLink"
   private const val GET_OUT_LINK_INFO_URL = "https://share-kd-njs.yun.139.com/yun-share/richlifeApp/devapp/IOutLink/getOutLinkInfoV6"
+  private const val GET_OUT_LINK_LIST_URL = "https://yun.139.com/orchestration/personalCloud-rebuild/outlink/v1.0/getOutLinkList"
+  private const val DEL_OUT_LINK_URL = "https://yun.139.com/orchestration/personalCloud-rebuild/outlink/v1.0/delOutLink"
   private const val MCLOUD_VERSION = "7.14.0"
   private const val MCLOUD_CLIENT = "10701"
   private const val MCLOUD_CHANNEL = "1000101"
@@ -433,6 +435,36 @@ object Cloud139Client {
     }
   }
 
+  @Serializable
+  data class GetOutLinkListResp(
+    val success: Boolean? = null,
+    val code: String? = null,
+    val message: String? = null,
+    val data: GetOutLinkListData? = null
+  )
+
+  @Serializable
+  data class GetOutLinkListData(
+    val getOutLinkLstRes: GetOutLinkLstRes? = null
+  )
+
+  @Serializable
+  data class GetOutLinkLstRes(
+    val count: String? = null,
+    val outLinks: List<OutLinkItem> = emptyList()
+  )
+
+  @Serializable
+  data class OutLinkItem(
+    val linkID: String? = null,
+    val passwd: String? = null,
+    val url: String? = null,
+    val lkName: String? = null,
+    val ctTime: String? = null,
+    val lastUdTime: String? = null,
+    val expireTime: String? = null
+  )
+
   // ===== 核心 API 实现 =====
 
   fun parseToken(rawToken: String): Result<Config> = runCatching {
@@ -532,9 +564,6 @@ object Cloud139Client {
     response.body<SearchResp>()
   }
 
-  /**
-   * 查看移动云盘外链内容 (明文不加 hcy-cool-flag)
-   */
   suspend fun getOutLinkInfo(
     linkId: String,
     passwd: String,
@@ -558,7 +587,6 @@ object Cloud139Client {
 
     val bodyStr = bodyJson.toString()
     val response: HttpResponse = httpClient.post(GET_OUT_LINK_INFO_URL) {
-      // 不发送 hcy-cool-flag，直接使用明文 JSON 交互
       buildCommonHeaders(this)
       val ts = getCurrentTimestamp()
       val randStr = generateRandStr(16)
@@ -624,6 +652,72 @@ object Cloud139Client {
 
     resp.data?.getOutLinkRes?.getOutLinkResSet?.firstOrNull()
       ?: throw IOException("未能获取到返回的分享结果")
+  }
+
+  /**
+   * 获取“我的分享”列表 (getOutLinkList)
+   */
+  suspend fun getOutLinkList(
+    bNum: Int = 1,
+    eNum: Int = 100
+  ): Result<GetOutLinkLstRes> = runCatching {
+    val bodyJson = buildJsonObject {
+      put("getOutLinkLstReq", buildJsonObject {
+        put("needSetAccount", true)
+        put("srt", 0)
+        put("srtDr", 0)
+        put("bNum", bNum)
+        put("eNum", eNum)
+        put("qryType", 1)
+        put("commonAccountInfo", buildJsonObject {
+          put("account", currentConfig.account)
+          put("accountType", 1)
+        })
+      })
+    }
+
+    val bodyStr = bodyJson.toString()
+    val response: HttpResponse = httpClient.post(GET_OUT_LINK_LIST_URL) {
+      applySignedHeaders(this, bodyStr, svcType = "1", isRoute = false)
+      contentType(ContentType.Application.Json)
+      setBody(bodyJson)
+    }
+
+    val resp = response.body<GetOutLinkListResp>()
+    if (resp.success != true) {
+      throw IOException("获取分享列表失败: ${resp.message}")
+    }
+
+    resp.data?.getOutLinkLstRes ?: GetOutLinkLstRes()
+  }
+
+  /**
+   * 取消外链分享 (delOutLink)
+   */
+  suspend fun delOutLink(linkIds: List<String>): Result<Unit> = runCatching {
+    val bodyJson = buildJsonObject {
+      put("delOutLinkReq", buildJsonObject {
+        putJsonArray("linkIDs") {
+          linkIds.forEach { add(JsonPrimitive(it)) }
+        }
+        put("commonAccountInfo", buildJsonObject {
+          put("account", currentConfig.account)
+          put("accountType", 1)
+        })
+      })
+    }
+
+    val bodyStr = bodyJson.toString()
+    val response: HttpResponse = httpClient.post(DEL_OUT_LINK_URL) {
+      applySignedHeaders(this, bodyStr, svcType = "1", isRoute = false)
+      contentType(ContentType.Application.Json)
+      setBody(bodyJson)
+    }
+
+    val resp = response.body<BaseResp>()
+    if (!resp.success) {
+      throw IOException("取消分享失败: ${resp.message}")
+    }
   }
 
   suspend fun getFileIdByPath(path: String): Result<String> = runCatching {

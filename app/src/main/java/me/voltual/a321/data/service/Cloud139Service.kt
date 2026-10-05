@@ -37,6 +37,25 @@ class Cloud139Service(private val token: String) : PanService {
     )
   }
 
+  private fun Cloud139Client.OutLinkItem.toUnifiedFile(): PanFile {
+    val linkId = this.linkID ?: ""
+    val shareUrlStr = this.url ?: "https://yun.139.com/shareweb/#/w/i/$linkId"
+    return PanFile(
+      id = linkId,
+      name = this.lkName ?: "文件分享",
+      size = 0L,
+      isDirectory = false,
+      updateTime = this.ctTime ?: this.lastUdTime ?: "",
+      category = 10,
+      etag = "",
+      rawDownloadUrl = shareUrlStr,
+      shareKey = linkId,
+      sharePwd = this.passwd,
+      expiration = this.expireTime?.ifEmpty { "永久有效" } ?: "永久有效",
+      shareUrl = shareUrlStr
+    )
+  }
+
   override suspend fun getFiles(parentId: String, page: Int): Result<List<PanFile>> = runCatching {
     val parentStr = if (parentId == "0" || parentId.isEmpty()) "/" else parentId
     val data = Cloud139Client.listPersonalFiles(parentStr).getOrThrow()
@@ -136,6 +155,30 @@ class Cloud139Service(private val token: String) : PanService {
     } else {
       url
     }
+  }
+
+  override suspend fun getShareList(next: String?, limit: Int): Result<PanPageResult> = runCatching {
+    val page = next?.toIntOrNull() ?: 1
+    val startNum = (page - 1) * limit + 1
+    val stopNum = page * limit
+    val res = Cloud139Client.getOutLinkList(bNum = startNum, eNum = stopNum).getOrThrow()
+
+    val files = res.outLinks.map { it.toUnifiedFile() }
+    val totalCount = res.count?.toIntOrNull() ?: files.size
+
+    PanPageResult(
+      files = files,
+      totalCount = totalCount,
+      hasMore = stopNum < totalCount,
+      nextMarker = if (stopNum < totalCount) (page + 1).toString() else "-1"
+    )
+  }
+
+  override suspend fun deleteShare(shareId: String): PanActionResult {
+    return Cloud139Client.delOutLink(listOf(shareId)).fold(
+      onSuccess = { PanActionResult.Success },
+      onFailure = { PanActionResult.Error(-1, it.message ?: "取消分享失败") }
+    )
   }
 
   override suspend fun getShareInfo(
