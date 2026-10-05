@@ -168,13 +168,13 @@ fun AuthScreen(
                       mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                     }
 
-                    webViewClient =
-                      object : WebViewClient() {
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                          super.onPageFinished(view, url)
-                          viewModel.checkAndExtractToken(currentUrl = url, manual = false)
-                        }
+                  webViewClient =
+                    object : WebViewClient() {
+                      override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        viewModel.checkAndExtractToken(manual = false)
                       }
+                    }
 
                     setOnTouchListener { view, event ->
                       when (event.action) {

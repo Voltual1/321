@@ -33,17 +33,6 @@ enum class LoginUrlConfig(val platform: PanPlatform, val loginUrl: String) {
     fun getUrl(platform: PanPlatform): String {
       return entries.find { it.platform == platform }?.loginUrl ?: PAN123.loginUrl
     }
-
-    /**
-     * 判断传入的 URL 是否仍处于该平台的登录页面
-     */
-    fun isAtLoginPage(platform: PanPlatform, url: String?): Boolean {
-      if (url.isNullOrBlank()) return true
-      return when (platform) {
-        PanPlatform.PAN123 -> url.contains("login.123pan.com") || url.contains("centerlogin")
-        PanPlatform.CLOUD139 -> url.contains("/login") || url.endsWith("#/login") || url.contains("login.html")
-      }
-    }
   }
 }
 
@@ -84,16 +73,12 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   /**
-   * 检查 Cookie 提取 Token；如果在页面完成时，URL 仍处于登录页面，则不会自动触发提取
+   * 检查 Cookie 并提取 Token
    */
-  fun checkAndExtractToken(currentUrl: String? = null, manual: Boolean = false): Boolean {
+  fun checkAndExtractToken(manual: Boolean = false): Boolean {
     val platform = _selectedPlatform.value
-
-    if (!manual && LoginUrlConfig.isAtLoginPage(platform, currentUrl)) {
-      return false
-    }
-
     val cookieManager = CookieManager.getInstance()
+
     return when (platform) {
       PanPlatform.PAN123 -> {
         val cookies = cookieManager.getCookie(target123CookieUrl) ?: ""

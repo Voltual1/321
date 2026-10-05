@@ -64,6 +64,8 @@ object AuthManager {
 
       builder.build()
     }
+    // 过河拆桥：保存 Token 后立即擦除 WebView 中的 Cookie 痕迹，防止二次进入登录页时发生自动重定向
+    clearWebViewCookies()
   }
 
   suspend fun switchPlatform(context: Context, platform: PanPlatform) {
@@ -84,6 +86,10 @@ object AuthManager {
 
   suspend fun clearCredentials(context: Context) {
     context.credentialsStore.updateData { UserCredentials.getDefaultInstance() }
+    clearWebViewCookies()
+  }
+
+  fun clearWebViewCookies() {
     val cookieManager = CookieManager.getInstance()
     cookieManager.removeSessionCookies {}
     cookieManager.removeAllCookies {
