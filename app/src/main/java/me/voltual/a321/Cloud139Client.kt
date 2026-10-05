@@ -272,6 +272,14 @@ object Cloud139Client {
   }
 
   @Serializable
+  data class PersonalDetailResp(
+    val success: Boolean? = null,
+    val code: String? = null,
+    val message: String? = null,
+    val data: PersonalFileItem? = null
+  )
+
+  @Serializable
   data class SearchResp(
     val resultCode: Int? = null,
     val count: Int? = null,
@@ -285,7 +293,7 @@ object Cloud139Client {
     val fileId: String? = null,
     val name: String? = null,
     val parentFileId: String? = null,
-    val type: String? = null, // "2"为目录，"1"为文件
+    val type: String? = null,
     val size: Long? = null,
     val extension: String? = null,
     val createdAt: String? = null,
@@ -416,9 +424,6 @@ object Cloud139Client {
     response.body<T>()
   }
 
-  /**
-   * 搜索文件
-   */
   suspend fun searchFiles(
     keyword: String,
     startNum: Int = 1,
@@ -511,6 +516,25 @@ object Cloud139Client {
     resp.data ?: PersonalListData()
   }
 
+  suspend fun getFileDetail(fileId: String): Result<PersonalFileItem> = runCatching {
+    val host = getPersonalCloudHost().getOrThrow()
+    val url = "$host/file/get"
+
+    val bodyJson = buildJsonObject {
+      put("fileId", fileId)
+    }
+
+    val resp = personalApiPost<PersonalDetailResp>(url, bodyJson).getOrThrow()
+    if (resp.success != true || resp.data == null) {
+      throw IOException("获取文件详情失败: ${resp.message}")
+    }
+    resp.data
+  }
+
+  /**
+   * 创建文件夹
+   * 注意：fileRenameMode 必须设为 "force_rename" 才能成功创建目录
+   */
   suspend fun createFolder(parentFileId: String, name: String): Result<PersonalUploadData> = runCatching {
     val host = getPersonalCloudHost().getOrThrow()
     val url = "$host/file/create"
@@ -520,7 +544,7 @@ object Cloud139Client {
       put("name", name)
       put("description", "")
       put("type", "folder")
-      put("fileRenameMode", "auto_rename")
+      put("fileRenameMode", "force_rename")
     }
 
     val resp = personalApiPost<PersonalUploadResp>(url, bodyJson).getOrThrow()
