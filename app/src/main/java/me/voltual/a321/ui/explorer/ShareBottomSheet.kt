@@ -20,6 +20,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
+import me.voltual.a321.core.ui.theme.SwitchWithText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +32,7 @@ fun ShareFileSheet(
 ) {
   val sheetState = rememberModalBottomSheetState()
   val password = remember { mutableStateOf("") }
+  var isPermanent by remember { mutableStateOf(false) }
 
   var selectedDate by remember { mutableStateOf(LocalDate(2099, 12, 12)) }
   var showDatePicker by remember { mutableStateOf(false) }
@@ -61,15 +63,42 @@ fun ShareFileSheet(
           modifier = Modifier.fillMaxWidth(),
           singleLine = true,
         )
+      } else {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+        ) {
+          SwitchWithText(
+            text = "永久有效",
+            checked = isPermanent,
+            onCheckedChange = { isPermanent = it }
+          )
+        }
       }
 
-      OutlinedCard(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
+      OutlinedCard(
+        onClick = { if (!isPermanent) showDatePicker = true },
+        enabled = !isPermanent,
+        modifier = Modifier.fillMaxWidth()
+      ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-          Icon(Icons.Default.DateRange, contentDescription = null)
+          Icon(
+            Icons.Default.DateRange,
+            contentDescription = null,
+            tint = if (isPermanent) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary
+          )
           Spacer(modifier = Modifier.width(12.dp))
           Column {
-            Text("有效期至", style = MaterialTheme.typography.labelSmall)
-            Text(selectedDate.toString(), style = MaterialTheme.typography.bodyLarge)
+            Text(
+              "有效期至",
+              style = MaterialTheme.typography.labelSmall,
+              color = if (isPermanent) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+              if (isPermanent) "永久有效" else selectedDate.toString(),
+              style = MaterialTheme.typography.bodyLarge,
+              color = if (isPermanent) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface
+            )
           }
         }
       }
@@ -78,10 +107,12 @@ fun ShareFileSheet(
 
       Button(
         onClick = {
-          val time = LocalTime(8, 0, 0, 0)
-          val dateTime = LocalDateTime(selectedDate, time)
+          val isoString = if (isPermanent) {
+            "PERMANENT"
+          } else {
+            val time = LocalTime(8, 0, 0, 0)
+            val dateTime = LocalDateTime(selectedDate, time)
 
-          val isoString =
             "${dateTime.year}-" +
               "${dateTime.month.number.toString().padStart(2, '0')}-" +
               "${dateTime.day.toString().padStart(2, '0')}T" +
@@ -90,6 +121,7 @@ fun ShareFileSheet(
               "${dateTime.second.toString().padStart(2, '0')}." +
               "${(dateTime.nanosecond / 1_000_000).toString().padStart(3, '0')}" +
               "+08:00"
+          }
 
           onConfirm(password.value, isoString)
         },

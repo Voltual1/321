@@ -116,13 +116,17 @@ class Cloud139Service(private val token: String) : PanService {
   ): Result<String> = runCatching {
     val title = if (fileIds.size > 1) "已选择 ${fileIds.size} 个文件" else "文件分享"
     
-    // 计算天数；若格式解析失败或年份极大(如2099年)则视为永久有效 (days = null)
-    val days = runCatching {
-      val expireDateTime = LocalDateTime.parse(expiration.substringBefore("+").substringBefore("Z"))
-      val now = LocalDateTime.now()
-      val diffDays = Duration.between(now, expireDateTime).toDays().toInt()
-      if (diffDays > 365) null else maxOf(1, diffDays)
-    }.getOrNull()
+    // 如果字符串传为 "PERMANENT" 或者无法解析为有效日期，代表用户勾选了“永久有效”
+    val days = if (expiration == "PERMANENT") {
+      null
+    } else {
+      runCatching {
+        val expireDateTime = LocalDateTime.parse(expiration.substringBefore("+").substringBefore("Z"))
+        val now = LocalDateTime.now()
+        val diff = Duration.between(now, expireDateTime).toDays().toInt()
+        maxOf(1, diff)
+      }.getOrNull()
+    }
 
     val outLinkSet = Cloud139Client.createOutLink(fileIds, title, days).getOrThrow()
     val url = outLinkSet.linkUrl ?: throw IOException("生成的分享链接为空")
