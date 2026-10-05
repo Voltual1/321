@@ -83,6 +83,7 @@ fun ExplorerScreen(
       label = "RightPaneElevation",
     )
 
+  // 注入全亮网盘平台下拉选择组件到顶栏标题位置（由 Navigator.forceCleanup 统一清理）
   LaunchedEffect(viewModel.currentPlatform) {
     controller.titleContent = {
       PanPlatformDropdownMenu(
@@ -91,12 +92,6 @@ fun ExplorerScreen(
           viewModel.switchPlatform(platform)
         }
       )
-    }
-  }
-
-  DisposableEffect(Unit) {
-    onDispose {
-      controller.titleContent = null
     }
   }
 

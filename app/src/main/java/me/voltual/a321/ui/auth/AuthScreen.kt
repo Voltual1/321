@@ -47,7 +47,7 @@ fun AuthScreen(
 
   var selectedTab by remember { mutableIntStateOf(0) }
 
-  // 注入全亮 PanPlatformDropdownMenu 组件到 TopAppBar 标题栏
+  // 注入全亮 PanPlatformDropdownMenu 组件到 TopAppBar 标题栏（由 Navigator.forceCleanup 统一清理）
   LaunchedEffect(selectedPlatform) {
     topAppBarController.titleContent = {
       PanPlatformDropdownMenu(
@@ -59,12 +59,6 @@ fun AuthScreen(
           }
         }
       )
-    }
-  }
-
-  DisposableEffect(Unit) {
-    onDispose {
-      topAppBarController.titleContent = null
     }
   }
 
