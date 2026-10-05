@@ -43,6 +43,7 @@ object Cloud139Client {
 
   // ===== 常量定义 =====
   private const val ROUTE_POLICY_URL = "https://user-njs.yun.139.com/user/route/qryRoutePolicy"
+  private const val SEARCH_URL = "https://search-njs.yun.139.com/search/SearchFile"
   private const val MCLOUD_VERSION = "7.14.0"
   private const val MCLOUD_CLIENT = "10701"
   private const val MCLOUD_CHANNEL = "1000101"
@@ -86,9 +87,6 @@ object Cloud139Client {
 
   // ===== 签名与工具函数 =====
 
-  /**
-   * 对应 Rust 端 utils_crypto.rs 中的 encode_uri_component
-   */
   private fun encodeUriComponent(s: String): String {
     val sb = StringBuilder()
     for (c in s) {
@@ -114,9 +112,6 @@ object Cloud139Client {
     return sb.toString()
   }
 
-  /**
-   * 对应 Rust 端 utils_crypto.rs 中的 calc_sign
-   */
   fun calcSign(body: String, ts: String, randStr: String): String {
     val encoded = encodeUriComponent(body)
     val sorted = encoded.toCharArray().sorted().joinToString("")
@@ -273,7 +268,42 @@ object Cloud139Client {
     val contentHashAlgorithm: String? = null
   ) {
     val isFolder: Boolean
-      get() = type == "folder" || type == "dir" || type == "1"
+      get() = type == "folder" || type == "dir" || type == "1" || type == "2"
+  }
+
+  @Serializable
+  data class SearchResp(
+    val resultCode: Int? = null,
+    val count: Int? = null,
+    val total: Int? = null,
+    val rows: List<SearchRow> = emptyList(),
+    val success: Boolean? = null
+  )
+
+  @Serializable
+  data class SearchRow(
+    val fileId: String? = null,
+    val name: String? = null,
+    val parentFileId: String? = null,
+    val type: String? = null, // "2"为目录，"1"为文件
+    val size: Long? = null,
+    val extension: String? = null,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
+    val contentHash: String? = null
+  ) {
+    fun toPersonalFileItem(): PersonalFileItem {
+      val mappedType = if (type == "2") "folder" else "file"
+      return PersonalFileItem(
+        fileId = fileId,
+        name = name,
+        size = size,
+        type = mappedType,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        contentHash = contentHash
+      )
+    }
   }
 
   @Serializable
@@ -317,9 +347,6 @@ object Cloud139Client {
 
   // ===== 核心 API 实现 =====
 
-  /**
-   * 解析 Token 字符串，提取账号及过期时间
-   */
   fun parseToken(rawToken: String): Result<Config> = runCatching {
     val token = rawToken.removePrefix("Basic ").trim()
     val decoded = String(Base64.getDecoder().decode(token), Charsets.UTF_8)
@@ -341,18 +368,12 @@ object Cloud139Client {
     )
   }
 
-  /**
-   * 登录初始化配置
-   */
   fun login(token: String): Result<Config> {
     return parseToken(token).onSuccess { config ->
       currentConfig = config
     }
   }
 
-  /**
-   * 获取个人云专属 Host 地址 (`qryRoutePolicy`)
-   */
   suspend fun getPersonalCloudHost(): Result<String> = runCatching {
     currentConfig.personalCloudHost?.let { return Result.success(it) }
 
@@ -385,9 +406,6 @@ object Cloud139Client {
     host
   }
 
-  /**
-   * 通用个人云 POST 请求辅助函数
-   */
   private suspend inline fun <reified T> personalApiPost(url: String, bodyJson: JsonObject): Result<T> = runCatching {
     val bodyStr = bodyJson.toString()
     val response: HttpResponse = httpClient.post(url) {
@@ -399,8 +417,36 @@ object Cloud139Client {
   }
 
   /**
-   * 根据远程路径获取 `fileId`
+   * 搜索文件
    */
+  suspend fun searchFiles(
+    keyword: String,
+    startNum: Int = 1,
+    stopNum: Int = 100
+  ): Result<SearchResp> = runCatching {
+    val bodyJson = buildJsonObject {
+      put("conditions", buildJsonObject {
+        put("type", 0)
+        put("keyword", keyword)
+        put("owner", currentConfig.account)
+      })
+      put("showInfo", buildJsonObject {
+        put("returnTotalCountFlag", true)
+        putJsonArray("sortInfos") {}
+        put("startNum", startNum)
+        put("stopNum", stopNum)
+      })
+    }
+
+    val bodyStr = bodyJson.toString()
+    val response: HttpResponse = httpClient.post(SEARCH_URL) {
+      applySignedHeaders(this, bodyStr, svcType = "1", isRoute = false)
+      contentType(ContentType.Application.Json)
+      setBody(bodyJson)
+    }
+    response.body<SearchResp>()
+  }
+
   suspend fun getFileIdByPath(path: String): Result<String> = runCatching {
     val trimmed = path.trim()
     if (trimmed.isEmpty() || trimmed == "/") return Result.success("")
@@ -439,9 +485,6 @@ object Cloud139Client {
     currentParentId
   }
 
-  /**
-   * 获取文件列表
-   */
   suspend fun listPersonalFiles(
     parentFileId: String,
     pageCursor: String = "",
@@ -468,9 +511,6 @@ object Cloud139Client {
     resp.data ?: PersonalListData()
   }
 
-  /**
-   * 创建文件夹
-   */
   suspend fun createFolder(parentFileId: String, name: String): Result<PersonalUploadData> = runCatching {
     val host = getPersonalCloudHost().getOrThrow()
     val url = "$host/file/create"
@@ -490,9 +530,6 @@ object Cloud139Client {
     resp.data ?: PersonalUploadData()
   }
 
-  /**
-   * 批量移动文件到回收站 (删除)
-   */
   suspend fun deleteFiles(fileIds: List<String>): Result<Unit> = runCatching {
     val host = getPersonalCloudHost().getOrThrow()
     val url = "$host/recyclebin/batchTrash"
@@ -509,9 +546,6 @@ object Cloud139Client {
     }
   }
 
-  /**
-   * 重命名文件/文件夹
-   */
   suspend fun renameFile(fileId: String, newName: String): Result<Unit> = runCatching {
     val host = getPersonalCloudHost().getOrThrow()
     val url = "$host/file/update"
@@ -528,9 +562,6 @@ object Cloud139Client {
     }
   }
 
-  /**
-   * 批量移动文件
-   */
   suspend fun moveFiles(fileIds: List<String>, toParentFileId: String): Result<Unit> = runCatching {
     val host = getPersonalCloudHost().getOrThrow()
     val url = "$host/file/batchMove"
@@ -548,9 +579,6 @@ object Cloud139Client {
     }
   }
 
-  /**
-   * 批量复制文件
-   */
   suspend fun copyFiles(fileIds: List<String>, toParentFileId: String): Result<Unit> = runCatching {
     val host = getPersonalCloudHost().getOrThrow()
     val url = "$host/file/batchCopy"
@@ -568,9 +596,6 @@ object Cloud139Client {
     }
   }
 
-  /**
-   * 获取文件下载直链
-   */
   suspend fun getDownloadUrl(fileId: String): Result<String> = runCatching {
     val host = getPersonalCloudHost().getOrThrow()
     val url = "$host/file/getDownloadUrl"
@@ -587,9 +612,6 @@ object Cloud139Client {
     resp.data?.cdnUrl ?: resp.data?.url ?: throw IOException("返回的下载链接为空")
   }
 
-  /**
-   * 初始化上传任务
-   */
   suspend fun initUpload(
     parentFileId: String,
     fileName: String,
@@ -630,9 +652,6 @@ object Cloud139Client {
     personalApiPost<PersonalUploadResp>(url, bodyJson).getOrThrow()
   }
 
-  /**
-   * 获取分片上传链接列表
-   */
   suspend fun getUploadUrls(
     fileId: String,
     uploadId: String,
@@ -676,9 +695,6 @@ object Cloud139Client {
     resultMap
   }
 
-  /**
-   * 完成/确认分片上传
-   */
   suspend fun confirmUpload(
     fileId: String,
     uploadId: String,

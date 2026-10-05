@@ -49,6 +49,25 @@ class Cloud139Service(private val token: String) : PanService {
     )
   }
 
+  override suspend fun searchFiles(
+    keyword: String,
+    page: Int,
+    parentId: Long,
+    limit: Int
+  ): Result<PanPageResult> = runCatching {
+    val startNum = (page - 1) * limit + 1
+    val stopNum = page * limit
+    val resp = Cloud139Client.searchFiles(keyword, startNum, stopNum).getOrThrow()
+    val files = resp.rows.map { it.toPersonalFileItem().toUnifiedFile() }
+    val total = resp.total ?: files.size
+
+    PanPageResult(
+      files = files,
+      totalCount = total,
+      hasMore = stopNum < total
+    )
+  }
+
   override suspend fun getDownloadUrl(file: PanFile): Result<String> {
     val fileId = file.shareKey.takeIf { !it.isNullOrEmpty() } ?: file.id.toString()
     return Cloud139Client.getDownloadUrl(fileId)
