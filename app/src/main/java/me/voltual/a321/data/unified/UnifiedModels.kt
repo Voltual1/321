@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 
 @Immutable
 data class PanFile(
-  val id: Long,
+  val id: String,
   val name: String,
   val size: Long,
   val isDirectory: Boolean,
