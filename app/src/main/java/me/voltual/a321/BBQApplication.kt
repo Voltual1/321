@@ -18,8 +18,10 @@ import me.voltual.a321.core.ui.theme.ThemeColorStore
 import me.voltual.a321.core.ui.theme.ThemeManager
 import org.koin.android.ext.koin.androidContext
 import org.koin.androix.startup.KoinStartup
+import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.dsl.koinConfiguration
 
+@OptIn(KoinExperimentalAPI::class)
 class BBQApplication : Application(), KoinStartup {
   val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -37,6 +39,7 @@ class BBQApplication : Application(), KoinStartup {
     ThemeManager.customColorSet = ThemeColorStore.loadColors(this)
   }
 
+  @OptIn(KoinExperimentalAPI::class)
   override fun onKoinStartup() = koinConfiguration {
     androidContext(this@BBQApplication)
     modules(appModule)

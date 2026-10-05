@@ -55,7 +55,6 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
   var dpi by remember { mutableStateOf(ThemeColorStore.loadDpi(context)) }
   var fontSize by remember { mutableStateOf(ThemeColorStore.loadFontSize(context)) }
 
-  // 是否启用自定义 DPI 的状态
   var customDpiEnabled by remember { mutableStateOf(ThemeColorStore.loadCustomDpiEnabled(context)) }
 
   val roundScreenPaddings = remember { ThemeColorStore.loadRoundScreenPaddings(context) }
@@ -65,11 +64,9 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
   var roundRight by remember { mutableStateOf(roundScreenPaddings.right) }
   var roundBottom by remember { mutableStateOf(roundScreenPaddings.bottom) }
 
-  // 持久化的主题模式 (0: 跟随系统, 1: 日间, 2: 夜间)
   var appThemeMode by remember { mutableStateOf(ThemeColorStore.loadThemeMode(context)) }
   var themeDropdownExpanded by remember { mutableStateOf(false) }
 
-  // 翻译状态
   var translate by remember { mutableStateOf(false) }
 
   var selectedTab by remember { mutableStateOf(0) }
@@ -90,13 +87,12 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
         Button(
           onClick = {
             scope.launch {
-              // 重置所有颜色和显示设置
               lightColors = ThemeColorStore.DEFAULT_COLORS.lightSet
               darkColors = ThemeColorStore.DEFAULT_COLORS.darkSet
               dpi = 1.0f
               fontSize = 1.0f
-              customDpiEnabled = false // 重置为不启用自定义 DPI
-              appThemeMode = 0 // 重置为跟随系统
+              customDpiEnabled = false
+              appThemeMode = 0
             }
             showResetDialog = false
           },
@@ -123,11 +119,9 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
-        verticalAlignment = Alignment.CenterVertically, // 垂直居中对齐
+        verticalAlignment = Alignment.CenterVertically,
       ) {
         IconButton(onClick = { showResetDialog = true }) { Icon(Icons.Filled.Refresh, "恢复默认设置") }
-
-        // 翻译按钮
         IconButton(onClick = { translate = !translate }) { Icon(Icons.Filled.Language, "翻译") }
       }
 
@@ -143,7 +137,6 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
           )
         }
         item {
-          // 自定义下拉菜单选择应用主题模式
           val themeOptions = listOf("跟随系统", "日间模式", "夜间模式")
           BBQExposedDropdownMenuBox(
             expanded = themeDropdownExpanded,
@@ -156,7 +149,7 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
               readOnly = true,
               label = { Text("应用主题") },
               trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = themeDropdownExpanded) },
-              modifier = Modifier.menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth()
+              modifier = Modifier.menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth()
             )
             BBQExposedDropdownMenu(
               expanded = themeDropdownExpanded,
@@ -232,7 +225,7 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
             onValueChange = { dpi = it.toFloatOrNull() ?: dpi },
             label = { Text("屏幕密度 (DPI 缩放)") },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            enabled = customDpiEnabled, // 只有在启用自定义 DPI 时才可编辑
+            enabled = customDpiEnabled,
           )
         }
         item {
@@ -241,13 +234,12 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
             onValueChange = { fontSize = it.toFloatOrNull() ?: fontSize },
             label = { Text("字体大小 (倍数)") },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            enabled = customDpiEnabled, // 只有在启用自定义 DPI 时才可编辑
+            enabled = customDpiEnabled,
           )
         }
         item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
 
         item {
-          // 使用 PrimaryTabRow 替代弃用的 TabRow
           PrimaryTabRow(
             selectedTabIndex = selectedTab,
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -260,7 +252,7 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
         }
 
         when (selectedTab) {
-          0 -> { // 日间模式
+          0 -> {
             items(lightColors.toList(), key = { "light_" + it.first }) { (name, color) ->
               Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 ColorEditItem(
@@ -269,20 +261,20 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
                   onColorChange = { newColor ->
                     lightColors = lightColors.copyWith(name, newColor)
                   },
-                  translate = translate, // 传递 translate 状态
+                  translate = translate,
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
               }
             }
           }
-          1 -> { // 夜间模式
+          1 -> {
             items(darkColors.toList(), key = { "dark_" + it.first }) { (name, color) ->
               Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 ColorEditItem(
                   colorName = name,
                   currentColor = color,
                   onColorChange = { newColor -> darkColors = darkColors.copyWith(name, newColor) },
-                  translate = translate, // 传递 translate 状态
+                  translate = translate,
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
               }
@@ -318,8 +310,6 @@ fun ThemeCustomizeScreen(modifier: Modifier = Modifier) {
   }
 }
 
-// 局部函数：保存主题并重启
-
 @Suppress("DEPRECATION")
 private fun saveThemeAndRestart(
   context: Context,
@@ -346,7 +336,7 @@ private fun saveThemeAndRestart(
     ThemeColorStore.saveColors(context, colors)
     ThemeColorStore.saveDpi(context, dpi)
     ThemeColorStore.saveFontSize(context, fontScale)
-    ThemeColorStore.saveCustomDpiEnabled(context, customDpiEnabled) // 保存是否启用自定义 DPI 的状态
+    ThemeColorStore.saveCustomDpiEnabled(context, customDpiEnabled)
     ThemeColorStore.saveRoundScreenPaddings(
       context,
       roundScreenEnabled,
@@ -355,13 +345,12 @@ private fun saveThemeAndRestart(
       roundRight,
       roundBottom,
     )
-    ThemeColorStore.saveThemeMode(context, appThemeMode) // 持久化存储主题模式
+    ThemeColorStore.saveThemeMode(context, appThemeMode)
 
     withContext(Dispatchers.Main) {
-      ThemeManager.applyCustomColors(context) // 应用颜色自定义
-      ThemeManager.applyThemeMode(context, appThemeMode) // 即时且平滑地应用主题模式
+      ThemeManager.applyCustomColors(context)
+      ThemeManager.applyThemeMode(context, appThemeMode)
 
-      // 仅当 DPI、字体大小、自定义 DPI 启用状态或主题模式改变时才重启 Activity
       if (oldDpi != dpi || oldFontScale != fontScale || oldCustomDpiEnabled != customDpiEnabled || oldThemeMode != appThemeMode) {
         (context as? Activity)?.let {
           if (customDpiEnabled) {
@@ -376,7 +365,7 @@ private fun saveThemeAndRestart(
           }
         }
         delay(300)
-        restartMainActivity(context) // 重启以重建界面样式
+        restartMainActivity(context)
       }
     }
   }
@@ -387,7 +376,7 @@ fun ColorEditItem(
   colorName: String,
   currentColor: Color,
   onColorChange: (Color) -> Unit,
-  translate: Boolean, // 接收 translate 参数
+  translate: Boolean,
 ) {
   var hexValue by remember(currentColor) { mutableStateOf(currentColor.toHex()) }
   var showColorPicker by remember { mutableStateOf(false) }
@@ -416,7 +405,7 @@ fun ColorEditItem(
           .border(1.dp, MaterialTheme.colorScheme.outline)
     )
     Text(
-      text = if (translate) colorNameTranslations[colorName] ?: colorName else colorName, // 使用翻译
+      text = if (translate) colorNameTranslations[colorName] ?: colorName else colorName,
       modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
       style = MaterialTheme.typography.bodyLarge,
     )
@@ -524,7 +513,7 @@ fun HsvColorPickerDialog(
       }
     },
     dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
-    shape = AppShapes.medium, // 应用 AppShapes.medium
+    shape = AppShapes.medium,
   )
 }
 
@@ -536,7 +525,6 @@ fun String.isValidHex(): Boolean = this.length == 6 && this.matches(Regex("[0-9A
 
 fun Float.to255(): Int = (this * 255).roundToInt()
 
-// 颜色名称翻译
 val colorNameTranslations =
   mapOf(
     "primary" to "主要颜色",

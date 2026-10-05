@@ -47,7 +47,6 @@ fun AuthScreen(
 
   var selectedTab by remember { mutableIntStateOf(0) }
 
-  // 注入全亮 PanPlatformDropdownMenu 组件到 TopAppBar 标题栏（由 Navigator.forceCleanup 统一清理）
   LaunchedEffect(selectedPlatform) {
     topAppBarController.titleContent = {
       PanPlatformDropdownMenu(
@@ -80,7 +79,7 @@ fun AuthScreen(
     modifier = modifier.fillMaxSize(),
     topBar = {
       Column {
-        TabRow(
+        PrimaryTabRow(
           selectedTabIndex = selectedTab,
           containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
@@ -168,13 +167,13 @@ fun AuthScreen(
                       mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                     }
 
-                  webViewClient =
-                    object : WebViewClient() {
-                      override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        viewModel.checkAndExtractToken(manual = false)
+                    webViewClient =
+                      object : WebViewClient() {
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                          super.onPageFinished(view, url)
+                          viewModel.checkAndExtractToken(manual = false)
+                        }
                       }
-                    }
 
                     setOnTouchListener { view, event ->
                       when (event.action) {
