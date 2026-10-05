@@ -7,6 +7,8 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.isSuccess
 import java.io.IOException
+import java.time.Duration
+import java.time.LocalDateTime
 import me.voltual.a321.Cloud139Client
 import me.voltual.a321.data.unified.*
 import me.voltual.a321.utils.PanUtils
@@ -105,6 +107,32 @@ class Cloud139Service(private val token: String) : PanService {
     Cloud139Client.confirmUpload(fileId, uploadId, sha256).getOrThrow()
     onProgress(1.0f)
     "上传成功"
+  }
+
+  override suspend fun shareFiles(
+    fileIds: List<String>,
+    password: String,
+    expiration: String
+  ): Result<String> = runCatching {
+    val title = if (fileIds.size > 1) "已选择 ${fileIds.size} 个文件" else "文件分享"
+    
+    // 计算天数；若格式解析失败或年份极大(如2099年)则视为永久有效 (days = null)
+    val days = runCatching {
+      val expireDateTime = LocalDateTime.parse(expiration.substringBefore("+").substringBefore("Z"))
+      val now = LocalDateTime.now()
+      val diffDays = Duration.between(now, expireDateTime).toDays().toInt()
+      if (diffDays > 365) null else maxOf(1, diffDays)
+    }.getOrNull()
+
+    val outLinkSet = Cloud139Client.createOutLink(fileIds, title, days).getOrThrow()
+    val url = outLinkSet.linkUrl ?: throw IOException("生成的分享链接为空")
+    val code = outLinkSet.passwd
+
+    if (!code.isNullOrEmpty()) {
+      "$url 提取码: $code"
+    } else {
+      url
+    }
   }
 
   override suspend fun searchFiles(

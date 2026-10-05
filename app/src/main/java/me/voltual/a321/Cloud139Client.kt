@@ -44,6 +44,7 @@ object Cloud139Client {
   // ===== 常量定义 =====
   private const val ROUTE_POLICY_URL = "https://user-njs.yun.139.com/user/route/qryRoutePolicy"
   private const val SEARCH_URL = "https://search-njs.yun.139.com/search/SearchFile"
+  private const val CREATE_OUT_LINK_URL = "https://yun.139.com/orchestration/personalCloud-rebuild/outlink/v1.0/getOutLink"
   private const val MCLOUD_VERSION = "7.14.0"
   private const val MCLOUD_CLIENT = "10701"
   private const val MCLOUD_CHANNEL = "1000101"
@@ -353,6 +354,31 @@ object Cloud139Client {
     val fileName: String? = null
   )
 
+  @Serializable
+  data class CreateOutLinkResp(
+    val success: Boolean? = null,
+    val code: String? = null,
+    val message: String? = null,
+    val data: CreateOutLinkData? = null
+  )
+
+  @Serializable
+  data class CreateOutLinkData(
+    val getOutLinkRes: OutLinkResContainer? = null
+  )
+
+  @Serializable
+  data class OutLinkResContainer(
+    val getOutLinkResSet: List<OutLinkResSet> = emptyList()
+  )
+
+  @Serializable
+  data class OutLinkResSet(
+    val linkID: String? = null,
+    val linkUrl: String? = null,
+    val passwd: String? = null
+  )
+
   // ===== 核心 API 实现 =====
 
   fun parseToken(rawToken: String): Result<Config> = runCatching {
@@ -452,6 +478,59 @@ object Cloud139Client {
     response.body<SearchResp>()
   }
 
+  /**
+   * 创建外链分享 API (getOutLink)
+   * @param fileIds 文件 ID 列表
+   * @param title 分享显示的名称/标题
+   * @param days 有效天数；为 null 时代表永久有效
+   */
+  suspend fun createOutLink(
+    fileIds: List<String>,
+    title: String,
+    days: Int? = null
+  ): Result<OutLinkResSet> = runCatching {
+    val bodyJson = buildJsonObject {
+      put("getOutLinkReq", buildJsonObject {
+        put("subLinkType", 0)
+        put("encrypt", 1)
+        putJsonArray("coIDLst") {
+          fileIds.forEach { add(JsonPrimitive(it)) }
+        }
+        putJsonArray("caIDLst") {}
+        put("pubType", 1)
+        put("dedicatedName", title)
+        if (days != null && days > 0) {
+          put("period", days)
+        }
+        put("periodUnit", 1)
+        putJsonArray("viewerLst") {}
+        put("extInfo", buildJsonObject {
+          put("isWatermark", 0)
+          put("shareChannel", "3001")
+        })
+        put("commonAccountInfo", buildJsonObject {
+          put("account", currentConfig.account)
+          put("accountType", 1)
+        })
+      })
+    }
+
+    val bodyStr = bodyJson.toString()
+    val response: HttpResponse = httpClient.post(CREATE_OUT_LINK_URL) {
+      applySignedHeaders(this, bodyStr, svcType = "1", isRoute = false)
+      contentType(ContentType.Application.Json)
+      setBody(bodyJson)
+    }
+
+    val resp = response.body<CreateOutLinkResp>()
+    if (resp.success != true) {
+      throw IOException("创建分享失败: ${resp.message}")
+    }
+
+    resp.data?.getOutLinkRes?.getOutLinkResSet?.firstOrNull()
+      ?: throw IOException("未能获取到返回的分享结果")
+  }
+
   suspend fun getFileIdByPath(path: String): Result<String> = runCatching {
     val trimmed = path.trim()
     if (trimmed.isEmpty() || trimmed == "/") return Result.success("")
@@ -531,10 +610,6 @@ object Cloud139Client {
     resp.data
   }
 
-  /**
-   * 创建文件夹
-   * 注意：fileRenameMode 必须设为 "force_rename" 才能成功创建目录
-   */
   suspend fun createFolder(parentFileId: String, name: String): Result<PersonalUploadData> = runCatching {
     val host = getPersonalCloudHost().getOrThrow()
     val url = "$host/file/create"
