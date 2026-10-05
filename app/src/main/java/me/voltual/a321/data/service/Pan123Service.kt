@@ -250,4 +250,9 @@ class Pan123Service(private val token: String) : PanService {
       PanActionResult.Error(response.code, response.message)
     }
   }.getOrElse { PanActionResult.Error(-1, it.message ?: "复制文件失败") }
+  
+  override fun parseExternalShareKey(url: String): String? {
+    val key = url.substringAfterLast("/s/", "").substringBefore("?").substringBefore("/").trim()
+    return key.ifEmpty { null }
+  }
 }

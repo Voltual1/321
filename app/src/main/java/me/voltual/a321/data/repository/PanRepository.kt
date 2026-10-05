@@ -152,4 +152,9 @@ class PanRepository(private val context: Context) {
     return runCatching { getActiveService().copyShareFiles(shareKey, sharePwd, targetParentId, files) }
       .getOrElse { PanActionResult.Error(-1, it.message ?: "转存失败") }
   }
+  
+  // PanRepository.kt 中新增 parseExternalShareKey 桥接
+  suspend fun parseExternalShareKey(url: String): String? {
+    return runCatching { getActiveService().parseExternalShareKey(url) }.getOrNull()
+  }
 }

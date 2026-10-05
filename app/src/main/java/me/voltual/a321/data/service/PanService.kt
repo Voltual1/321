@@ -7,6 +7,8 @@ import me.voltual.a321.data.unified.*
 interface PanService {
   val platform: PanPlatform
 
+  fun parseExternalShareKey(url: String): String? = null
+
   suspend fun getFiles(parentId: String = "0", page: Int = 1): Result<List<PanFile>> =
     Result.failure(UnsupportedOperationException("${platform.displayName} 暂不支持此功能"))
 

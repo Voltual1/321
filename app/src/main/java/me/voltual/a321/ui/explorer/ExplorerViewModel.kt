@@ -530,10 +530,20 @@ private suspend fun executeMoveWorkflow(
   }
 
   fun openExternalShare(url: String, pwd: String, pane: PaneIndex) {
-    val key = when (currentPlatform) {
-      PanPlatform.PAN123 -> url.substringAfterLast("/s/").substringBefore("?").substringBefore("/")
-      PanPlatform.CLOUD139 -> url.substringAfterLast("/i/").substringBefore("?").substringBefore("/")
+    viewModelScope.launch {
+      val key = repository.parseExternalShareKey(url) ?: return@launch
+
+      val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
+      state.isRecycleBin = false
+      state.isSearchMode = false
+      state.isShareListMode = false
+      state.isExternalShareMode = true
+      state.externalShareKey = key
+      state.externalSharePwd = pwd
+      state.pathStack = listOf(PanPath("0", "分享: $key"))
+      loadFiles(pane)
     }
+  }
 
     if (key.isBlank()) return
 

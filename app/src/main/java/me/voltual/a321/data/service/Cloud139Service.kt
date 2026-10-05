@@ -296,4 +296,9 @@ class Cloud139Service(private val token: String) : PanService {
       onFailure = { PanActionResult.Error(-1, it.message ?: "复制失败") }
     )
   }
+  
+  override fun parseExternalShareKey(url: String): String? {
+    val key = url.substringAfterLast("/i/", "").substringBefore("?").substringBefore("/").trim()
+    return key.ifEmpty { null }
+  }
 }
