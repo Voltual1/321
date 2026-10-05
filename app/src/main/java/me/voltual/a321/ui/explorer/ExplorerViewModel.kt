@@ -545,19 +545,6 @@ private suspend fun executeMoveWorkflow(
     }
   }
 
-    if (key.isBlank()) return
-
-    val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
-    state.isRecycleBin = false
-    state.isSearchMode = false
-    state.isShareListMode = false
-    state.isExternalShareMode = true
-    state.externalShareKey = key
-    state.externalSharePwd = pwd
-    state.pathStack = listOf(PanPath("0", "分享: $key"))
-    loadFiles(pane)
-  }
-
   fun exitExternalShare(pane: PaneIndex) {
     val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
     state.isExternalShareMode = false
