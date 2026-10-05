@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.map
 
 // 定义当前的协议版本号
 object AgreementVersions {
-  const val USER_AGREEMENT = 3
+  const val USER_AGREEMENT = 4
 }
 
 private val Context.userAgreementDataStore: DataStore<Preferences> by
