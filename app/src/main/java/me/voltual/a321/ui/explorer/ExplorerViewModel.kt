@@ -29,6 +29,7 @@ import me.voltual.a321.data.unified.PanActionResult
 import me.voltual.a321.data.unified.PanFile
 import me.voltual.a321.data.unified.PanPageResult
 import me.voltual.a321.data.unified.PanPath
+import me.voltual.a321.data.unified.PanPlatform
 
 enum class PaneIndex {
   LEFT,
@@ -57,7 +58,6 @@ class ExplorerViewModel(
     var searchKeyword by mutableStateOf("")
     var isShareListMode by mutableStateOf(false)
 
-    // --- 外部分享链接模式 ---
     var isExternalShareMode by mutableStateOf(false)
     var externalShareKey by mutableStateOf("")
     var externalSharePwd by mutableStateOf("")
@@ -79,11 +79,32 @@ class ExplorerViewModel(
       selectedIds.clear()
       lastSelectedIndex = -1
     }
+
+    fun resetToRoot() {
+      fileList = emptyList()
+      isLoading = false
+      error = null
+      pathStack = listOf(PanPath(0, "/"))
+      isRecycleBin = false
+      isSearchMode = false
+      searchKeyword = ""
+      isShareListMode = false
+      isExternalShareMode = false
+      externalShareKey = ""
+      externalSharePwd = ""
+      shareNextMarker = null
+      currentPage = 1
+      totalCount = 0
+      clearSelection()
+    }
   }
 
   val leftPane = PaneState()
   val rightPane = PaneState()
   var activePane by mutableStateOf(PaneIndex.LEFT)
+
+  var currentPlatform by mutableStateOf(PanPlatform.PAN123)
+    private set
 
   val recentlyModifiedIds = mutableStateListOf<Long>()
 
@@ -130,8 +151,23 @@ class ExplorerViewModel(
   val events: Flow<ExplorerEvent> = _events.receiveAsFlow()
 
   init {
-    loadFiles(PaneIndex.LEFT)
-    loadFiles(PaneIndex.RIGHT)
+    viewModelScope.launch {
+      currentPlatform = repository.getActivePlatform()
+      loadFiles(PaneIndex.LEFT)
+      loadFiles(PaneIndex.RIGHT)
+    }
+  }
+
+  fun switchPlatform(platform: PanPlatform) {
+    if (currentPlatform == platform) return
+    viewModelScope.launch {
+      repository.switchPlatform(platform)
+      currentPlatform = platform
+      leftPane.resetToRoot()
+      rightPane.resetToRoot()
+      loadFiles(PaneIndex.LEFT)
+      loadFiles(PaneIndex.RIGHT)
+    }
   }
 
   fun setActive(pane: PaneIndex) {
@@ -324,20 +360,16 @@ class ExplorerViewModel(
     val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
 
     viewModelScope.launch {
-      // ----- 分页前状态准备 -----
       if (isNextPage) {
-        // 对于使用游标分页的模式（我的分享 & 外部分享），若 nextMarker 为 "-1" 则无更多数据
         if (state.isShareListMode || state.isExternalShareMode) {
           if (state.shareNextMarker == "-1") return@launch
         } else {
-          // 普通目录模式：基于页码判断
           if (state.currentPage >= state.totalPages) return@launch
           state.currentPage++
         }
       } else {
         state.isLoading = true
         state.currentPage = 1
-        // 重置游标：外部分享起始值为 "1"，我的分享起始值为 "0"（由 API 决定）
         state.shareNextMarker =
           when {
             state.isExternalShareMode -> "1"
@@ -348,7 +380,6 @@ class ExplorerViewModel(
 
       state.error = null
 
-      // ----- 根据当前模式调用不同 API -----
       val result: Result<PanPageResult> =
         when {
           state.isExternalShareMode -> {
@@ -382,20 +413,17 @@ class ExplorerViewModel(
           }
         }
 
-      // ----- 处理返回结果 -----
       result
         .onSuccess { pageResult ->
           if (!isNextPage) {
             recentlyModifiedIds.clear()
           }
 
-          // 更新总数与游标
           state.totalCount = pageResult.totalCount
-          state.shareNextMarker = pageResult.nextMarker // 对于普通目录，nextMarker 可能为 null
+          state.shareNextMarker = pageResult.nextMarker
 
           val newList = pageResult.files
 
-          // 构建显示的列表（添加“..”或特殊返回项）
           val processedList =
             if (!isNextPage) {
               when {
@@ -482,7 +510,6 @@ class ExplorerViewModel(
         }
         .onFailure { exception ->
           state.error = exception.message ?: "加载失败"
-          // 如果加载失败且是下一页，回滚页码（普通目录模式）
           if (isNextPage && !state.isShareListMode && !state.isExternalShareMode) {
             state.currentPage--
           }

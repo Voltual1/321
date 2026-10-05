@@ -13,6 +13,16 @@ const val LOGIN_REQUIRED = "你可能没有登录哦o_O，先点击左上角的�
 
 class PanRepository(private val context: Context) {
 
+  suspend fun getActivePlatform(): PanPlatform {
+    val credentials = AuthManager.getCredentials(context).first()
+    val id = credentials.activePlatform
+    return if (id.isNotEmpty()) PanPlatform.fromId(id) else PanPlatform.PAN123
+  }
+
+  suspend fun switchPlatform(platform: PanPlatform) {
+    AuthManager.switchPlatform(context, platform)
+  }
+
   private suspend fun getActiveService(): PanService {
     val credentials = AuthManager.getCredentials(context).first()
     val rawToken = credentials.token

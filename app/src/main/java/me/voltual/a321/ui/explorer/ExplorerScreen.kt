@@ -48,6 +48,7 @@ import me.voltual.a321.core.ui.icons.prismicons.Pdf
 import me.voltual.a321.core.ui.icons.prismicons.PrismIcons
 import me.voltual.a321.core.ui.icons.prismicons.Sql
 import me.voltual.a321.core.ui.icons.prismicons.Vector
+import me.voltual.a321.core.ui.theme.PanPlatformDropdownMenu
 import me.voltual.a321.core.utils.extension.text.formatSize
 import me.voltual.a321.data.unified.PanFile
 import me.voltual.a321.data.unified.PanPath
@@ -82,6 +83,24 @@ fun ExplorerScreen(
       label = "RightPaneElevation",
     )
 
+  // 注入全亮网盘平台下拉选择组件到顶栏标题位置
+  LaunchedEffect(viewModel.currentPlatform) {
+    controller.titleContent = {
+      PanPlatformDropdownMenu(
+        selectedPlatform = viewModel.currentPlatform,
+        onPlatformSelected = { platform ->
+          viewModel.switchPlatform(platform)
+        }
+      )
+    }
+  }
+
+  DisposableEffect(Unit) {
+    onDispose {
+      controller.titleContent = null
+    }
+  }
+
   LaunchedEffect(Unit) {
     viewModel.events.collect { event ->
       when (event) {
@@ -95,7 +114,7 @@ fun ExplorerScreen(
           if (result == SnackbarResult.ActionPerformed && event.actionLabel == "复制") {
             val url = event.message.substringAfter("：")
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("123Pan Share", url)
+            val clip = ClipData.newPlainText("Share Link", url)
             clipboard.setPrimaryClip(clip)
           }
         }
@@ -103,7 +122,7 @@ fun ExplorerScreen(
     }
   }
 
-  // 当 ViewModel 状态变化时，同步更新外层的 Actions
+  // 同步更新顶栏操作按钮 Actions
   LaunchedEffect(activeState.isShareListMode, activeState.isRecycleBin, viewModel.activePane) {
     controller.updateActions(
       listOf(
@@ -184,50 +203,6 @@ fun ExplorerScreen(
 
   Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
-      topBar = {
-        /*
-        TopAppBar(
-          title = {},
-          actions = {
-            BBQIconButton(
-              onClick = { viewModel.showLinkInputDialog() }, // 新增
-              icon = Icons.Default.Link,
-              contentDescription = "打开分享",
-            )
-            BBQIconButton(
-              onClick = { viewModel.showSearchDialog() },
-              icon = Icons.Default.Search,
-              contentDescription = "搜索",
-            )
-            BBQIconButton(
-              onClick = { viewModel.toggleShareList(viewModel.activePane) },
-              icon = Icons.Default.Share,
-              contentDescription = "已分享",
-              tint =
-                if (activeState.isShareListMode) MaterialTheme.colorScheme.primary
-                else LocalContentColor.current,
-            )
-            BBQIconButton(
-              onClick = { viewModel.toggleRecycleBin(viewModel.activePane) },
-              icon =
-                if (activeState.isRecycleBin) Icons.Default.CloudQueue
-                else Icons.Default.DeleteSweep,
-              contentDescription = "回收站",
-              tint =
-                if (activeState.isRecycleBin) MaterialTheme.colorScheme.primary
-                else LocalContentColor.current,
-            )
-            BBQIconButton(
-              onClick = {
-                viewModel.loadFiles(PaneIndex.LEFT)
-                viewModel.loadFiles(PaneIndex.RIGHT)
-              },
-              icon = Icons.Default.Refresh,
-              contentDescription = "全部刷新",
-            )
-          },
-        )*/
-      },
       floatingActionButton = {
         FloatingActionButton(onClick = { viewModel.showCreateFileDialog() }) {
           Icon(Icons.Default.Add, contentDescription = "新建或上传")
@@ -361,7 +336,7 @@ fun ExplorerDialogs(
     activePaneIndex = activePaneIndex,
     isRecycleBin = activePaneState.isRecycleBin,
     isShareListMode = activePaneState.isShareListMode,
-    isExternalShareMode = activePaneState.isExternalShareMode, // 传递状态
+    isExternalShareMode = activePaneState.isExternalShareMode,
     onDismiss = { viewModel.hideActionMenu() },
     onAction = { action -> viewModel.performAction(action, activePaneIndex) },
   )
@@ -482,7 +457,6 @@ fun FilePane(
   onRetry: () -> Unit,
 ) {
   val listState = rememberLazyListState()
-  val scope = rememberCoroutineScope()
 
   LaunchedEffect(listState, state.fileList) {
     snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
@@ -680,7 +654,6 @@ fun FileListItem(
       }
     },
     leadingContent = {
-      // --- 关键修改处 ---
       Icon(
         imageVector = getFileIcon(file),
         contentDescription = null,
