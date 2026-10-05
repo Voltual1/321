@@ -33,7 +33,7 @@ class DownloadSettingsDataStore(private val context: Context) {
   }
 
   val downloadModeFlow: Flow<Int> = context.downloadSettingsDataStore.data.map { preferences ->
-    preferences[DOWNLOAD_MODE_KEY] ?: MODE_1DM
+    preferences[DOWNLOAD_MODE_KEY] ?: MODE_COPY_LINK
   }
 
   suspend fun saveDownloadMode(mode: Int) {
