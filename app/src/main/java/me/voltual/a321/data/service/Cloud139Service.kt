@@ -181,6 +181,31 @@ class Cloud139Service(private val token: String) : PanService {
     )
   }
 
+  override suspend fun getRecycleBinFiles(page: Int): Result<PanPageResult> = runCatching {
+    val data = Cloud139Client.getRecycleBinList().getOrThrow()
+    val files = data.items.map { it.toUnifiedFile() }
+
+    PanPageResult(
+      files = files,
+      totalCount = files.size,
+      hasMore = false
+    )
+  }
+
+  override suspend fun restoreFiles(fileIds: List<String>): PanActionResult {
+    return Cloud139Client.restoreRecycleBinFiles(fileIds).fold(
+      onSuccess = { PanActionResult.Success },
+      onFailure = { PanActionResult.Error(-1, it.message ?: "恢复文件失败") }
+    )
+  }
+
+  override suspend fun deleteFilesPermanently(fileIds: List<String>): PanActionResult {
+    return Cloud139Client.deleteRecycleBinFilesPermanently(fileIds).fold(
+      onSuccess = { PanActionResult.Success },
+      onFailure = { PanActionResult.Error(-1, it.message ?: "彻底删除失败") }
+    )
+  }
+
   override suspend fun getShareInfo(
     shareKey: String,
     next: String?,

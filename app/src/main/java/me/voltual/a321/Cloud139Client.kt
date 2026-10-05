@@ -536,6 +536,65 @@ object Cloud139Client {
     response.body<T>()
   }
 
+  /**
+   * 获取回收站文件列表 (`recyclebin/list`)
+   */
+  suspend fun getRecycleBinList(
+    pageCursor: String? = null,
+    pageSize: Int = 100
+  ): Result<PersonalListData> = runCatching {
+    val host = getPersonalCloudHost().getOrThrow()
+    val url = "$host/recyclebin/list"
+
+    val bodyJson = buildJsonObject {
+      put("pageInfo", buildJsonObject {
+        put("pageSize", pageSize)
+        put("pageCursor", pageCursor ?: "")
+      })
+    }
+
+    val resp = personalApiPost<PersonalListResp>(url, bodyJson).getOrThrow()
+    resp.data ?: PersonalListData()
+  }
+
+  /**
+   * 批量恢复回收站文件 (`recyclebin/batchRestore`)
+   */
+  suspend fun restoreRecycleBinFiles(fileIds: List<String>): Result<Unit> = runCatching {
+    val host = getPersonalCloudHost().getOrThrow()
+    val url = "$host/recyclebin/batchRestore"
+
+    val bodyJson = buildJsonObject {
+      putJsonArray("fileIds") {
+        fileIds.forEach { add(JsonPrimitive(it)) }
+      }
+    }
+
+    val resp = personalApiPost<BaseResp>(url, bodyJson).getOrThrow()
+    if (!resp.success) {
+      throw IOException("恢复文件失败: ${resp.message}")
+    }
+  }
+
+  /**
+   * 彻底删除回收站文件 (`file/batchDelete`)
+   */
+  suspend fun deleteRecycleBinFilesPermanently(fileIds: List<String>): Result<Unit> = runCatching {
+    val host = getPersonalCloudHost().getOrThrow()
+    val url = "$host/file/batchDelete"
+
+    val bodyJson = buildJsonObject {
+      putJsonArray("fileIds") {
+        fileIds.forEach { add(JsonPrimitive(it)) }
+      }
+    }
+
+    val resp = personalApiPost<BaseResp>(url, bodyJson).getOrThrow()
+    if (!resp.success) {
+      throw IOException("彻底删除文件失败: ${resp.message}")
+    }
+  }
+
   suspend fun searchFiles(
     keyword: String,
     startNum: Int = 1,
@@ -654,9 +713,6 @@ object Cloud139Client {
       ?: throw IOException("未能获取到返回的分享结果")
   }
 
-  /**
-   * 获取“我的分享”列表 (getOutLinkList)
-   */
   suspend fun getOutLinkList(
     bNum: Int = 1,
     eNum: Int = 100
@@ -691,9 +747,6 @@ object Cloud139Client {
     resp.data?.getOutLinkLstRes ?: GetOutLinkLstRes()
   }
 
-  /**
-   * 取消外链分享 (delOutLink)
-   */
   suspend fun delOutLink(linkIds: List<String>): Result<Unit> = runCatching {
     val bodyJson = buildJsonObject {
       put("delOutLinkReq", buildJsonObject {
