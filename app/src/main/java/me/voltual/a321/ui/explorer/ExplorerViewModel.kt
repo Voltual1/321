@@ -297,17 +297,22 @@ class ExplorerViewModel(
     }
   }
 
-  private suspend fun executeMoveWorkflow(
+private suspend fun executeMoveWorkflow(
     ids: List<String>,
     sourcePane: PaneIndex,
     targetPathId: String,
   ) {
     val state = if (sourcePane == PaneIndex.LEFT) leftPane else rightPane
+
+    // 全平台统一逻辑：如果当前处于回收站，先执行恢复 (restore)
+    if (state.isRecycleBin) {
+      repository.restoreFiles(ids)
+    }
+
     val moveResult = repository.moveFiles(ids, targetPathId)
 
     if (moveResult is PanActionResult.Success) {
       if (state.isRecycleBin) {
-        repository.restoreFiles(ids)
         _events.send(ExplorerEvent.ShowSnackbar("已恢复并移动 ${ids.size} 个文件"))
       } else {
         _events.send(ExplorerEvent.ShowSnackbar("成功移动 ${ids.size} 个文件"))
@@ -756,18 +761,22 @@ class ExplorerViewModel(
     hideRenameDialog()
 
     viewModelScope.launch {
+      // 全平台统一逻辑：如果当前处于回收站，先执行恢复 (restore)
+      if (state.isRecycleBin) {
+        repository.restoreFiles(listOf(file.id))
+      }
+
       val renameRes = repository.renameFile(file.id, newName)
       if (renameRes is PanActionResult.Success) {
         if (state.isRecycleBin) {
-          repository.restoreFiles(listOf(file.id))
-          _events.send(ExplorerEvent.ShowSnackbar("已重命名并恢复文件"))
+          _events.send(ExplorerEvent.ShowSnackbar("已恢复并重命名文件"))
         } else {
           _events.send(ExplorerEvent.ShowSnackbar("重命名成功"))
         }
         state.clearSelection()
         loadFiles(paneIndex, highlightIds = listOf(file.id))
       } else {
-        _events.send(ExplorerEvent.ShowSnackbar("操作失败"))
+        _events.send(ExplorerEvent.ShowSnackbar("操作失败: ${renameRes}"))
       }
     }
   }

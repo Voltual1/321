@@ -106,13 +106,13 @@ fun FileActionMenu(
               if (!isBatch) {
                 ActionMenuItem(
                   icon = Icons.Default.DriveFileMove,
-                  label = "移动并恢复",
+                  label = "恢复并移动",
                   iconModifier = moveIconModifier,
                 ) {
                   onAction("move")
                 }
 
-                ActionMenuItem(Icons.Default.Edit, "重命名并恢复") { onAction("rename") }
+                ActionMenuItem(Icons.Default.Edit, "恢复并重命名") { onAction("rename") }
               }
 
               HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp))
