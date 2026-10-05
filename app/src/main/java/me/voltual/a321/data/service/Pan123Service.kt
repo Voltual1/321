@@ -18,6 +18,32 @@ class Pan123Service(private val token: String) : PanService {
   private val apiService = KtorClient.ApiServiceImpl
   private val CHUNK_SIZE = 5 * 1024 * 1024L
 
+  /**
+   * 支持解析以下 123 云盘的三种常见外链格式：
+   * 1. https://1834296697.share.123865.com/123pan/RMsQTd-mCVVv
+   * 2. https://www.123pan.com/s/hIA5Vv-Ri0wd.html
+   * 3. https://www.123684.com/s/hIA5Vv-QuUwd
+   */
+  override fun parseExternalShareKey(url: String): String? {
+    val trimmed = url.trim()
+    if (trimmed.isEmpty()) return null
+
+    // 格式 1：匹配 .share.123865.com/123pan/{key}
+    if (trimmed.contains(".share.") || trimmed.contains("/123pan/")) {
+      val key = trimmed.substringAfter("/123pan/", "").substringBefore("?").substringBefore("/").trim()
+      if (key.isNotEmpty()) return key
+    }
+
+    // 格式 2 & 3：匹配 /s/{key}.html 或 /s/{key}
+    if (trimmed.contains("/s/")) {
+      val rawKey = trimmed.substringAfter("/s/", "").substringBefore("?").substringBefore("/").trim()
+      val key = rawKey.removeSuffix(".html").trim()
+      if (key.isNotEmpty()) return key
+    }
+
+    return null
+  }
+
   override suspend fun getFiles(parentId: String, page: Int): Result<List<PanFile>> = runCatching {
     val idLong = parentId.toLongOrNull() ?: 0L
     val response = apiService.getFileList(token, page, idLong).getOrThrow()
@@ -250,9 +276,4 @@ class Pan123Service(private val token: String) : PanService {
       PanActionResult.Error(response.code, response.message)
     }
   }.getOrElse { PanActionResult.Error(-1, it.message ?: "复制文件失败") }
-  
-  override fun parseExternalShareKey(url: String): String? {
-    val key = url.substringAfterLast("/s/", "").substringBefore("?").substringBefore("/").trim()
-    return key.ifEmpty { null }
-  }
 }
