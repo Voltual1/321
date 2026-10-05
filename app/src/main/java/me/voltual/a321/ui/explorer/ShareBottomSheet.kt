@@ -25,6 +25,7 @@ import kotlinx.datetime.toLocalDateTime
 @Composable
 fun ShareFileSheet(
   displayTitle: String,
+  supportsCustomPassword: Boolean = true,
   onDismiss: () -> Unit,
   onConfirm: (password: String, expiration: String) -> Unit,
 ) {
@@ -50,15 +51,17 @@ fun ShareFileSheet(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
 
-      OutlinedTextField(
-        value = password.value,
-        onValueChange = { password.value = it },
-        label = { Text("提取码 (留空为无密码)") },
-        placeholder = { Text("请输入4位提取码") },
-        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-      )
+      if (supportsCustomPassword) {
+        OutlinedTextField(
+          value = password.value,
+          onValueChange = { password.value = it },
+          label = { Text("提取码 (留空为无密码)") },
+          placeholder = { Text("请输入4位提取码") },
+          leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+          modifier = Modifier.fillMaxWidth(),
+          singleLine = true,
+        )
+      }
 
       OutlinedCard(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -126,8 +129,3 @@ fun ShareFileSheet(
     }
   }
 }
-
-data class ShareUiState(
-  val password: MutableState<String> = mutableStateOf(""),
-  val expiration: MutableState<LocalDateTime> = mutableStateOf(LocalDateTime(2099, 12, 12, 8, 0, 0)),
-)

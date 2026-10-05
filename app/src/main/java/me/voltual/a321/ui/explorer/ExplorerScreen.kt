@@ -385,6 +385,7 @@ fun ExplorerDialogs(
   if (viewModel.isShareSheetVisible) {
     ShareFileSheet(
       displayTitle = viewModel.sharingDisplayName,
+      supportsCustomPassword = viewModel.currentPlatform.supportsCustomPassword,
       onDismiss = { viewModel.hideShareSheet() },
       onConfirm = { password, expiration -> viewModel.confirmShare(password, expiration) },
     )

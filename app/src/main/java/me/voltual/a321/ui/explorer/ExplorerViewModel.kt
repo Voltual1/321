@@ -771,8 +771,7 @@ class ExplorerViewModel(
     viewModelScope.launch {
       repository
         .shareFiles(ids, password, expiration)
-        .onSuccess { shareKey ->
-          val fullUrl = "https://www.123pan.com/s/$shareKey"
+        .onSuccess { fullUrl ->
           _events.send(ExplorerEvent.ShowSnackbar("分享成功：$fullUrl", "复制"))
           leftPane.clearSelection()
           rightPane.clearSelection()

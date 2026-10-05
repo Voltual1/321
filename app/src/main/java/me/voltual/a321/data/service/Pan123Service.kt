@@ -153,7 +153,13 @@ class Pan123Service(private val token: String) : PanService {
   ): Result<String> = runCatching {
     val idsLong = fileIds.mapNotNull { it.toLongOrNull() }
     val response = apiService.createShare(token, idsLong, password, expiration).getOrThrow()
-    response.data?.ShareKey ?: throw Exception("分享失败：未获取到 Key")
+    val shareKey = response.data?.ShareKey ?: throw Exception("分享失败：未获取到 Key")
+    val link = "https://www.123pan.com/s/$shareKey"
+    if (password.isNotBlank()) {
+      "$link 提取码: $password"
+    } else {
+      link
+    }
   }
 
   override suspend fun getRecycleBinFiles(page: Int): Result<PanPageResult> = runCatching {
@@ -165,11 +171,11 @@ class Pan123Service(private val token: String) : PanService {
   override suspend fun restoreFiles(fileIds: List<String>): PanActionResult {
     return runCatching {
       val idsLong = fileIds.mapNotNull { it.toLongOrNull() }
-      val response = apiService.restoreFiles(token, idsLong).getOrThrow()
-      if (response.isSuccess) {
+      val response = apiService.restoreFiles(token, idsLong).toActionResult()
+      if (response is PanActionResult.Success) {
         PanActionResult.Success
       } else {
-        PanActionResult.Error(response.code, response.message)
+        response
       }
     }.getOrElse { PanActionResult.Error(-1, it.message ?: "恢复文件失败") }
   }
