@@ -18,6 +18,14 @@ object PanUtils {
     return hashingSource.hash.hex()
   }
 
+  /** 使用 Okio 高效计算 Uri 的 SHA-256 (用于中国移动云盘秒传与分片确认) */
+  fun calcSha256(context: Context, uri: Uri): String {
+    val inputStream = context.contentResolver.openInputStream(uri) ?: return ""
+    val hashingSource = HashingSource.sha256(inputStream.source())
+    hashingSource.buffer().use { it.readAll(blackholeSink()) }
+    return hashingSource.hash.hex()
+  }
+
   fun generateLoginUuid(): String = UUID.randomUUID().toString().replace("-", "")
 
   /** 获取设备型号，例如 "24075RP89G" */
