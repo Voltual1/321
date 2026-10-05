@@ -4,7 +4,7 @@ import me.voltual.a321.KtorClient
 
 fun KtorClient.FileInfo.toUnifiedModel(): PanFile {
   return PanFile(
-    id = this.FileId,
+    id = this.FileId.toString(),
     name = this.FileName,
     size = this.Size,
     isDirectory = this.isDirectory,
@@ -35,7 +35,7 @@ fun KtorClient.UserInfo.toUnifiedQuota(): PanUserQuota {
 
 fun KtorClient.FolderDetailsData.toUnifiedModel(): PanFile {
   return PanFile(
-    id = this.FileId,
+    id = this.FileId.toString(),
     name = this.FileName,
     size = this.Size ?: 0L,
     isDirectory = true,
@@ -69,10 +69,9 @@ fun <T> Result<KtorClient.PanResponse<T>>.toActionResult(): PanActionResult {
   )
 }
 
-// 更新分享模型映射，填充新增字段
 fun KtorClient.ShareInfo.toUnifiedModel(): PanFile {
   return PanFile(
-    id = this.ShareId,
+    id = this.ShareId.toString(),
     name = this.ShareName,
     size = this.bytesTotal,
     isDirectory = false,
@@ -81,7 +80,7 @@ fun KtorClient.ShareInfo.toUnifiedModel(): PanFile {
     isAbnormal = this.isViolation == 1,
     etag = "",
     s3KeyFlag = null,
-    rawDownloadUrl = this.shareLinkList.list.first(),
+    rawDownloadUrl = this.shareLinkList.list.firstOrNull() ?: "",
     extension = "",
     shareKey = this.ShareKey,
     sharePwd = this.SharePwd,
@@ -108,19 +107,14 @@ fun KtorClient.ShareGetResponseData.toPageResult(): PanPageResult {
   )
 }
 
-/**
- * 将统一文件模型转换为复制分享所需的数据模型
- *
- * @param targetParentId 目标文件夹 ID（实际调用时会被覆盖，此参数可选）
- */
-fun PanFile.toCopyFileInfo(targetParentId: Long = 0L): KtorClient.CopyFileInfo {
+fun PanFile.toCopyFileInfo(targetParentId: String = "0"): KtorClient.CopyFileInfo {
   return KtorClient.CopyFileInfo(
     driveId = 0,
-    duplicate = 2, // duplicate = 2 表示若目标已存在同名文件，则自动重命名
+    duplicate = 2,
     etag = this.etag,
-    fileId = this.id,
+    fileId = this.id.toLongOrNull() ?: 0L,
     fileName = this.name,
-    parentFileId = targetParentId,
+    parentFileId = targetParentId.toLongOrNull() ?: 0L,
     size = this.size,
     type = if (this.isDirectory) 1 else 0,
   )

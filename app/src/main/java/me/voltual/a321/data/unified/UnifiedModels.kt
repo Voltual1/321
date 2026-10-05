@@ -22,14 +22,14 @@ data class PanFile(
   val shareUrl: String? = null,
 )
 
-data class PanPath(val id: Long, val name: String)
+data class PanPath(val id: String, val name: String)
 
 @Immutable
 data class PanPageResult(
   val files: List<PanFile>,
   val totalCount: Int,
   val hasMore: Boolean,
-  val nextMarker: String? = null, // 适配 OSS 或其他网盘的流式分页
+  val nextMarker: String? = null,
 )
 
 data class PanUserQuota(
@@ -66,7 +66,7 @@ data class PanTransferTask(
   val totalSize: Long,
   val currentSize: Long,
   val status: PanTaskStatus,
-  val speed: Long, // 每秒字节数
+  val speed: Long,
   val errorMsg: String? = null,
   val isUpload: Boolean = true,
 ) {
@@ -79,6 +79,6 @@ sealed class PanActionResult {
 
   data class Error(val code: Int, val message: String) : PanActionResult()
 
-  data class PartialSuccess(val successIds: List<Long>, val failedIds: List<Long>) :
+  data class PartialSuccess(val successIds: List<String>, val failedIds: List<String>) :
     PanActionResult()
 }

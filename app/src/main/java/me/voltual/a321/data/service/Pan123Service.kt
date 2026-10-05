@@ -18,13 +18,15 @@ class Pan123Service(private val token: String) : PanService {
   private val apiService = KtorClient.ApiServiceImpl
   private val CHUNK_SIZE = 5 * 1024 * 1024L
 
-  override suspend fun getFiles(parentId: Long, page: Int): Result<List<PanFile>> = runCatching {
-    val response = apiService.getFileList(token, page, parentId).getOrThrow()
+  override suspend fun getFiles(parentId: String, page: Int): Result<List<PanFile>> = runCatching {
+    val idLong = parentId.toLongOrNull() ?: 0L
+    val response = apiService.getFileList(token, page, idLong).getOrThrow()
     response.data?.InfoList?.toUnifiedList() ?: emptyList()
   }
 
-  override suspend fun getFilesWithTotal(parentId: Long, page: Int): Result<PanPageResult> = runCatching {
-    val response = apiService.getFileList(token, page, parentId).getOrThrow()
+  override suspend fun getFilesWithTotal(parentId: String, page: Int): Result<PanPageResult> = runCatching {
+    val idLong = parentId.toLongOrNull() ?: 0L
+    val response = apiService.getFileList(token, page, idLong).getOrThrow()
     val total = response.data?.Total ?: 0
     val files = response.data?.InfoList?.toUnifiedList() ?: emptyList()
 
@@ -40,11 +42,12 @@ class Pan123Service(private val token: String) : PanService {
     uri: Uri,
     fileName: String,
     fileSize: Long,
-    parentId: Long,
+    parentId: String,
     onProgress: (Float) -> Unit
   ): Result<String> = runCatching {
+    val idLong = parentId.toLongOrNull() ?: 0L
     val md5 = PanUtils.calcMd5(context, uri)
-    val reqRes = apiService.requestUpload(token, parentId, fileName, fileSize, md5).getOrThrow()
+    val reqRes = apiService.requestUpload(token, idLong, fileName, fileSize, md5).getOrThrow()
     val uploadInfo = reqRes.data ?: throw Exception("Upload request failed")
 
     if (uploadInfo.Reuse) {
@@ -85,7 +88,7 @@ class Pan123Service(private val token: String) : PanService {
 
   override suspend fun getDownloadUrl(file: PanFile): Result<String> = runCatching {
     val tempInfo = KtorClient.FileInfo(
-      FileId = file.id,
+      FileId = file.id.toLongOrNull() ?: 0L,
       FileName = file.name,
       Type = if (file.isDirectory) 1 else 0,
       Size = file.size,
@@ -101,13 +104,15 @@ class Pan123Service(private val token: String) : PanService {
     data.toUnifiedQuota()
   }
 
-  override suspend fun deleteFiles(fileIds: List<Long>): PanActionResult {
-    return apiService.deleteFiles(token, fileIds).toActionResult()
+  override suspend fun deleteFiles(fileIds: List<String>): PanActionResult {
+    val idsLong = fileIds.mapNotNull { it.toLongOrNull() }
+    return apiService.deleteFiles(token, idsLong).toActionResult()
   }
 
-  override suspend fun createFolder(name: String, parentId: Long): PanActionResult {
+  override suspend fun createFolder(name: String, parentId: String): PanActionResult {
     return runCatching {
-      val response = apiService.createFolder(token, name, parentId).getOrThrow()
+      val idLong = parentId.toLongOrNull() ?: 0L
+      val response = apiService.createFolder(token, name, idLong).getOrThrow()
       if (response.isSuccess) {
         PanActionResult.Success
       } else {
@@ -116,9 +121,11 @@ class Pan123Service(private val token: String) : PanService {
     }.getOrElse { PanActionResult.Error(-1, it.message ?: "创建目录失败") }
   }
 
-  override suspend fun moveFiles(fileIds: List<Long>, targetParentId: Long): PanActionResult {
+  override suspend fun moveFiles(fileIds: List<String>, targetParentId: String): PanActionResult {
     return runCatching {
-      val response = apiService.moveFiles(token, fileIds, targetParentId).getOrThrow()
+      val idsLong = fileIds.mapNotNull { it.toLongOrNull() }
+      val targetLong = targetParentId.toLongOrNull() ?: 0L
+      val response = apiService.moveFiles(token, idsLong, targetLong).getOrThrow()
       if (response.isSuccess) {
         PanActionResult.Success
       } else {
@@ -127,9 +134,10 @@ class Pan123Service(private val token: String) : PanService {
     }.getOrElse { PanActionResult.Error(-1, it.message ?: "移动文件失败") }
   }
 
-  override suspend fun renameFile(fileId: Long, newName: String): PanActionResult {
+  override suspend fun renameFile(fileId: String, newName: String): PanActionResult {
     return runCatching {
-      val response = apiService.renameFile(token, fileId, newName).getOrThrow()
+      val idLong = fileId.toLongOrNull() ?: 0L
+      val response = apiService.renameFile(token, idLong, newName).getOrThrow()
       if (response.isSuccess) {
         PanActionResult.Success
       } else {
@@ -139,11 +147,12 @@ class Pan123Service(private val token: String) : PanService {
   }
 
   override suspend fun shareFiles(
-    fileIds: List<Long>,
+    fileIds: List<String>,
     password: String,
     expiration: String
   ): Result<String> = runCatching {
-    val response = apiService.createShare(token, fileIds, password, expiration).getOrThrow()
+    val idsLong = fileIds.mapNotNull { it.toLongOrNull() }
+    val response = apiService.createShare(token, idsLong, password, expiration).getOrThrow()
     response.data?.ShareKey ?: throw Exception("分享失败：未获取到 Key")
   }
 
@@ -153,9 +162,10 @@ class Pan123Service(private val token: String) : PanService {
     data.toPageResult()
   }
 
-  override suspend fun restoreFiles(fileIds: List<Long>): PanActionResult {
+  override suspend fun restoreFiles(fileIds: List<String>): PanActionResult {
     return runCatching {
-      val response = apiService.restoreFiles(token, fileIds).getOrThrow()
+      val idsLong = fileIds.mapNotNull { it.toLongOrNull() }
+      val response = apiService.restoreFiles(token, idsLong).getOrThrow()
       if (response.isSuccess) {
         PanActionResult.Success
       } else {
@@ -164,9 +174,10 @@ class Pan123Service(private val token: String) : PanService {
     }.getOrElse { PanActionResult.Error(-1, it.message ?: "恢复文件失败") }
   }
 
-  override suspend fun deleteFilesPermanently(fileIds: List<Long>): PanActionResult {
+  override suspend fun deleteFilesPermanently(fileIds: List<String>): PanActionResult {
     return runCatching {
-      val response = apiService.deleteFilesPermanently(token, fileIds).getOrThrow()
+      val idsLong = fileIds.mapNotNull { it.toLongOrNull() }
+      val response = apiService.deleteFilesPermanently(token, idsLong).getOrThrow()
       if (response.code == 0 || response.code == 7301) {
         PanActionResult.Success
       } else {
@@ -178,10 +189,11 @@ class Pan123Service(private val token: String) : PanService {
   override suspend fun searchFiles(
     keyword: String,
     page: Int,
-    parentId: Long,
+    parentId: String,
     limit: Int
   ): Result<PanPageResult> = runCatching {
-    val response = apiService.searchFiles(token, keyword, page, limit, parentId).getOrThrow()
+    val idLong = parentId.toLongOrNull() ?: 0L
+    val response = apiService.searchFiles(token, keyword, page, limit, idLong).getOrThrow()
     val total = response.data?.Total ?: 0
     val files = response.data?.InfoList?.toUnifiedList() ?: emptyList()
     PanPageResult(files = files, totalCount = total, hasMore = files.size >= limit)
@@ -197,18 +209,20 @@ class Pan123Service(private val token: String) : PanService {
   override suspend fun getShareInfo(
     shareKey: String,
     next: String?,
-    parentId: Long,
+    parentId: String,
     page: Int,
     sharePwd: String?
   ): Result<PanPageResult> = runCatching {
     val nextParam = if (next.isNullOrEmpty()) "1" else next
-    val response = apiService.getShareInfo(token, shareKey, nextParam, page, 200, parentId, sharePwd).getOrThrow()
+    val idLong = parentId.toLongOrNull() ?: 0L
+    val response = apiService.getShareInfo(token, shareKey, nextParam, page, 200, idLong, sharePwd).getOrThrow()
     val data = response.data ?: throw Exception("获取分享信息失败")
     data.toPageResult()
   }
 
-  override suspend fun deleteShare(shareId: Long): PanActionResult = runCatching {
-    val response = apiService.deleteShare(token, listOf(shareId)).getOrThrow()
+  override suspend fun deleteShare(shareId: String): PanActionResult = runCatching {
+    val idLong = shareId.toLongOrNull() ?: 0L
+    val response = apiService.deleteShare(token, listOf(idLong)).getOrThrow()
     if (response.isSuccess) {
       PanActionResult.Success
     } else {
@@ -219,11 +233,11 @@ class Pan123Service(private val token: String) : PanService {
   override suspend fun copyShareFiles(
     shareKey: String,
     sharePwd: String,
-    targetParentId: Long,
+    targetParentId: String,
     files: List<PanFile>
   ): PanActionResult = runCatching {
-    val copyInfos = files.map { it.toCopyFileInfo() }
-    val response = apiService.copyShareFile(token, shareKey, sharePwd, targetParentId, copyInfos).getOrThrow()
+    val copyInfos = files.map { it.toCopyFileInfo(targetParentId) }
+    val response = apiService.copyShareFile(token, shareKey, sharePwd, targetParentId.toLongOrNull() ?: 0L, copyInfos).getOrThrow()
     if (response.isSuccess) {
       PanActionResult.Success
     } else {

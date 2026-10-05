@@ -15,21 +15,16 @@ import okio.source
 
 class Cloud139Service(private val token: String) : PanService {
   override val platform: PanPlatform = PanPlatform.CLOUD139
-  private val CHUNK_SIZE = 104857600L // 100MB 默认分片
+  private val CHUNK_SIZE = 104857600L
 
   init {
     Cloud139Client.login(token)
   }
 
-  private fun fileIdToLong(fileId: String?): Long {
-    if (fileId.isNullOrEmpty() || fileId == "/") return 0L
-    return fileId.toLongOrNull() ?: fileId.hashCode().toLong()
-  }
-
   private fun Cloud139Client.PersonalFileItem.toUnifiedFile(): PanFile {
     val rawId = this.fileId ?: ""
     return PanFile(
-      id = fileIdToLong(rawId),
+      id = rawId,
       name = this.name ?: "",
       size = this.size ?: 0L,
       isDirectory = this.isFolder,
@@ -40,14 +35,14 @@ class Cloud139Service(private val token: String) : PanService {
     )
   }
 
-  override suspend fun getFiles(parentId: Long, page: Int): Result<List<PanFile>> = runCatching {
-    val parentStr = if (parentId == 0L) "/" else parentId.toString()
+  override suspend fun getFiles(parentId: String, page: Int): Result<List<PanFile>> = runCatching {
+    val parentStr = if (parentId == "0" || parentId.isEmpty()) "/" else parentId
     val data = Cloud139Client.listPersonalFiles(parentStr).getOrThrow()
     data.items.map { it.toUnifiedFile() }
   }
 
-  override suspend fun getFilesWithTotal(parentId: Long, page: Int): Result<PanPageResult> = runCatching {
-    val parentStr = if (parentId == 0L) "/" else parentId.toString()
+  override suspend fun getFilesWithTotal(parentId: String, page: Int): Result<PanPageResult> = runCatching {
+    val parentStr = if (parentId == "0" || parentId.isEmpty()) "/" else parentId
     val data = Cloud139Client.listPersonalFiles(parentStr).getOrThrow()
     val files = data.items.map { it.toUnifiedFile() }
     PanPageResult(
@@ -62,13 +57,12 @@ class Cloud139Service(private val token: String) : PanService {
     uri: Uri,
     fileName: String,
     fileSize: Long,
-    parentId: Long,
+    parentId: String,
     onProgress: (Float) -> Unit
   ): Result<String> = runCatching {
     val sha256 = PanUtils.calcSha256(context, uri)
-    val parentStr = if (parentId == 0L) "/" else parentId.toString()
+    val parentStr = if (parentId == "0" || parentId.isEmpty()) "/" else parentId
 
-    // 1. 初始化上传任务
     val initResp = Cloud139Client.initUpload(parentStr, fileName, fileSize, sha256, CHUNK_SIZE).getOrThrow()
     if (initResp.data == null) {
       onProgress(1.0f)
@@ -79,7 +73,6 @@ class Cloud139Service(private val token: String) : PanService {
     val fileId = data.fileId ?: ""
     val uploadId = data.uploadId ?: ""
 
-    // 秒传或无需上传分片
     if (data.exist == true || data.rapidUpload == true || data.partInfos.isNullOrEmpty()) {
       onProgress(1.0f)
       return@runCatching "秒传成功"
@@ -87,10 +80,8 @@ class Cloud139Service(private val token: String) : PanService {
 
     val partCount = ((fileSize + CHUNK_SIZE - 1) / CHUNK_SIZE).toInt()
 
-    // 2. 获取分片上传预签名 URL 映射
     val uploadUrls = Cloud139Client.getUploadUrls(fileId, uploadId, partCount, CHUNK_SIZE, fileSize).getOrThrow()
 
-    // 3. 读取本地分片并通过 HTTP PUT 上传
     context.contentResolver.openInputStream(uri)?.source()?.buffer()?.use { source ->
       for (partNum in 1..partCount) {
         val readSize = minOf(CHUNK_SIZE, fileSize - (partNum - 1) * CHUNK_SIZE)
@@ -111,7 +102,6 @@ class Cloud139Service(private val token: String) : PanService {
       }
     } ?: throw IOException("无法读取文件内容")
 
-    // 4. 确认上传完成
     Cloud139Client.confirmUpload(fileId, uploadId, sha256).getOrThrow()
     onProgress(1.0f)
     "上传成功"
@@ -120,7 +110,7 @@ class Cloud139Service(private val token: String) : PanService {
   override suspend fun searchFiles(
     keyword: String,
     page: Int,
-    parentId: Long,
+    parentId: String,
     limit: Int
   ): Result<PanPageResult> = runCatching {
     val startNum = (page - 1) * limit + 1
@@ -137,37 +127,35 @@ class Cloud139Service(private val token: String) : PanService {
   }
 
   override suspend fun getDownloadUrl(file: PanFile): Result<String> {
-    val fileId = file.shareKey.takeIf { !it.isNullOrEmpty() } ?: file.id.toString()
+    val fileId = file.shareKey.takeIf { !it.isNullOrEmpty() } ?: file.id
     return Cloud139Client.getDownloadUrl(fileId)
   }
 
-  override suspend fun createFolder(name: String, parentId: Long): PanActionResult {
-    val parentStr = if (parentId == 0L) "/" else parentId.toString()
+  override suspend fun createFolder(name: String, parentId: String): PanActionResult {
+    val parentStr = if (parentId == "0" || parentId.isEmpty()) "/" else parentId
     return Cloud139Client.createFolder(parentStr, name).fold(
       onSuccess = { PanActionResult.Success },
       onFailure = { PanActionResult.Error(-1, it.message ?: "创建目录失败") }
     )
   }
 
-  override suspend fun deleteFiles(fileIds: List<Long>): PanActionResult {
-    val ids = fileIds.map { it.toString() }
-    return Cloud139Client.deleteFiles(ids).fold(
+  override suspend fun deleteFiles(fileIds: List<String>): PanActionResult {
+    return Cloud139Client.deleteFiles(fileIds).fold(
       onSuccess = { PanActionResult.Success },
       onFailure = { PanActionResult.Error(-1, it.message ?: "删除文件失败") }
     )
   }
 
-  override suspend fun renameFile(fileId: Long, newName: String): PanActionResult {
-    return Cloud139Client.renameFile(fileId.toString(), newName).fold(
+  override suspend fun renameFile(fileId: String, newName: String): PanActionResult {
+    return Cloud139Client.renameFile(fileId, newName).fold(
       onSuccess = { PanActionResult.Success },
       onFailure = { PanActionResult.Error(-1, it.message ?: "重命名失败") }
     )
   }
 
-  override suspend fun moveFiles(fileIds: List<Long>, targetParentId: Long): PanActionResult {
-    val ids = fileIds.map { it.toString() }
-    val targetStr = if (targetParentId == 0L) "/" else targetParentId.toString()
-    return Cloud139Client.moveFiles(ids, targetStr).fold(
+  override suspend fun moveFiles(fileIds: List<String>, targetParentId: String): PanActionResult {
+    val targetStr = if (targetParentId == "0" || targetParentId.isEmpty()) "/" else targetParentId
+    return Cloud139Client.moveFiles(fileIds, targetStr).fold(
       onSuccess = { PanActionResult.Success },
       onFailure = { PanActionResult.Error(-1, it.message ?: "移动失败") }
     )
@@ -176,11 +164,11 @@ class Cloud139Service(private val token: String) : PanService {
   override suspend fun copyShareFiles(
     shareKey: String,
     sharePwd: String,
-    targetParentId: Long,
+    targetParentId: String,
     files: List<PanFile>
   ): PanActionResult {
-    val ids = files.map { it.shareKey.takeIf { k -> !k.isNullOrEmpty() } ?: it.id.toString() }
-    val targetStr = if (targetParentId == 0L) "/" else targetParentId.toString()
+    val ids = files.map { it.shareKey.takeIf { k -> !k.isNullOrEmpty() } ?: it.id }
+    val targetStr = if (targetParentId == "0" || targetParentId.isEmpty()) "/" else targetParentId
     return Cloud139Client.copyFiles(ids, targetStr).fold(
       onSuccess = { PanActionResult.Success },
       onFailure = { PanActionResult.Error(-1, it.message ?: "复制失败") }

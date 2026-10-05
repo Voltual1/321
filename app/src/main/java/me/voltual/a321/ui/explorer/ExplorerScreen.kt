@@ -83,7 +83,6 @@ fun ExplorerScreen(
       label = "RightPaneElevation",
     )
 
-  // 注入全亮网盘平台下拉选择组件到顶栏标题位置
   LaunchedEffect(viewModel.currentPlatform) {
     controller.titleContent = {
       PanPlatformDropdownMenu(
@@ -122,7 +121,6 @@ fun ExplorerScreen(
     }
   }
 
-  // 同步更新顶栏操作按钮 Actions
   LaunchedEffect(activeState.isShareListMode, activeState.isRecycleBin, viewModel.activePane) {
     controller.updateActions(
       listOf(
@@ -608,7 +606,7 @@ fun FileListItem(
   onLongClick: () -> Unit,
   onSwipeToSelect: (Int) -> Unit,
 ) {
-  val isUpFolder = file.name == ".." && file.id == -1L
+  val isUpFolder = file.name.startsWith("..") && file.id.startsWith("-")
   val backgroundColor =
     when {
       isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)

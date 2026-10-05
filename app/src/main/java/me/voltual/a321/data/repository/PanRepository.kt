@@ -47,11 +47,11 @@ class PanRepository(private val context: Context) {
     }
   }
 
-  suspend fun getFiles(parentId: Long = 0, page: Int = 1): Result<List<PanFile>> = runCatching {
+  suspend fun getFiles(parentId: String = "0", page: Int = 1): Result<List<PanFile>> = runCatching {
     getActiveService().getFiles(parentId, page).getOrThrow()
   }
 
-  suspend fun getFilesWithTotal(parentId: Long = 0, page: Int = 1): Result<PanPageResult> = runCatching {
+  suspend fun getFilesWithTotal(parentId: String = "0", page: Int = 1): Result<PanPageResult> = runCatching {
     getActiveService().getFilesWithTotal(parentId, page).getOrThrow()
   }
 
@@ -59,7 +59,7 @@ class PanRepository(private val context: Context) {
     uri: Uri,
     fileName: String,
     fileSize: Long,
-    parentId: Long,
+    parentId: String,
     onProgress: (Float) -> Unit,
   ): Result<String> = runCatching {
     getActiveService().uploadFile(context, uri, fileName, fileSize, parentId, onProgress).getOrThrow()
@@ -73,28 +73,28 @@ class PanRepository(private val context: Context) {
     getActiveService().getUserQuota().getOrThrow()
   }
 
-  suspend fun deleteFiles(fileIds: List<Long>): PanActionResult {
+  suspend fun deleteFiles(fileIds: List<String>): PanActionResult {
     return runCatching { getActiveService().deleteFiles(fileIds) }
       .getOrElse { PanActionResult.Error(-1, it.message ?: "删除失败") }
   }
 
-  suspend fun createFolder(name: String, parentId: Long): PanActionResult {
+  suspend fun createFolder(name: String, parentId: String): PanActionResult {
     return runCatching { getActiveService().createFolder(name, parentId) }
       .getOrElse { PanActionResult.Error(-1, it.message ?: "新建文件夹失败") }
   }
 
-  suspend fun moveFiles(fileIds: List<Long>, targetParentId: Long): PanActionResult {
+  suspend fun moveFiles(fileIds: List<String>, targetParentId: String): PanActionResult {
     return runCatching { getActiveService().moveFiles(fileIds, targetParentId) }
       .getOrElse { PanActionResult.Error(-1, it.message ?: "移动失败") }
   }
 
-  suspend fun renameFile(fileId: Long, newName: String): PanActionResult {
+  suspend fun renameFile(fileId: String, newName: String): PanActionResult {
     return runCatching { getActiveService().renameFile(fileId, newName) }
       .getOrElse { PanActionResult.Error(-1, it.message ?: "重命名失败") }
   }
 
   suspend fun shareFiles(
-    fileIds: List<Long>,
+    fileIds: List<String>,
     password: String = "",
     expiration: String = "",
   ): Result<String> = runCatching {
@@ -105,12 +105,12 @@ class PanRepository(private val context: Context) {
     getActiveService().getRecycleBinFiles(page).getOrThrow()
   }
 
-  suspend fun restoreFiles(fileIds: List<Long>): PanActionResult {
+  suspend fun restoreFiles(fileIds: List<String>): PanActionResult {
     return runCatching { getActiveService().restoreFiles(fileIds) }
       .getOrElse { PanActionResult.Error(-1, it.message ?: "恢复失败") }
   }
 
-  suspend fun deleteFilesPermanently(fileIds: List<Long>): PanActionResult {
+  suspend fun deleteFilesPermanently(fileIds: List<String>): PanActionResult {
     return runCatching { getActiveService().deleteFilesPermanently(fileIds) }
       .getOrElse { PanActionResult.Error(-1, it.message ?: "彻底删除失败") }
   }
@@ -118,7 +118,7 @@ class PanRepository(private val context: Context) {
   suspend fun searchFiles(
     keyword: String,
     page: Int = 1,
-    parentId: Long = 0,
+    parentId: String = "0",
     limit: Int = 100,
   ): Result<PanPageResult> = runCatching {
     getActiveService().searchFiles(keyword, page, parentId, limit).getOrThrow()
@@ -131,14 +131,14 @@ class PanRepository(private val context: Context) {
   suspend fun getShareInfo(
     shareKey: String,
     next: String? = "1",
-    parentId: Long = 0,
+    parentId: String = "0",
     page: Int = 1,
     sharePwd: String? = null,
   ): Result<PanPageResult> = runCatching {
     getActiveService().getShareInfo(shareKey, next, parentId, page, sharePwd).getOrThrow()
   }
 
-  suspend fun deleteShare(shareId: Long): PanActionResult {
+  suspend fun deleteShare(shareId: String): PanActionResult {
     return runCatching { getActiveService().deleteShare(shareId) }
       .getOrElse { PanActionResult.Error(-1, it.message ?: "取消分享失败") }
   }
@@ -146,7 +146,7 @@ class PanRepository(private val context: Context) {
   suspend fun copyShareFiles(
     shareKey: String,
     sharePwd: String,
-    targetParentId: Long,
+    targetParentId: String,
     files: List<PanFile>,
   ): PanActionResult {
     return runCatching { getActiveService().copyShareFiles(shareKey, sharePwd, targetParentId, files) }

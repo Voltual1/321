@@ -49,7 +49,7 @@ class ExplorerViewModel(
     var fileList by mutableStateOf<List<PanFile>>(emptyList())
     var isLoading by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
-    var pathStack by mutableStateOf(listOf(PanPath(0, "/")))
+    var pathStack by mutableStateOf(listOf(PanPath("0", "/")))
     val currentPath: PanPath
       get() = pathStack.last()
 
@@ -69,7 +69,7 @@ class ExplorerViewModel(
     val totalPages: Int
       get() = ceil(totalCount.toDouble() / pageSize).toInt().coerceAtLeast(1)
 
-    val selectedIds = mutableStateListOf<Long>()
+    val selectedIds = mutableStateListOf<String>()
     val isSelectionMode: Boolean
       get() = selectedIds.size > 1
 
@@ -84,7 +84,7 @@ class ExplorerViewModel(
       fileList = emptyList()
       isLoading = false
       error = null
-      pathStack = listOf(PanPath(0, "/"))
+      pathStack = listOf(PanPath("0", "/"))
       isRecycleBin = false
       isSearchMode = false
       searchKeyword = ""
@@ -106,7 +106,7 @@ class ExplorerViewModel(
   var currentPlatform by mutableStateOf(PanPlatform.PAN123)
     private set
 
-  val recentlyModifiedIds = mutableStateListOf<Long>()
+  val recentlyModifiedIds = mutableStateListOf<String>()
 
   var isUploading by mutableStateOf(false)
   var uploadProgress by mutableStateOf(0f)
@@ -133,7 +133,7 @@ class ExplorerViewModel(
   var isBatchActionMenu by mutableStateOf(false)
     private set
 
-  var sharingFileIds by mutableStateOf<List<Long>>(emptyList())
+  var sharingFileIds by mutableStateOf<List<String>>(emptyList())
   var sharingDisplayName by mutableStateOf("")
 
   var isCreateFileDialogVisible by mutableStateOf(false)
@@ -249,9 +249,9 @@ class ExplorerViewModel(
   }
 
   private suspend fun executeCopyExternalFiles(
-    ids: List<Long>,
+    ids: List<String>,
     sourcePaneIndex: PaneIndex,
-    targetPathId: Long,
+    targetPathId: String,
   ) {
     val sourceState = if (sourcePaneIndex == PaneIndex.LEFT) leftPane else rightPane
     val targetPaneIndex = if (sourcePaneIndex == PaneIndex.LEFT) PaneIndex.RIGHT else PaneIndex.LEFT
@@ -275,7 +275,7 @@ class ExplorerViewModel(
     }
   }
 
-  private suspend fun executeCancelShare(ids: List<Long>, paneIndex: PaneIndex) {
+  private suspend fun executeCancelShare(ids: List<String>, paneIndex: PaneIndex) {
     val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
     var successCount = 0
     ids.forEach { id ->
@@ -292,9 +292,9 @@ class ExplorerViewModel(
   }
 
   private suspend fun executeMoveWorkflow(
-    ids: List<Long>,
+    ids: List<String>,
     sourcePane: PaneIndex,
-    targetPathId: Long,
+    targetPathId: String,
   ) {
     val state = if (sourcePane == PaneIndex.LEFT) leftPane else rightPane
     val moveResult = repository.moveFiles(ids, targetPathId)
@@ -314,7 +314,7 @@ class ExplorerViewModel(
     }
   }
 
-  private suspend fun executeRestore(ids: List<Long>, paneIndex: PaneIndex) {
+  private suspend fun executeRestore(ids: List<String>, paneIndex: PaneIndex) {
     val state = if (paneIndex == PaneIndex.LEFT) leftPane else rightPane
     repository.restoreFiles(ids)
     _events.send(ExplorerEvent.ShowSnackbar("${ids.size} 个文件已恢复至原位置"))
@@ -356,7 +356,7 @@ class ExplorerViewModel(
     }
   }
 
-  fun loadFiles(pane: PaneIndex, isNextPage: Boolean = false, highlightIds: List<Long>? = null) {
+  fun loadFiles(pane: PaneIndex, isNextPage: Boolean = false, highlightIds: List<String>? = null) {
     val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
 
     viewModelScope.launch {
@@ -398,7 +398,7 @@ class ExplorerViewModel(
             val searchParentId =
               if (state.pathStack.size > 1) {
                 state.pathStack[state.pathStack.size - 2].id
-              } else 0L
+              } else "0"
             repository.searchFiles(
               keyword = state.searchKeyword,
               page = state.currentPage,
@@ -431,7 +431,7 @@ class ExplorerViewModel(
                   val prefix = if (state.pathStack.size > 1) ".. [share]" else ".. [exit_share]"
                   listOf(
                     PanFile(
-                      id = -5,
+                      id = "-5",
                       name = prefix,
                       isDirectory = true,
                       size = 0,
@@ -444,7 +444,7 @@ class ExplorerViewModel(
                 state.isRecycleBin -> {
                   listOf(
                     PanFile(
-                      id = -2,
+                      id = "-2",
                       name = ".. [trash]",
                       isDirectory = true,
                       size = 0,
@@ -457,7 +457,7 @@ class ExplorerViewModel(
                 state.isSearchMode -> {
                   listOf(
                     PanFile(
-                      id = -3,
+                      id = "-3",
                       name = ".. [search_results]",
                       isDirectory = true,
                       size = 0,
@@ -470,7 +470,7 @@ class ExplorerViewModel(
                 state.isShareListMode -> {
                   listOf(
                     PanFile(
-                      id = -4,
+                      id = "-4",
                       name = ".. [shares]",
                       isDirectory = true,
                       size = 0,
@@ -483,7 +483,7 @@ class ExplorerViewModel(
                 state.pathStack.size > 1 -> {
                   listOf(
                     PanFile(
-                      id = -1,
+                      id = "-1",
                       name = "..",
                       isDirectory = true,
                       size = 0,
@@ -529,7 +529,7 @@ class ExplorerViewModel(
     state.isExternalShareMode = true
     state.externalShareKey = key
     state.externalSharePwd = pwd
-    state.pathStack = listOf(PanPath(0, "分享: $key"))
+    state.pathStack = listOf(PanPath("0", "分享: $key"))
     loadFiles(pane)
   }
 
@@ -538,7 +538,7 @@ class ExplorerViewModel(
     state.isExternalShareMode = false
     state.externalShareKey = ""
     state.externalSharePwd = ""
-    state.pathStack = listOf(PanPath(0, "/"))
+    state.pathStack = listOf(PanPath("0", "/"))
     loadFiles(pane)
   }
 
@@ -549,10 +549,10 @@ class ExplorerViewModel(
       state.isSearchMode = false
       state.isExternalShareMode = false
       state.isShareListMode = true
-      state.pathStack = listOf(PanPath(-4, "我的分享"))
+      state.pathStack = listOf(PanPath("-4", "我的分享"))
     } else {
       state.isShareListMode = false
-      state.pathStack = listOf(PanPath(0, "/"))
+      state.pathStack = listOf(PanPath("0", "/"))
     }
     loadFiles(pane)
   }
@@ -565,7 +565,7 @@ class ExplorerViewModel(
       state.isExternalShareMode = false
       state.isSearchMode = true
       state.searchKeyword = keyword
-      state.pathStack = state.pathStack + PanPath(-3, "搜索: $keyword")
+      state.pathStack = state.pathStack + PanPath("-3", "搜索: $keyword")
       loadFiles(pane)
     }
   }
@@ -587,10 +587,10 @@ class ExplorerViewModel(
       state.isSearchMode = false
       state.isExternalShareMode = false
       state.isRecycleBin = true
-      state.pathStack = listOf(PanPath(-2, "回收站"))
+      state.pathStack = listOf(PanPath("-2", "回收站"))
     } else {
       state.isRecycleBin = false
-      state.pathStack = listOf(PanPath(0, "/"))
+      state.pathStack = listOf(PanPath("0", "/"))
     }
     loadFiles(pane)
   }
@@ -598,7 +598,7 @@ class ExplorerViewModel(
   fun enterFolder(pane: PaneIndex, folder: PanFile) {
     val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
 
-    if (state.isExternalShareMode && folder.id == -5L) {
+    if (state.isExternalShareMode && folder.id == "-5") {
       if (state.pathStack.size > 1) {
         navigateBack(pane)
       } else {
@@ -606,20 +606,20 @@ class ExplorerViewModel(
       }
       return
     }
-    if (state.isRecycleBin && folder.id == -2L) {
+    if (state.isRecycleBin && folder.id == "-2") {
       toggleRecycleBin(pane)
       return
     }
-    if (state.isSearchMode && folder.id == -3L) {
+    if (state.isSearchMode && folder.id == "-3") {
       exitSearch(pane)
       return
     }
-    if (state.isShareListMode && folder.id == -4L) {
+    if (state.isShareListMode && folder.id == "-4") {
       toggleShareList(pane)
       return
     }
 
-    if (folder.name == ".." && folder.id == -1L) {
+    if (folder.name == ".." && folder.id == "-1") {
       navigateBack(pane)
       return
     }
@@ -630,7 +630,7 @@ class ExplorerViewModel(
         state.isSearchMode = false
         state.searchKeyword = ""
         val newStack = state.pathStack.toMutableList()
-        if (newStack.size >= 2 && newStack[newStack.size - 2].id == -3L) {
+        if (newStack.size >= 2 && newStack[newStack.size - 2].id == "-3") {
           newStack.removeAt(newStack.size - 2)
           state.pathStack = newStack
         }
@@ -708,7 +708,7 @@ class ExplorerViewModel(
   fun toggleSelection(pane: PaneIndex, index: Int) {
     val state = if (pane == PaneIndex.LEFT) leftPane else rightPane
     val file = state.fileList.getOrNull(index) ?: return
-    if (file.id == -1L || file.id == -2L || file.id == -3L || file.id == -4L || file.id == -5L)
+    if (file.id == "-1" || file.id == "-2" || file.id == "-3" || file.id == "-4" || file.id == "-5")
       return
 
     val fileId = file.id
@@ -723,7 +723,7 @@ class ExplorerViewModel(
         val range = if (start < end) start..end else end..start
         range.forEach { i ->
           val f = state.fileList.getOrNull(i)
-          if (f != null && f.id > 0 && !state.selectedIds.contains(f.id)) {
+          if (f != null && f.id != "-1" && f.id != "-2" && f.id != "-3" && f.id != "-4" && f.id != "-5" && !state.selectedIds.contains(f.id)) {
             state.selectedIds.add(f.id)
           }
         }
@@ -816,7 +816,7 @@ class ExplorerViewModel(
   }
 
   fun downloadFile(activity: android.app.Activity, file: PanFile) {
-    if (file.id < 0) return
+    if (file.id.startsWith("-")) return
     viewModelScope.launch {
       repository.getDownloadUrl(file).onSuccess { url ->
         val mode = downloadSettingsDataStore.loadDownloadMode()
