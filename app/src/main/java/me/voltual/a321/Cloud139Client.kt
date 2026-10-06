@@ -13,7 +13,8 @@
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 @file:OptIn(
   kotlinx.serialization.ExperimentalSerializationApi::class,
-  kotlin.io.encoding.ExperimentalEncodingApi::class
+  kotlin.io.encoding.ExperimentalEncodingApi::class,
+  kotlin.time.ExperimentalTime::class
 )
 
 package me.voltual.a321
@@ -33,7 +34,7 @@ import io.ktor.util.encodeBase64
 import java.io.IOException
 import java.security.MessageDigest
 import kotlin.io.encoding.Base64
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
 import kotlinx.datetime.format.char
@@ -139,9 +140,6 @@ object Cloud139Client {
     return sb.toString()
   }
 
-  /**
-   * 签名算法 (使用 Kotlin 标准库 Base64)
-   */
   fun calcSign(body: String, ts: String, randStr: String): String {
     val encoded = encodeUriComponent(body)
     val sorted = encoded.toCharArray().sorted().joinToString("")
