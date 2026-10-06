@@ -10,8 +10,6 @@ import kotlinx.coroutines.delay
 import me.voltual.a321.KtorClient
 import me.voltual.a321.data.unified.*
 import me.voltual.a321.utils.PanUtils
-import okio.buffer
-import okio.source
 
 class Pan123Service(private val token: String) : PanService {
   override val platform: PanPlatform = PanPlatform.PAN123
@@ -88,21 +86,23 @@ class Pan123Service(private val token: String) : PanService {
     val fileId = uploadInfo.FileId!!
     val totalParts = ((fileSize + CHUNK_SIZE - 1) / CHUNK_SIZE).toInt()
 
-    context.contentResolver.openInputStream(uri)?.source()?.buffer()?.use { source ->
+    val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Failed to open Uri input stream")
+    inputStream.use { rawStream ->
       for (partNumber in 1..totalParts) {
-        val chunk = source.readByteArray(minOf(CHUNK_SIZE, fileSize - (partNumber - 1) * CHUNK_SIZE))
+        val partSize = minOf(CHUNK_SIZE, fileSize - (partNumber - 1) * CHUNK_SIZE)
         val urlRes = apiService.getS3PartUrls(token, bucket, key, uploadId, storageNode, partNumber).getOrThrow()
         val uploadUrl = urlRes.data?.presignedUrls?.get(partNumber.toString())
           ?: throw Exception("Failed to get S3 URL")
 
-        val putResponse = KtorClient.httpClient.put(uploadUrl) { setBody(chunk) }
+        val streamContent = PanUtils.createStreamContent(rawStream, partSize, closeStreamOnClose = false)
+        val putResponse = KtorClient.httpClient.put(uploadUrl) { setBody(streamContent) }
         if (!putResponse.status.isSuccess()) {
           throw IOException("S3 Upload failed at part $partNumber")
         }
 
         onProgress(partNumber.toFloat() / totalParts * 0.9f)
       }
-    } ?: throw Exception("Failed to open Uri source")
+    }
 
     apiService.completeS3Upload(token, bucket, key, uploadId, storageNode).getOrThrow()
     delay(1000)

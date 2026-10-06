@@ -4,7 +4,6 @@ package me.voltual.a321.data.service
 
 import android.content.Context
 import android.net.Uri
-import io.ktor.client.request.header
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.isSuccess
@@ -14,8 +13,6 @@ import kotlinx.datetime.LocalDateTime
 import me.voltual.a321.Cloud139Client
 import me.voltual.a321.data.unified.*
 import me.voltual.a321.utils.PanUtils
-import okio.buffer
-import okio.source
 
 class Cloud139Service(private val token: String) : PanService {
   override val platform: PanPlatform = PanPlatform.CLOUD139
@@ -105,16 +102,15 @@ class Cloud139Service(private val token: String) : PanService {
 
     val uploadUrls = Cloud139Client.getUploadUrls(fileId, uploadId, partCount, CHUNK_SIZE, fileSize).getOrThrow()
 
-    context.contentResolver.openInputStream(uri)?.source()?.buffer()?.use { source ->
+    val inputStream = context.contentResolver.openInputStream(uri) ?: throw IOException("无法读取文件内容")
+    inputStream.use { rawStream ->
       for (partNum in 1..partCount) {
         val readSize = minOf(CHUNK_SIZE, fileSize - (partNum - 1) * CHUNK_SIZE)
-        val chunk = source.readByteArray(readSize)
         val uploadUrl = uploadUrls[partNum] ?: throw IOException("缺失分片 $partNum 的上传链接")
 
+        val streamContent = PanUtils.createStreamContent(rawStream, readSize, closeStreamOnClose = false)
         val putResp = Cloud139Client.httpClient.put(uploadUrl) {
-          header("Content-Type", "application/octet-stream")
-          header("Content-Length", readSize.toString())
-          setBody(chunk)
+          setBody(streamContent)
         }
 
         if (!putResp.status.isSuccess()) {
@@ -123,7 +119,7 @@ class Cloud139Service(private val token: String) : PanService {
 
         onProgress(partNum.toFloat() / partCount * 0.9f)
       }
-    } ?: throw IOException("无法读取文件内容")
+    }
 
     Cloud139Client.confirmUpload(fileId, uploadId, sha256).getOrThrow()
     onProgress(1.0f)
