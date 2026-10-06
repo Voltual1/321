@@ -302,7 +302,7 @@ class MainActivity : ComponentActivity() {
               coroutineScope.launch { snackbarHostState.showSnackbar("当前已是最新版本") }
             }
             is UpdateCheckResult.Error -> {
-              coroutineScope.launch { snackbarHostState.showSnackbar(result.message ?: "检查更新失败") }
+              coroutineScope.launch { snackbarHostState.showSnackbar(result.message) }
             }
           }
         }
