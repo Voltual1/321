@@ -4,6 +4,7 @@ package me.voltual.a321.data.service
 
 import android.content.Context
 import android.net.Uri
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.isSuccess
@@ -110,6 +111,9 @@ class Cloud139Service(private val token: String) : PanService {
 
         val streamContent = PanUtils.createStreamContent(rawStream, readSize, closeStreamOnClose = false)
         val putResp = Cloud139Client.httpClient.put(uploadUrl) {
+          timeout {
+            requestTimeoutMillis = 20 * 60 * 1000L // 移动云盘 100MB 单分片上传放宽至 20 分钟超时
+          }
           setBody(streamContent)
         }
 

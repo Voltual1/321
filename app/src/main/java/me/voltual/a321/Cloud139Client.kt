@@ -31,6 +31,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import java.io.IOException
 import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 import kotlin.io.encoding.Base64
 import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
@@ -90,6 +91,14 @@ object Cloud139Client {
 
   val httpClient =
     HttpClient(OkHttp) {
+      engine {
+        config {
+          writeTimeout(15, TimeUnit.MINUTES) // 15分钟流式上传写入超时
+          readTimeout(10, TimeUnit.MINUTES)
+          connectTimeout(30, TimeUnit.SECONDS)
+        }
+      }
+
       install(ContentNegotiation) {
         json(
           Json {
@@ -102,8 +111,9 @@ object Cloud139Client {
       }
 
       install(HttpTimeout) {
-        requestTimeoutMillis = 30000
-        connectTimeoutMillis = 15000
+        requestTimeoutMillis = 15 * 60 * 1000L // 支持移动云盘 100MB 单分片在慢速网络下上传
+        connectTimeoutMillis = 30000L
+        socketTimeoutMillis = 120000L
       }
 
       install(Logging) { level = LogLevel.INFO }
@@ -138,9 +148,6 @@ object Cloud139Client {
     return sb.toString()
   }
 
-  /**
-   * 签名算法 (全量采用 Kotlin 2.3.21 标准库 Base64)
-   */
   fun calcSign(body: String, ts: String, randStr: String): String {
     val encoded = encodeUriComponent(body)
     val sorted = encoded.toCharArray().sorted().joinToString("")
@@ -492,9 +499,6 @@ object Cloud139Client {
 
   // ===== 核心 API 实现 =====
 
-  /**
-   * 解析 Token 字符串 (纯用 Kotlin 2.3.21 标准库 Base64.decode)
-   */
   fun parseToken(rawToken: String): Result<Config> = runCatching {
     val token = rawToken.removePrefix("Basic ").trim()
     val decoded = Base64.decode(token).decodeToString()

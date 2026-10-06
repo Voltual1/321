@@ -2,6 +2,7 @@ package me.voltual.a321.data.service
 
 import android.content.Context
 import android.net.Uri
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.isSuccess
@@ -94,7 +95,12 @@ class Pan123Service(private val token: String) : PanService {
           ?: throw Exception("Failed to get S3 upload URL for part $partNumber")
 
         val streamContent = PanUtils.createStreamContent(rawStream, partSize, closeStreamOnClose = false)
-        val putResponse = KtorClient.httpClient.put(uploadUrl) { setBody(streamContent) }
+        val putResponse = KtorClient.httpClient.put(uploadUrl) {
+          timeout {
+            requestTimeoutMillis = 15 * 60 * 1000L // 显式放宽单个分片上传超时为 15 分钟
+          }
+          setBody(streamContent)
+        }
         if (!putResponse.status.isSuccess()) {
           throw IOException("S3 Upload failed at part $partNumber with status ${putResponse.status}")
         }

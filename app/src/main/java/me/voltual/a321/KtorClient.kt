@@ -23,6 +23,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -38,6 +39,14 @@ object KtorClient {
 
   val httpClient =
     HttpClient(OkHttp) {
+      engine {
+        config {
+          writeTimeout(10, TimeUnit.MINUTES)
+          readTimeout(5, TimeUnit.MINUTES)
+          connectTimeout(30, TimeUnit.SECONDS)
+        }
+      }
+
       install(ContentNegotiation) {
         json(
           Json {
@@ -66,8 +75,9 @@ object KtorClient {
       }
 
       install(HttpTimeout) {
-        requestTimeoutMillis = 30000
-        connectTimeoutMillis = 15000
+        requestTimeoutMillis = 10 * 60 * 1000L // 提升全局请求超时至 10 分钟
+        connectTimeoutMillis = 30000L
+        socketTimeoutMillis = 120000L
       }
 
       install(Logging) { level = LogLevel.INFO }
@@ -395,7 +405,6 @@ object KtorClient {
       md5: String,
     ): Result<PanResponse<UploadRequestData>>
 
-    // 单分片预签名 URL
     suspend fun getS3Auth(
       token: String,
       bucket: String,
@@ -406,7 +415,6 @@ object KtorClient {
       end: Int = 2,
     ): Result<PanResponse<S3PartUrlsData>>
 
-    // 多分片批量预签名 URL
     suspend fun getS3PartUrls(
       token: String,
       bucket: String,
@@ -417,7 +425,6 @@ object KtorClient {
       end: Int,
     ): Result<PanResponse<S3PartUrlsData>>
 
-    // 完成 S3 分片上传 (使用 OpenList v2 接口)
     suspend fun completeS3V2(
       token: String,
       bucket: String,
