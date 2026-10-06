@@ -10,6 +10,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.isSuccess
 import java.io.IOException
 import kotlin.time.Clock
+import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDateTime
 import me.voltual.a321.Cloud139Client
 import me.voltual.a321.data.unified.*
@@ -17,7 +18,7 @@ import me.voltual.a321.utils.PanUtils
 
 class Cloud139Service(private val token: String) : PanService {
   override val platform: PanPlatform = PanPlatform.CLOUD139
-  private val CHUNK_SIZE = 104857600L
+  private val CHUNK_SIZE = 10 * 1024 * 1024L // 调整为 10MB 分片，避免连接被服务器 RST
 
   init {
     Cloud139Client.login(token)
@@ -103,26 +104,52 @@ class Cloud139Service(private val token: String) : PanService {
 
     val uploadUrls = Cloud139Client.getUploadUrls(fileId, uploadId, partCount, CHUNK_SIZE, fileSize).getOrThrow()
 
-    val inputStream = context.contentResolver.openInputStream(uri) ?: throw IOException("无法读取文件内容")
-    inputStream.use { rawStream ->
-      for (partNum in 1..partCount) {
-        val readSize = minOf(CHUNK_SIZE, fileSize - (partNum - 1) * CHUNK_SIZE)
-        val uploadUrl = uploadUrls[partNum] ?: throw IOException("缺失分片 $partNum 的上传链接")
+    for (partNum in 1..partCount) {
+      val offset = (partNum - 1) * CHUNK_SIZE
+      val readSize = minOf(CHUNK_SIZE, fileSize - offset)
+      val uploadUrl = uploadUrls[partNum] ?: throw IOException("缺失分片 $partNum 的上传链接")
 
-        val streamContent = PanUtils.createStreamContent(rawStream, readSize, closeStreamOnClose = false)
-        val putResp = Cloud139Client.httpClient.put(uploadUrl) {
-          timeout {
-            requestTimeoutMillis = 20 * 60 * 1000L // 移动云盘 100MB 单分片上传放宽至 20 分钟超时
+      var uploadSuccess = false
+      var lastError: Exception? = null
+
+      // 单个 10MB 分片增加最多 3 次容错重试（自动重置流位置）
+      for (attempt in 1..3) {
+        val stream = context.contentResolver.openInputStream(uri) ?: throw IOException("无法读取文件内容")
+        try {
+          if (offset > 0) {
+            var skipped = 0L
+            while (skipped < offset) {
+              val s = stream.skip(offset - skipped)
+              if (s <= 0) break
+              skipped += s
+            }
           }
-          setBody(streamContent)
-        }
 
-        if (!putResp.status.isSuccess()) {
-          throw IOException("分片 $partNum 上传失败: HTTP ${putResp.status.value}")
-        }
+          val streamContent = PanUtils.createStreamContent(stream, readSize, closeStreamOnClose = true)
+          val putResp = Cloud139Client.httpClient.put(uploadUrl) {
+            timeout {
+              requestTimeoutMillis = 5 * 60 * 1000L
+            }
+            setBody(streamContent)
+          }
 
-        onProgress(partNum.toFloat() / partCount * 0.9f)
+          if (putResp.status.isSuccess()) {
+            uploadSuccess = true
+            break
+          } else {
+            lastError = IOException("分片 $partNum 上传失败: HTTP ${putResp.status.value}")
+          }
+        } catch (e: Exception) {
+          lastError = e
+          delay(1000L * attempt) // 出现 Connection reset 时退避重试
+        }
       }
+
+      if (!uploadSuccess) {
+        throw lastError ?: IOException("分片 $partNum 上传多次重试均失败")
+      }
+
+      onProgress(partNum.toFloat() / partCount * 0.9f)
     }
 
     Cloud139Client.confirmUpload(fileId, uploadId, sha256).getOrThrow()

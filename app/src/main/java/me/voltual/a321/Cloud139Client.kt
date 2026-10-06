@@ -981,7 +981,7 @@ object Cloud139Client {
     fileName: String,
     fileSize: Long,
     contentHash: String,
-    partSize: Long = 104857600L
+    partSize: Long = 10485760L // 默认 10MB
   ): Result<PersonalUploadResp> = runCatching {
     val host = getPersonalCloudHost().getOrThrow()
     val url = "$host/file/create"
