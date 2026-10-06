@@ -69,7 +69,12 @@ fun <T> Result<KtorClient.PanResponse<T>>.toActionResult(): PanActionResult {
   )
 }
 
+// 映射 123 云盘分享条目 (修复 shareUrl 赋值)
 fun KtorClient.ShareInfo.toUnifiedModel(): PanFile {
+  val primaryLink = this.shareLinkList.list.firstOrNull()
+    ?: this.ShareUrl.takeIf { it.isNotBlank() }
+    ?: "https://www.123pan.com/s/${this.ShareKey}"
+
   return PanFile(
     id = this.ShareId.toString(),
     name = this.ShareName,
@@ -80,12 +85,12 @@ fun KtorClient.ShareInfo.toUnifiedModel(): PanFile {
     isAbnormal = this.isViolation == 1,
     etag = "",
     s3KeyFlag = null,
-    rawDownloadUrl = this.shareLinkList.list.firstOrNull() ?: "",
+    rawDownloadUrl = primaryLink,
     extension = "",
     shareKey = this.ShareKey,
     sharePwd = this.SharePwd,
     expiration = this.Expiration,
-    shareUrl = this.ShareUrl,
+    shareUrl = primaryLink,
   )
 }
 
