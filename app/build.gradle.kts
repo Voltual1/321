@@ -27,8 +27,8 @@ android {
         applicationId = "me.voltual.a321"
         minSdk = 21
         targetSdk = 37 // 升级至 37
-        versionCode = 8
-        versionName = "4.0"
+        versionCode = 9
+        versionName = "4.1"
 
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
