@@ -25,11 +25,12 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import io.ktor.util.decodeBase64String
+import io.ktor.util.encodeBase64
 import java.io.IOException
 import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Base64
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -116,10 +117,14 @@ object Cloud139Client {
     return sb.toString()
   }
 
+  /**
+   * 签名算法 (使用 Ktor encodeBase64 全平台兼容)
+   */
+  @Suppress("DEPRECATION")
   fun calcSign(body: String, ts: String, randStr: String): String {
     val encoded = encodeUriComponent(body)
     val sorted = encoded.toCharArray().sorted().joinToString("")
-    val bodyBase64 = Base64.getEncoder().encodeToString(sorted.toByteArray(Charsets.UTF_8))
+    val bodyBase64 = sorted.encodeBase64()
 
     val hash1 = md5Hash(bodyBase64)
     val hash2 = md5Hash("$ts:$randStr")
@@ -467,9 +472,13 @@ object Cloud139Client {
 
   // ===== 核心 API 实现 =====
 
+  /**
+   * 解析 Token 字符串 (使用 Ktor decodeBase64String 兼容低版本 Android)
+   */
+  @Suppress("DEPRECATION")
   fun parseToken(rawToken: String): Result<Config> = runCatching {
     val token = rawToken.removePrefix("Basic ").trim()
-    val decoded = String(Base64.getDecoder().decode(token), Charsets.UTF_8)
+    val decoded = token.decodeBase64String()
     val parts = decoded.split(":")
     if (parts.size < 3) throw IllegalArgumentException("Token 格式不完整")
 
@@ -536,9 +545,6 @@ object Cloud139Client {
     response.body<T>()
   }
 
-  /**
-   * 获取回收站文件列表 (`recyclebin/list`)
-   */
   suspend fun getRecycleBinList(
     pageCursor: String? = null,
     pageSize: Int = 100
@@ -557,9 +563,6 @@ object Cloud139Client {
     resp.data ?: PersonalListData()
   }
 
-  /**
-   * 批量恢复回收站文件 (`recyclebin/batchRestore`)
-   */
   suspend fun restoreRecycleBinFiles(fileIds: List<String>): Result<Unit> = runCatching {
     val host = getPersonalCloudHost().getOrThrow()
     val url = "$host/recyclebin/batchRestore"
@@ -576,9 +579,6 @@ object Cloud139Client {
     }
   }
 
-  /**
-   * 彻底删除回收站文件 (`file/batchDelete`)
-   */
   suspend fun deleteRecycleBinFilesPermanently(fileIds: List<String>): Result<Unit> = runCatching {
     val host = getPersonalCloudHost().getOrThrow()
     val url = "$host/file/batchDelete"
