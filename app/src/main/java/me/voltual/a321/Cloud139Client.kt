@@ -11,7 +11,10 @@
 //
 // 你应该已经收到了一份 GNU 通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
-@file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+@file:OptIn(
+  kotlinx.serialization.ExperimentalSerializationApi::class,
+  kotlin.io.encoding.ExperimentalEncodingApi::class
+)
 
 package me.voltual.a321
 
@@ -25,12 +28,11 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.util.decodeBase64String
-import io.ktor.util.encodeBase64
 import java.io.IOException
 import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.io.encoding.Base64
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -118,13 +120,12 @@ object Cloud139Client {
   }
 
   /**
-   * 签名算法 (使用 Ktor encodeBase64 全平台兼容)
+   * 签名算法 (使用 Kotlin 标准库 Base64)
    */
-  @Suppress("DEPRECATION")
   fun calcSign(body: String, ts: String, randStr: String): String {
     val encoded = encodeUriComponent(body)
     val sorted = encoded.toCharArray().sorted().joinToString("")
-    val bodyBase64 = sorted.encodeBase64()
+    val bodyBase64 = Base64.encode(sorted.toByteArray(Charsets.UTF_8))
 
     val hash1 = md5Hash(bodyBase64)
     val hash2 = md5Hash("$ts:$randStr")
@@ -473,12 +474,11 @@ object Cloud139Client {
   // ===== 核心 API 实现 =====
 
   /**
-   * 解析 Token 字符串 (使用 Ktor decodeBase64String 兼容低版本 Android)
+   * 解析 Token 字符串 (使用 Kotlin 标准库 Base64.decode)
    */
-  @Suppress("DEPRECATION")
   fun parseToken(rawToken: String): Result<Config> = runCatching {
     val token = rawToken.removePrefix("Basic ").trim()
-    val decoded = token.decodeBase64String()
+    val decoded = Base64.decode(token).decodeToString()
     val parts = decoded.split(":")
     if (parts.size < 3) throw IllegalArgumentException("Token 格式不完整")
 
