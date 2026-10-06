@@ -53,13 +53,13 @@ fun FilePropertyDialog(file: PanFile, onDismiss: () -> Unit, isShareListMode: Bo
             isMonospace = true,
           )
           PropertyItem("过期时间", file.expiration ?: "永久有效")
-          PropertyItem("分享 ID", file.id.toString(), isMonospace = true)
+          PropertyItem("分享 ID", file.id, isMonospace = true)
         } else {
           // 普通文件信息
           PropertyItem("大小", file.size.formatSize())
           PropertyItem("类型", if (file.isDirectory) "文件夹" else "${file.extension.uppercase()} 文件")
           PropertyItem("修改时间", file.updateTime)
-          PropertyItem("文件 ID", file.id.toString(), isMonospace = true)
+          PropertyItem("文件 ID", file.id, isMonospace = true)
           if (file.etag != "") {
             PropertyItem("Etag", file.etag, isMonospace = true)
           }
