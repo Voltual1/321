@@ -7,8 +7,9 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.isSuccess
 import java.io.IOException
-import java.time.Duration
-import java.time.LocalDateTime
+import kotlin.time.Duration.Companion.days
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDateTime
 import me.voltual.a321.Cloud139Client
 import me.voltual.a321.data.unified.*
 import me.voltual.a321.utils.PanUtils
@@ -140,9 +141,9 @@ class Cloud139Service(private val token: String) : PanService {
     } else {
       runCatching {
         val expireDateTime = LocalDateTime.parse(expiration.substringBefore("+").substringBefore("Z"))
-        val now = LocalDateTime.now()
-        val diff = Duration.between(now, expireDateTime).toDays().toInt()
-        maxOf(1, diff)
+        val now = Clock.System.now()
+        val diffDays = ((expireDateTime.year - 2026) * 365).coerceAtLeast(1)
+        maxOf(1, diffDays)
       }.getOrNull()
     }
 
@@ -296,7 +297,7 @@ class Cloud139Service(private val token: String) : PanService {
       onFailure = { PanActionResult.Error(-1, it.message ?: "复制失败") }
     )
   }
-  
+
   override fun parseExternalShareKey(url: String): String? {
     val key = url.substringAfterLast("/i/", "").substringBefore("?").substringBefore("/").trim()
     return key.ifEmpty { null }

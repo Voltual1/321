@@ -28,11 +28,17 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import io.ktor.util.decodeBase64String
+import io.ktor.util.encodeBase64
 import java.io.IOException
 import java.security.MessageDigest
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import kotlin.io.encoding.Base64
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.format
+import kotlinx.datetime.format.char
+import kotlinx.datetime.format.Padding
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -57,6 +63,20 @@ object Cloud139Client {
   private const val MCLOUD_CHANNEL_SRC = "10000034"
   private const val DEVICE_INFO = "||9|7.14.0|chrome|120.0.0.0|||windows 10||zh-CN|||"
   private const val CLIENT_INFO = "||9|7.14.0|chrome|120.0.0.0|||windows 10||zh-CN|||dW5kZWZpbmVk||"
+
+  private val timestampFormat = kotlinx.datetime.LocalDateTime.Format {
+    year(Padding.ZERO)
+    char('-')
+    monthNumber(Padding.ZERO)
+    char('-')
+    day(Padding.ZERO)
+    char(' ')
+    hour(Padding.ZERO)
+    char(':')
+    minute(Padding.ZERO)
+    char(':')
+    second(Padding.ZERO)
+  }
 
   // ===== 客户端配置与状态 =====
   data class Config(
@@ -145,8 +165,8 @@ object Cloud139Client {
   }
 
   fun getCurrentTimestamp(): String {
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-    return LocalDateTime.now().format(formatter)
+    val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    return now.format(timestampFormat)
   }
 
   // ===== 请求头构建 =====
@@ -473,12 +493,9 @@ object Cloud139Client {
 
   // ===== 核心 API 实现 =====
 
-  /**
-   * 解析 Token 字符串 (使用 Kotlin 标准库 Base64.decode)
-   */
   fun parseToken(rawToken: String): Result<Config> = runCatching {
     val token = rawToken.removePrefix("Basic ").trim()
-    val decoded = Base64.decode(token).decodeToString()
+    val decoded = token.decodeBase64String()
     val parts = decoded.split(":")
     if (parts.size < 3) throw IllegalArgumentException("Token 格式不完整")
 
