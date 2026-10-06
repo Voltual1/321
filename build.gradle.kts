@@ -2,7 +2,10 @@
 // Root build.gradle.kts
 plugins {
     alias(libs.plugins.android.application) apply false
-    alias(libs.plugins.android.library).apply(false) 
+    alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.kotlin.compose) apply false   // ← 加上这行
+    alias(libs.plugins.kotlin.serialization) apply false  // 建议也加上
+    alias(libs.plugins.ksp) apply false
     id("com.diffplug.spotless") version "8.4.0"
 }
 //tasks.register<Delete>("clean") {
