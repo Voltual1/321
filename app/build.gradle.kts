@@ -27,8 +27,8 @@ android {
         applicationId = "me.voltual.a321"
         minSdk = 21
         targetSdk = 37 // 升级至 37
-        versionCode = 9
-        versionName = "4.1"
+        versionCode = 10
+        versionName = "5.0"
 
         multiDexEnabled = true
         buildConfigField("String", "LICENSE", "\"GPLv3\"")
@@ -101,6 +101,8 @@ android {
             excludes.add("/META-INF/LICENSE*")
             excludes.add("/META-INF/*.txt")
             excludes.add("/google/protobuf/**")
+            excludes.add("/kotlin/**")
+            excludes.add("/assets/PublicSuffixDatabase.list")            
             excludes.add("/src/google/protobuf/**")
             excludes.add("/java/core/java_features_proto-descriptor-set.proto.bin")
             excludes.add("DebugProbesKt.bin")
