@@ -29,8 +29,6 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import io.ktor.util.decodeBase64String
-import io.ktor.util.encodeBase64
 import java.io.IOException
 import java.security.MessageDigest
 import kotlin.io.encoding.Base64
@@ -140,6 +138,9 @@ object Cloud139Client {
     return sb.toString()
   }
 
+  /**
+   * 签名算法 (全量采用 Kotlin 2.3.21 标准库 Base64)
+   */
   fun calcSign(body: String, ts: String, randStr: String): String {
     val encoded = encodeUriComponent(body)
     val sorted = encoded.toCharArray().sorted().joinToString("")
@@ -491,9 +492,12 @@ object Cloud139Client {
 
   // ===== 核心 API 实现 =====
 
+  /**
+   * 解析 Token 字符串 (纯用 Kotlin 2.3.21 标准库 Base64.decode)
+   */
   fun parseToken(rawToken: String): Result<Config> = runCatching {
     val token = rawToken.removePrefix("Basic ").trim()
-    val decoded = token.decodeBase64String()
+    val decoded = Base64.decode(token).decodeToString()
     val parts = decoded.split(":")
     if (parts.size < 3) throw IllegalArgumentException("Token 格式不完整")
 
