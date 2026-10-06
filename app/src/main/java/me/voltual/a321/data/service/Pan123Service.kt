@@ -6,7 +6,6 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.isSuccess
 import java.io.IOException
-import kotlinx.coroutines.delay
 import me.voltual.a321.KtorClient
 import me.voltual.a321.data.unified.*
 import me.voltual.a321.utils.PanUtils
@@ -14,25 +13,17 @@ import me.voltual.a321.utils.PanUtils
 class Pan123Service(private val token: String) : PanService {
   override val platform: PanPlatform = PanPlatform.PAN123
   private val apiService = KtorClient.ApiServiceImpl
-  private val CHUNK_SIZE = 5 * 1024 * 1024L
+  private val CHUNK_SIZE = 16 * 1024 * 1024L
 
-  /**
-   * 支持解析以下 123 云盘的三种常见外链格式：
-   * 1. https://1834296697.share.123865.com/123pan/RMsQTd-mCVVv
-   * 2. https://www.123pan.com/s/hIA5Vv-Ri0wd.html
-   * 3. https://www.123684.com/s/hIA5Vv-QuUwd
-   */
   override fun parseExternalShareKey(url: String): String? {
     val trimmed = url.trim()
     if (trimmed.isEmpty()) return null
 
-    // 格式 1：匹配 .share.123865.com/123pan/{key}
     if (trimmed.contains(".share.") || trimmed.contains("/123pan/")) {
       val key = trimmed.substringAfter("/123pan/", "").substringBefore("?").substringBefore("/").trim()
       if (key.isNotEmpty()) return key
     }
 
-    // 格式 2 & 3：匹配 /s/{key}.html 或 /s/{key}
     if (trimmed.contains("/s/")) {
       val rawKey = trimmed.substringAfter("/s/", "").substringBefore("?").substringBefore("/").trim()
       val key = rawKey.removeSuffix(".html").trim()
@@ -74,7 +65,7 @@ class Pan123Service(private val token: String) : PanService {
     val reqRes = apiService.requestUpload(token, idLong, fileName, fileSize, md5).getOrThrow()
     val uploadInfo = reqRes.data ?: throw Exception("Upload request failed")
 
-    if (uploadInfo.Reuse) {
+    if (uploadInfo.Reuse || uploadInfo.Key.isNullOrEmpty()) {
       onProgress(1.0f)
       return@runCatching "秒传成功"
     }
@@ -84,29 +75,44 @@ class Pan123Service(private val token: String) : PanService {
     val uploadId = uploadInfo.UploadId!!
     val storageNode = uploadInfo.StorageNode!!
     val fileId = uploadInfo.FileId!!
-    val totalParts = ((fileSize + CHUNK_SIZE - 1) / CHUNK_SIZE).toInt()
+
+    val chunkCount = if (fileSize > CHUNK_SIZE) ((fileSize + CHUNK_SIZE - 1) / CHUNK_SIZE).toInt() else 1
+    val isMultipart = chunkCount > 1
 
     val inputStream = context.contentResolver.openInputStream(uri) ?: throw Exception("Failed to open Uri input stream")
     inputStream.use { rawStream ->
-      for (partNumber in 1..totalParts) {
+      for (partNumber in 1..chunkCount) {
         val partSize = minOf(CHUNK_SIZE, fileSize - (partNumber - 1) * CHUNK_SIZE)
-        val urlRes = apiService.getS3PartUrls(token, bucket, key, uploadId, storageNode, partNumber).getOrThrow()
+        
+        val urlRes = if (isMultipart) {
+          apiService.getS3PartUrls(token, bucket, key, uploadId, storageNode, partNumber, partNumber + 1).getOrThrow()
+        } else {
+          apiService.getS3Auth(token, bucket, key, uploadId, storageNode, 1, 2).getOrThrow()
+        }
+
         val uploadUrl = urlRes.data?.presignedUrls?.get(partNumber.toString())
-          ?: throw Exception("Failed to get S3 URL")
+          ?: throw Exception("Failed to get S3 upload URL for part $partNumber")
 
         val streamContent = PanUtils.createStreamContent(rawStream, partSize, closeStreamOnClose = false)
         val putResponse = KtorClient.httpClient.put(uploadUrl) { setBody(streamContent) }
         if (!putResponse.status.isSuccess()) {
-          throw IOException("S3 Upload failed at part $partNumber")
+          throw IOException("S3 Upload failed at part $partNumber with status ${putResponse.status}")
         }
 
-        onProgress(partNumber.toFloat() / totalParts * 0.9f)
+        onProgress(partNumber.toFloat() / chunkCount * 0.9f)
       }
     }
 
-    apiService.completeS3Upload(token, bucket, key, uploadId, storageNode).getOrThrow()
-    delay(1000)
-    apiService.confirmUpload(token, fileId).getOrThrow()
+    apiService.completeS3V2(
+      token = token,
+      bucket = bucket,
+      key = key,
+      uploadId = uploadId,
+      storageNode = storageNode,
+      fileId = fileId.toLongOrNull() ?: 0L,
+      fileSize = fileSize,
+      isMultipart = isMultipart
+    ).getOrThrow()
 
     onProgress(1.0f)
     "上传成功"

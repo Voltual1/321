@@ -1,10 +1,12 @@
 // Copyright (C) 2025 Voltual
-// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 通用公共许可证第3版
-// （或任意更新的版本）的条款重新分发和/或修改它。
-// 本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
-// 有关更多细节，请参阅 GNU 通用公共许可证。
+// Portions of 123Pan upload logic derived from OpenList (https://github.com/OpenListTeam/OpenList)
 //
-// 你应该已经收到了一份 GNU 通用公共许可证的副本
+// 本程序是自由软件：你可以根据自由软件基金会发布的 GNU 阿拉伯数字通用公共许可证第3版
+// （AGPLv3 或任意更新的版本）的条款重新分发和/或修改它。
+// 本程序是基于希望它有用而分发的，但没有任何担保；甚至没有适销性或特定用途适用性的隐含担保。
+// 有关更多细节，请参阅 GNU 强通用公共许可证。
+//
+// 你应该已经收到了一份 GNU 强通用公共许可证的副本
 // 如果没有，请查阅 <http://www.gnu.org/licenses/>.
 @file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 
@@ -42,7 +44,7 @@ object KtorClient {
             ignoreUnknownKeys = true
             isLenient = true
             explicitNulls = false
-            encodeDefaults = true // 关键修复：强制序列化默认值
+            encodeDefaults = true
           }
         )
       }
@@ -70,18 +72,14 @@ object KtorClient {
 
       install(Logging) { level = LogLevel.INFO }
 
-      // 处理重定向：获取下载直链时我们需要手动处理 302
       followRedirects = false
     }
 
-  // ===== 数据模型 =====
-
-  // ===== 请求模型定义 (用于 POST Body) =====
+  // ===== 请求与响应模型定义 =====
 
   @Serializable
   data class LoginRequest(val type: Int = 1, val passport: String, val password: String)
 
-  // 微信授权码登录请求
   @Serializable
   data class WechatLoginRequest(
     val from: String = "web",
@@ -113,14 +111,18 @@ object KtorClient {
   )
 
   @Serializable
-  data class CompleteS3UploadRequest(
+  data class CompleteS3UploadV2Request(
+    val StorageNode: String,
     val bucket: String,
+    val fileId: Long,
+    val fileSize: Long,
+    val isMultipart: Boolean,
     val key: String,
     val uploadId: String,
-    val StorageNode: String,
   )
 
-  @Serializable data class ConfirmUploadRequest(val fileId: String)
+  @Serializable
+  data class ConfirmUploadRequest(val fileId: String)
 
   @Serializable
   data class TrashRequest(
@@ -145,7 +147,6 @@ object KtorClient {
 
   @Serializable
   data class PanResponse<T>(val code: Int, val message: String, val data: T? = null) {
-    // 关键修复：兼容 0 和 200 作为成功码
     val isSuccess: Boolean
       get() = code == 0 || code == 200
   }
@@ -154,24 +155,28 @@ object KtorClient {
 
   @Serializable
   data class UploadRequestData(
-    val Reuse: Boolean, // 是否秒传成功
+    val Reuse: Boolean,
     val FileId: String? = null,
     val UploadId: String? = null,
     val Bucket: String? = null,
     val Key: String? = null,
     val StorageNode: String? = null,
+    val AccessKeyId: String? = null,
+    val SecretAccessKey: String? = null,
+    val SessionToken: String? = null,
+    val EndPoint: String? = null,
   )
 
   @Serializable
   data class S3PartUrlsData(
-    val presignedUrls: Map<String, String> // PartNumber -> URL
+    val presignedUrls: Map<String, String>
   )
 
   @Serializable
   data class FileInfo(
     val FileId: Long,
     val FileName: String,
-    val Type: Int, // 1: 文件夹, 0: 文件
+    val Type: Int,
     val Size: Long,
     val Etag: String,
     val S3KeyFlag: String? = null,
@@ -183,7 +188,6 @@ object KtorClient {
     val isDirectory: Boolean
       get() = Type == 1
 
-    // 补全此逻辑：123网盘 Status > 100 通常表示文件异常（被封禁或审核不通过）
     val isAbnormal: Boolean
       get() = Status > 100
   }
@@ -192,7 +196,6 @@ object KtorClient {
 
   @Serializable data class LoginData(val token: String)
 
-  // ===== 扫码登录相关数据模型 =====
   @Serializable
   data class QrGenerateData(
     val url: String,
@@ -201,10 +204,10 @@ object KtorClient {
 
   @Serializable
   data class QrResultData(
-    val loginStatus: Int,      // 0: 等待扫码, 1: 已扫码未确认, 3: 授权成功
-    val scanPlatform: Int,     // 4: 微信, 7: 123云盘 App
+    val loginStatus: Int,
+    val scanPlatform: Int,
     val login_type: Int,
-    val token: String? = null  // App 授权成功时直接返回
+    val token: String? = null
   )
 
   @Serializable
@@ -216,8 +219,6 @@ object KtorClient {
   data class WxCodeData(
     val wxCode: String
   )
-
-  // ===== 下载相关的请求模型 =====
 
   @Serializable
   data class DownloadInfoRequest(
@@ -234,7 +235,6 @@ object KtorClient {
 
   @Serializable data class BatchDownloadItem(val fileId: Long)
 
-  // 用户信息
   @Serializable
   data class UserInfo(
     val UID: Long,
@@ -249,21 +249,18 @@ object KtorClient {
     val HeadImage: String = "",
   )
 
-  // 分享请求
   @Serializable
   data class ShareCreateRequest(
     val driveId: Int = 0,
     val expiration: String,
-    val fileIdList: String, // 逗号分隔的ID字符串
+    val fileIdList: String,
     val shareName: String = "分享文件",
     val sharePwd: String = "",
     val event: String = "shareCreate",
   )
 
-  // 分享响应数据
   @Serializable data class ShareCreateData(val ShareKey: String)
 
-  // 文件夹详情数据
   @Serializable
   data class FolderDetailsData(
     val FileId: Long,
@@ -333,7 +330,6 @@ object KtorClient {
 
   @Serializable data class DeleteFileItem(val fileId: Long)
 
-  // 获取分享信息响应的 data 部分
   @Serializable
   data class ShareGetResponseData(
     val Next: String?,
@@ -344,31 +340,15 @@ object KtorClient {
     val InfoList: List<FileInfo>,
   )
 
-  // 取消分享的请求体
   @Serializable data class ShareDeleteItem(val shareid: Long)
 
   @Serializable
   data class ShareDeleteRequest(val driveId: Int = 0, val shareInfoList: List<ShareDeleteItem>)
 
-  // 取消分享响应的 data 部分
   @Serializable data class ShareDeleteResponseData(val InfoList: List<ShareDeleteItemResult>)
 
   @Serializable data class ShareDeleteItemResult(val ShareId: Long)
 
-  // ===== 复制分享文件相关数据类 =====
-
-  /**
-   * 复制分享文件时单个文件的信息
-   *
-   * @param driveId 网盘ID，默认为0
-   * @param duplicate 重复处理策略（2 表示重命名）
-   * @param etag 文件ETag
-   * @param fileId 分享中的文件ID
-   * @param fileName 文件名
-   * @param parentFileId 目标文件夹ID（用户自己的网盘）
-   * @param size 文件大小
-   * @param type 类型：0 文件，1 文件夹
-   */
   @Serializable
   data class CopyFileInfo(
     val driveId: Int = 0,
@@ -381,7 +361,6 @@ object KtorClient {
     val type: Int,
   )
 
-  /** 复制分享文件的请求体 */
   @Serializable
   data class CopyShareRequest(
     val SharePwd: String = "",
@@ -392,17 +371,14 @@ object KtorClient {
   // ===== API 接口定义 =====
 
   interface ApiService {
-    // 兼容 UpdateChecker.kt
     suspend fun getLatestRelease(url: String): Result<UpdateInfo>
 
-    // 兼容 PanRepository.kt
     suspend fun getFileList(
       token: String,
       page: Int,
       parentId: Long = 0,
     ): Result<PanResponse<FileListData>>
 
-    // 新增功能
     suspend fun login(passport: String, password: String): Result<PanResponse<LoginData>>
 
     suspend fun getDownloadUrl(token: String, file: FileInfo): Result<String>
@@ -411,7 +387,6 @@ object KtorClient {
 
     suspend fun deleteFiles(token: String, fileIds: List<Long>): Result<PanResponse<Unit>>
 
-    // 1. 请求上传（含秒传校验）
     suspend fun requestUpload(
       token: String,
       parentId: Long,
@@ -420,32 +395,44 @@ object KtorClient {
       md5: String,
     ): Result<PanResponse<UploadRequestData>>
 
-    // 2. 获取分块上传的预签名 URL
+    // 单分片预签名 URL
+    suspend fun getS3Auth(
+      token: String,
+      bucket: String,
+      key: String,
+      uploadId: String,
+      storageNode: String,
+      start: Int = 1,
+      end: Int = 2,
+    ): Result<PanResponse<S3PartUrlsData>>
+
+    // 多分片批量预签名 URL
     suspend fun getS3PartUrls(
       token: String,
       bucket: String,
       key: String,
       uploadId: String,
       storageNode: String,
-      partNumber: Int,
+      start: Int,
+      end: Int,
     ): Result<PanResponse<S3PartUrlsData>>
 
-    // 3. 合并 S3 分块
-    suspend fun completeS3Upload(
+    // 完成 S3 分片上传 (使用 OpenList v2 接口)
+    suspend fun completeS3V2(
       token: String,
       bucket: String,
       key: String,
       uploadId: String,
       storageNode: String,
+      fileId: Long,
+      fileSize: Long,
+      isMultipart: Boolean,
     ): Result<PanResponse<Unit>>
 
-    // 4. 最终确认上传完成
     suspend fun confirmUpload(token: String, fileId: String): Result<PanResponse<Unit>>
 
-    // 获取用户信息
     suspend fun getUserInfo(token: String): Result<PanResponse<UserInfo>>
 
-    // 创建分享
     suspend fun createShare(
       token: String,
       fileIds: List<Long>,
@@ -453,43 +440,26 @@ object KtorClient {
       expiration: String = "2099-12-12T08:00:00+08:00",
     ): Result<PanResponse<ShareCreateData>>
 
-    // 获取回收站列表
     suspend fun listRecycle(token: String, page: Int = 1): Result<PanResponse<FileListData>>
 
-    // 恢复文件（从回收站）
     suspend fun restoreFiles(token: String, fileIds: List<Long>): Result<PanResponse<Unit>>
 
-    // 彻底删除文件（不可恢复）
     suspend fun deleteFilesPermanently(
       token: String,
       fileIds: List<Long>,
     ): Result<PanResponse<Unit>>
 
-    // 获取文件夹详情（支持多个ID）
     suspend fun getFolderDetails(
       token: String,
       folderIds: List<Long>,
     ): Result<PanResponse<List<FolderDetailsData>>>
 
-    /**
-     * 移动文件或文件夹
-     *
-     * @param fileIds 需要移动的文件/文件夹 ID 列表
-     * @param targetParentId 目标目录的 ID
-     */
     suspend fun moveFiles(
       token: String,
       fileIds: List<Long>,
       targetParentId: Long,
     ): Result<PanResponse<Unit>>
 
-    /**
-     * 重命名文件或文件夹
-     *
-     * @param token 用户授权 Token
-     * @param fileId 文件或文件夹 of ID
-     * @param newName 新的文件名（需包含后缀名）
-     */
     suspend fun renameFile(token: String, fileId: Long, newName: String): Result<PanResponse<Unit>>
 
     suspend fun searchFiles(
@@ -500,16 +470,6 @@ object KtorClient {
       parentFileId: Long = 0,
     ): Result<PanResponse<FileListData>>
 
-    /**
-     * 获取分享列表
-     *
-     * @param token 用户授权 Token
-     * @param next 分页标识，首次请求传 null，后续使用响应中的 Next 字段
-     * @param limit 每页数量，默认 100
-     * @param orderBy 排序字段，默认 "fileId"
-     * @param orderDirection 排序方向，默认 "desc"
-     * @param searchData 搜索关键词，可选
-     */
     suspend fun listShares(
       token: String,
       next: String? = null,
@@ -519,44 +479,21 @@ object KtorClient {
       searchData: String? = null,
     ): Result<PanResponse<ShareListData>>
 
-    /**
-     * 获取分享链接中的文件列表
-     *
-     * @param shareKey 分享标识
-     * @param next
-     * @param limit 每页数量
-     * @param parentFileId 文件夹ID（0表示根目录）
-     * @param sharePwd 提取码（可选）
-     */
     suspend fun getShareInfo(
       token: String,
       shareKey: String,
-      next: String? = "1", // 新增参数，默认值为 "1"
+      next: String? = "1",
       page: Int = 1,
       limit: Int = 200,
       parentFileId: Long = 0,
       sharePwd: String? = null,
     ): Result<PanResponse<ShareGetResponseData>>
 
-    /**
-     * 删除分享（取消分享）
-     *
-     * @param shareIds 要删除的分享ID列表
-     */
     suspend fun deleteShare(
       token: String,
       shareIds: List<Long>,
     ): Result<PanResponse<ShareDeleteResponseData>>
 
-    /**
-     * 从分享链接复制文件到自己的网盘
-     *
-     * @param token 用户授权Token
-     * @param shareKey 分享标识
-     * @param sharePwd 分享提取码（可选）
-     * @param targetParentId 目标文件夹ID（自己的网盘）
-     * @param files 要复制的文件信息列表（从分享文件列表获取）
-     */
     suspend fun copyShareFile(
       token: String,
       shareKey: String,
@@ -565,26 +502,12 @@ object KtorClient {
       files: List<CopyFileInfo>,
     ): Result<PanResponse<Unit>>
 
-    // ===== 扫码相关新接口 =====
-
-    /**
-     * 1. 申请扫码二维码和uniID
-     */
     suspend fun generateQrCode(): Result<PanResponse<QrGenerateData>>
 
-    /**
-     * 2. 轮询二维码扫码状态
-     */
     suspend fun getQrCodeResult(uniID: String): Result<PanResponse<QrResultData>>
 
-    /**
-     * 3. 微信扫码成功后，获取虚拟微信 Code
-     */
     suspend fun getWxCode(uniID: String): Result<PanResponse<WxCodeData>>
 
-    /**
-     * 4. 使用微信 Code 换取最终登录 Token
-     */
     suspend fun loginWithWechatCode(wxCode: String): Result<PanResponse<LoginData>>
   }
 
@@ -619,13 +542,40 @@ object KtorClient {
         }
       }
 
+    override suspend fun getS3Auth(
+      token: String,
+      bucket: String,
+      key: String,
+      uploadId: String,
+      storageNode: String,
+      start: Int,
+      end: Int,
+    ) =
+      safeApiCall<PanResponse<S3PartUrlsData>> {
+        httpClient.post("/b/api/file/s3_upload_object/auth") {
+          bearerAuth(token)
+          contentType(ContentType.Application.Json)
+          setBody(
+            S3PartUrlsRequest(
+              bucket = bucket,
+              key = key,
+              partNumberStart = start,
+              partNumberEnd = end,
+              uploadId = uploadId,
+              StorageNode = storageNode,
+            )
+          )
+        }
+      }
+
     override suspend fun getS3PartUrls(
       token: String,
       bucket: String,
       key: String,
       uploadId: String,
       storageNode: String,
-      partNumber: Int,
+      start: Int,
+      end: Int,
     ) =
       safeApiCall<PanResponse<S3PartUrlsData>> {
         httpClient.post("/b/api/file/s3_repare_upload_parts_batch") {
@@ -635,9 +585,8 @@ object KtorClient {
             S3PartUrlsRequest(
               bucket = bucket,
               key = key,
-              partNumberStart = partNumber,
-              // 关键修复：End 必须比 Start 大 1 才能获取到当前块 of URL
-              partNumberEnd = partNumber + 1,
+              partNumberStart = start,
+              partNumberEnd = end,
               uploadId = uploadId,
               StorageNode = storageNode,
             )
@@ -645,23 +594,29 @@ object KtorClient {
         }
       }
 
-    override suspend fun completeS3Upload(
+    override suspend fun completeS3V2(
       token: String,
       bucket: String,
       key: String,
       uploadId: String,
       storageNode: String,
+      fileId: Long,
+      fileSize: Long,
+      isMultipart: Boolean,
     ) =
       safeApiCall<PanResponse<Unit>> {
-        httpClient.post("/b/api/file/s3_complete_multipart_upload") {
+        httpClient.post("/b/api/file/upload_complete/v2") {
           bearerAuth(token)
           contentType(ContentType.Application.Json)
           setBody(
-            CompleteS3UploadRequest(
+            CompleteS3UploadV2Request(
+              StorageNode = storageNode,
               bucket = bucket,
+              fileId = fileId,
+              fileSize = fileSize,
+              isMultipart = isMultipart,
               key = key,
               uploadId = uploadId,
-              StorageNode = storageNode,
             )
           )
         }
@@ -697,12 +652,10 @@ object KtorClient {
       }
     }
 
-    /** 获取下载直链 参考 Python 原型：如果是文件夹走 batch_download_info，文件走 download_info */
     override suspend fun getDownloadUrl(token: String, file: FileInfo): Result<String> {
       val endpoint =
         if (file.isDirectory) "/a/api/file/batch_download_info" else "/a/api/file/download_info"
 
-      // 使用具体的 Serializable 对象替代 mapOf
       val requestBody: Any =
         if (file.isDirectory) {
           BatchDownloadRequest(listOf(BatchDownloadItem(file.FileId)))
@@ -759,7 +712,6 @@ object KtorClient {
         httpClient.post("/api/file/delete") {
           bearerAuth(token)
           contentType(ContentType.Application.Json)
-          // 彻底删除！
           setBody(DeleteFileRequest(fileIdList = fileIds.map { DeleteFileItem(it) }))
         }
       }
@@ -813,7 +765,7 @@ object KtorClient {
           setBody(
             TrashRequest(
               fileTrashInfoList = fileIds.map { TrashItem(FileId = it) },
-              operation = false, // false 表示恢复
+              operation = false,
             )
           )
         }
@@ -847,7 +799,6 @@ object KtorClient {
         httpClient.post("/api/file/rename") {
           bearerAuth(token)
           contentType(ContentType.Application.Json)
-
           setBody(RenameRequest(driveId = 0, fileName = newName, fileId = fileId))
         }
       }
@@ -866,10 +817,10 @@ object KtorClient {
           parameters.append("limit", limit.toString())
           parameters.append("Page", page.toString())
           parameters.append("parentFileId", parentFileId.toString())
-          parameters.append("orderBy", "update_at") // 按更新时间排序
+          parameters.append("orderBy", "update_at")
           parameters.append("orderDirection", "desc")
           parameters.append("trashed", "false")
-          parameters.append("SearchData", keyword) // 搜索关键词
+          parameters.append("SearchData", keyword)
         }
       }
     }
@@ -939,7 +890,6 @@ object KtorClient {
       targetParentId: Long,
       files: List<CopyFileInfo>,
     ): Result<PanResponse<Unit>> = safeApiCall {
-      // 确保每个文件的 parentFileId 使用用户指定的目标文件夹
       val adjustedFiles = files.map { it.copy(parentFileId = targetParentId) }
       httpClient.post("/api/file/copy") {
         bearerAuth(token)
@@ -949,8 +899,6 @@ object KtorClient {
         )
       }
     }
-
-    // ===== 扫码接口具体实现 =====
 
     override suspend fun generateQrCode(): Result<PanResponse<QrGenerateData>> = safeApiCall {
       httpClient.get("https://user.123pan.cn/api/user/qr-code/generate")
@@ -981,14 +929,12 @@ object KtorClient {
     }
   }
 
-  /** 安全地执行 Ktor 请求 */
   private suspend inline fun <reified T> safeApiCall(block: suspend () -> HttpResponse): Result<T> {
     var attempts = 0
     while (attempts < MAX_RETRIES) {
       try {
         val response = block()
         if (response.status.value in 300..399 && T::class == String::class) {
-          // 特殊处理重定向返回
           return Result.success(response as T)
         }
         if (!response.status.isSuccess() && response.status != HttpStatusCode.Found) {
