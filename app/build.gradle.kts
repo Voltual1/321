@@ -145,8 +145,8 @@ dependencies {
   implementation(libs.koin.android.compose)
   implementation(libs.koin.startup)
 
-  implementation(libs.coil.compose)
-  implementation(libs.coil.network.ktor)
+//  implementation(libs.coil.compose)
+//  implementation(libs.coil.network.ktor)
   implementation(libs.markdown)
   implementation(libs.simple.storage)
   implementation(libs.tink.android)

@@ -27,7 +27,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -39,8 +38,6 @@ sealed class IconSource {
   data class Resource(val resId: Int) : IconSource()
 
   data class Vector(val imageVector: ImageVector) : IconSource()
-
-  data class Remote(val url: String) : IconSource()
 }
 
 data class DrawerItem(
@@ -76,7 +73,7 @@ fun NavigationDrawerItems(
       DrawerItem(
         "download_settings",
         "下载设置",
-        IconSource.Vector(Icons.Default.Download), // 添加矢量下载图标
+        IconSource.Vector(Icons.Default.Download),
         DownloadSettings,
       ),
       DrawerItem(
@@ -217,8 +214,6 @@ private fun ItemContent(
       when (val source = item.icon) {
         is IconSource.Resource -> Icon(painterResource(source.resId), null, modifier = iconModifier)
         is IconSource.Vector -> Icon(source.imageVector, null, modifier = iconModifier)
-        is IconSource.Remote ->
-          AsyncImage(model = source.url, contentDescription = null, modifier = iconModifier)
       }
     },
     selected = isSelected,
